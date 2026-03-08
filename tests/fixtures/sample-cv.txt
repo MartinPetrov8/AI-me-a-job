@@ -1,0 +1,23 @@
+John Doe
+Senior Software Engineer
+
+Education:
+Master of Science in Computer Science, Stanford University (2015)
+
+Experience:
+Senior Software Engineer at Google (2020 - Present)
+- Led development of microservices architecture
+- Managed team of 5 engineers
+- Technologies: Python, Go, Kubernetes, Docker
+
+Software Engineer at Facebook (2017 - 2020)
+- Built data processing pipelines
+- Implemented ML models for content recommendation
+
+Junior Developer at Startup Inc (2015 - 2017)
+- Full-stack web development
+- Technologies: JavaScript, React, Node.js
+
+Skills: Python, Go, JavaScript, TypeScript, React, Node.js, Kubernetes, Docker, AWS, Machine Learning, Team Leadership
+
+Languages: English (Native), Spanish (Fluent), French (Intermediate)

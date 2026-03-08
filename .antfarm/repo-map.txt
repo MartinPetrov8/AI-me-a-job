@@ -1,4 +1,4 @@
-# Repo Map — generated 2026-03-08T20:42:30Z
+# Repo Map — generated 2026-03-08T21:13:53Z
 # Architecture snapshot: class/function signatures, routes, exports
 # Use this to find the right file/function without reading full source.
 
@@ -13,12 +13,22 @@
 drizzle.config.ts:
   3:export default {
 
+src/app/api/profile/route.ts:
+  15:export async function GET(request: NextRequest) {
+  63:export async function PUT(request: NextRequest) {
+
+src/app/api/upload/route.ts:
+  13:export async function POST(request: NextRequest) {
+
 src/app/layout.tsx:
   4:export const metadata: Metadata = {
   9:export default function RootLayout({
 
 src/app/page.tsx:
   1:export default function Home() {
+
+src/app/upload/page.tsx:
+  6:export default function UploadPage() {
 
 src/lib/criteria.ts:
   1:export const YEARS_EXPERIENCE = ['0-1', '2-4', '5-9', '10-15', '15+'] as const;
@@ -37,6 +47,11 @@ src/lib/criteria.ts:
   65:export type WorkMode = typeof WORK_MODES[number];
   67:export const EMPLOYMENT_TYPES = ['Full-time', 'Part-time', 'Contract', 'Freelance'] as const;
 
+src/lib/cv-parser/extract-text.ts:
+  4:export class UnsupportedFileTypeError extends Error {
+  11:export class EmptyDocumentError extends Error {
+  23:export async function extractText(buffer: Buffer, mimeType: string): Promise<string> {
+
 src/lib/db/index.ts:
   12:export const db = drizzle(client, { schema });
 
@@ -46,6 +61,17 @@ src/lib/db/schema.ts:
   37:export const jobs = pgTable('jobs', {
   70:export const searches = pgTable('searches', {
   78:export const searchResults = pgTable('search_results', {
+
+src/lib/llm/client.ts:
+  3:export const openai = new OpenAI({
+
+src/lib/llm/extract-cv.ts:
+  18:export interface ExtractedCriteria {
+  29:export class LLMExtractionError extends Error {
+  49:export async function extractCvCriteria(rawText: string): Promise<ExtractedCriteria> {
+
+src/lib/llm/prompts.ts:
+  1:export const CV_EXTRACTION_SYSTEM_PROMPT = `You are a CV parsing assistant. Extract structured information from a CV text.
 
 src/lib/validation.ts:
   13:export const profileInputSchema = z.object({
@@ -137,6 +163,7 @@ node_modules/flatted/golang/pkg/flatted/flatted.go:
   src/lib
   tailwind.config.ts
   tests
+  tests/api
   tests/fixtures
   tests/lib
   tsconfig.json

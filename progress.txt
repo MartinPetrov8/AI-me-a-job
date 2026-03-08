@@ -18,3 +18,7 @@ Started: 2026-03-08T20:41:42Z
 ---
 
 [S-01][done] Complete implementation of Next.js project with TypeScript, Tailwind CSS, Drizzle ORM schema, bounded category constants, Zod validation schemas, seed data, and comprehensive test coverage | tests:PASS
+
+---
+
+[S-01][done] CV upload feature with PDF/DOCX extraction, OpenAI GPT-4o-mini LLM criteria extraction, upload/profile API routes, and client upload page with drag-and-drop | tests:PASS
