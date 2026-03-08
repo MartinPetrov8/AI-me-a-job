@@ -1,4 +1,4 @@
-# Repo Map — generated 2026-03-08T21:13:53Z
+# Repo Map — generated 2026-03-08T21:37:18Z
 # Architecture snapshot: class/function signatures, routes, exports
 # Use this to find the right file/function without reading full source.
 
@@ -7,8 +7,8 @@
 ## TypeScript/JavaScript
 
 .next/types/routes.d.ts:
-  17:export type ParamsOf<Route extends Routes> = ParamMap[Route]
-  24:export type { AppRoutes, PageRoutes, LayoutRoutes, RedirectRoutes, RewriteRoutes, ParamMap }
+  21:export type ParamsOf<Route extends Routes> = ParamMap[Route]
+  28:export type { AppRoutes, PageRoutes, LayoutRoutes, RedirectRoutes, RewriteRoutes, ParamMap, AppRouteHandlerRoutes }
 
 drizzle.config.ts:
   3:export default {
