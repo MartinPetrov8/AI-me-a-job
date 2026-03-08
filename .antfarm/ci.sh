@@ -3,7 +3,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 echo "=== CI: Type Check ==="
-tsc --noEmit 2>&1
+npx tsc --noEmit 2>&1
 
 echo ""
 echo "=== CI: Build ==="
