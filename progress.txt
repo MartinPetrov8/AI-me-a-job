@@ -1,0 +1,20 @@
+# Progress Log
+Run: fc35cf23-922b-4057-8a5d-ca564f69d036
+Task: Initialize a Next.js 14+ project with TypeScript, Tailwind CSS, and Drizzle ORM connected to Supabase Postgres
+Started: 2026-03-08T20:41:42Z
+
+## Codebase Patterns
+- Next.js 14+ App Router in src/app/
+- Drizzle ORM in src/lib/db/ with postgres-js driver
+- Criteria constants with derived TypeScript types in src/lib/criteria.ts
+- Zod validation schemas in src/lib/validation.ts
+- camelCase for TS variables/PascalCase for components/snake_case for DB columns
+- Strict TypeScript mode enabled
+- All tests use Vitest with fixtures in tests/fixtures/
+- Database schema includes all 5 tables: users, profiles, jobs, searches, search_results
+- Seed script generates 3 user+profile records and 50 jobs with diverse industry/seniority data
+- Test fixtures contain 20 jobs with full classification across 4+ industries and 3+ seniority levels
+
+---
+
+[S-01][done] Complete implementation of Next.js project with TypeScript, Tailwind CSS, Drizzle ORM schema, bounded category constants, Zod validation schemas, seed data, and comprehensive test coverage | tests:PASS

@@ -1,0 +1,112 @@
+# Architecture Notes
+
+## Project Overview
+AI-me-a-job is a Next.js 14+ web application for AI-powered job matching with TypeScript, Tailwind CSS, and Drizzle ORM connected to Supabase Postgres.
+
+## Tech Stack
+- Next.js 14+ (App Router)
+- TypeScript (strict mode)
+- Tailwind CSS for styling
+- Drizzle ORM with postgres-js driver
+- Supabase Postgres database
+- Zod for validation
+- Vitest for testing
+
+## Folder Structure
+```
+src/
+  app/              # Next.js App Router pages
+    layout.tsx      # Root layout
+    page.tsx        # Home page
+    globals.css     # Global styles with Tailwind directives
+  lib/              # Shared utilities and business logic
+    db/             # Database layer
+      schema.ts     # Drizzle schema definitions
+      index.ts      # Database client export
+    criteria.ts     # Bounded constants and types
+    validation.ts   # Zod schemas
+  components/       # React components (to be added)
+scripts/
+  seed.ts           # Database seeding script
+tests/
+  lib/              # Unit tests for lib modules
+  fixtures/         # Test data fixtures
+```
+
+## Key Patterns
+
+### Database Schema
+- All tables use UUID primary keys with `.defaultRandom()`
+- Timestamps use `timestamptz` with `.defaultNow()` for created_at/updated_at
+- Foreign keys use cascade delete where appropriate
+- Array columns for languages and key_skills use `.array()` with GIN indexes for efficient querying
+- Unique constraints implemented via `.unique()` or `unique().on(...)`
+
+### Criteria Constants
+- All bounded enums defined as `const` arrays in `src/lib/criteria.ts`
+- TypeScript types derived using `typeof ARRAY[number]` pattern
+- Used by both Zod schemas and database schema for consistency
+
+### Validation
+- Zod schemas in `src/lib/validation.ts`
+- profileInputSchema: all 8 criteria fields required, uses z.enum() from criteria constants
+- preferencesInputSchema: all fields optional, allows flexible user preferences
+- Arrays must have minimum 1 item where required (languages, keySkills)
+
+### Testing
+- Vitest for unit testing
+- Tests organized by module in tests/lib/
+- Fixtures in tests/fixtures/ as JSON files
+- Each criteria constant tested for: non-empty + no duplicates
+- Validation schemas tested for: valid input passes, invalid values reject, missing required fields reject
+
+### Database Connection
+- Connection string via DATABASE_URL environment variable
+- Client instantiated in src/lib/db/index.ts and exported as `db`
+- Throws error if DATABASE_URL not set
+
+### Naming Conventions
+- camelCase for TypeScript variables/functions
+- PascalCase for types and React components
+- snake_case for database columns (Drizzle convention)
+- Prefixed with "pref_" for user preference fields
+
+### Error Handling
+- Type-safe with TypeScript strict mode
+- Zod .safeParse() for input validation
+- Environment variable validation on startup
+
+### Build & Test Commands
+- `npm run dev` - Next.js development server
+- `npm run build` - Production build
+- `npm run test` - Run Vitest tests
+- `npm run typecheck` - TypeScript type checking
+- `npm run db:generate` - Generate Drizzle migrations
+- `npm run db:push` - Push schema to database
+- `npm run seed` - Seed database with sample data
+
+## Utility Functions
+- None yet - to be added as needed
+
+## Developer Guidelines
+1. Always use criteria constants from src/lib/criteria.ts - never hardcode enum values
+2. Validate all external input with Zod schemas before database operations
+3. Use TypeScript strict mode - no implicit any
+4. Follow existing naming conventions
+5. Add tests for new validation schemas or criteria constants
+6. Use Drizzle ORM for all database operations - no raw SQL
+7. Keep business logic in src/lib/, UI components in src/components/
+8. Use the commit.sh helper for all commits to capture commit hashes
+
+## Database Schema Summary
+- users: authentication and email storage
+- profiles: user CV data and job criteria (8 required fields + preferences)
+- jobs: job postings from external sources (classified and unclassified)
+- searches: search execution records
+- search_results: individual job matches per search
+
+## Next Steps for Developers
+1. Push schema to Supabase: `npm run db:push`
+2. Seed database: `npm run seed`
+3. Build features on top of this foundation
+4. Follow the patterns established in tests and validation

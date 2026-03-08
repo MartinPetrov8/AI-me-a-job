@@ -1,0 +1,9 @@
+db_rows:users:3
+db_rows:profiles:3
+db_rows:jobs:50
+file_nonempty:src/lib/db/schema.ts
+file_nonempty:src/lib/criteria.ts
+file_nonempty:src/lib/validation.ts
+file_exists:tests/fixtures/sample-jobs.json
+cmd_exit0:npx tsc --noEmit
+cmd_exit0:npm run test
