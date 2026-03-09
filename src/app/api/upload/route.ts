@@ -10,7 +10,9 @@ const ALLOWED_MIME_TYPES = [
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
 ];
 
-// App Router route config (Next.js 13+)
+// App Router route config — must be nodejs runtime for FormData/file upload support
+// Edge runtime does NOT support multipart/form-data → returns 405
+export const runtime = 'nodejs';
 export const maxDuration = 60;
 export const dynamic = 'force-dynamic';
 
