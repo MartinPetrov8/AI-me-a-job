@@ -1,4 +1,4 @@
-# Repo Map — generated 2026-03-09T08:59:38Z
+# Repo Map — generated 2026-03-09T09:34:31Z
 # Architecture snapshot: class/function signatures, routes, exports
 # Use this to find the right file/function without reading full source.
 
@@ -7,8 +7,8 @@
 ## TypeScript/JavaScript
 
 .next/types/routes.d.ts:
-  24:export type ParamsOf<Route extends Routes> = ParamMap[Route]
-  31:export type { AppRoutes, PageRoutes, LayoutRoutes, RedirectRoutes, RewriteRoutes, ParamMap, AppRouteHandlerRoutes }
+  27:export type ParamsOf<Route extends Routes> = ParamMap[Route]
+  34:export type { AppRoutes, PageRoutes, LayoutRoutes, RedirectRoutes, RewriteRoutes, ParamMap, AppRouteHandlerRoutes }
 
 drizzle.config.ts:
   3:export default {
@@ -19,6 +19,12 @@ src/app/api/preferences/route.ts:
 src/app/api/profile/route.ts:
   15:export async function GET(request: NextRequest) {
   63:export async function PUT(request: NextRequest) {
+
+src/app/api/search/delta/route.ts:
+  7:export async function POST(request: NextRequest) {
+
+src/app/api/search/route.ts:
+  4:export async function POST(request: NextRequest) {
 
 src/app/api/upload/route.ts:
   13:export async function POST(request: NextRequest) {
@@ -31,10 +37,13 @@ src/app/page.tsx:
   1:export default function Home() {
 
 src/app/preferences/page.tsx:
-  7:export default function PreferencesPage() {
+  243:export default function PreferencesPage() {
 
 src/app/profile/page.tsx:
-  28:export default function ProfilePage() {
+  388:export default function ProfilePage() {
+
+src/app/results/page.tsx:
+  231:export default function ResultsPage() {
 
 src/app/upload/page.tsx:
   6:export default function UploadPage() {
@@ -109,6 +118,11 @@ src/lib/llm/prompts.ts:
   1:export const CV_EXTRACTION_SYSTEM_PROMPT = `You are a CV parsing assistant. Extract structured information from a CV text.
   21:export const JOB_CLASSIFICATION_SYSTEM_PROMPT = `You are a job posting classification assistant. Extract the requirements and qualifications from a job posting.
 
+src/lib/matching/engine.ts:
+  6:export interface MatchedJob {
+  23:export interface MatchResult {
+  151:export async function findMatches(profileId: string, options?: { delta?: boolean }): Promise<MatchResult> {
+
 src/lib/validation.ts:
   13:export const profileInputSchema = z.object({
   24:export const preferencesInputSchema = z.object({
@@ -149,17 +163,20 @@ node_modules/flatted/golang/pkg/flatted/flatted.go:
   .next/build-manifest.json
   .next/cache
   .next/diagnostics
-  .next/export
-  .next/export-detail.json
+  .next/export-marker.json
   .next/fallback-build-manifest.json
+  .next/images-manifest.json
   .next/next-minimal-server.js.nft.json
   .next/next-server.js.nft.json
   .next/package.json
+  .next/prerender-manifest.json
   .next/required-server-files.js
   .next/required-server-files.json
   .next/routes-manifest.json
   .next/server
   .next/static
+  .next/trace
+  .next/trace-build
   .next/turbopack
   .next/types
   README.md

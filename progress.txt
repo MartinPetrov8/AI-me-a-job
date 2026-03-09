@@ -14,6 +14,8 @@ Started: 2026-03-08T20:41:42Z
 - Database schema includes all 5 tables: users, profiles, jobs, searches, search_results
 - Seed script generates 3 user+profile records and 50 jobs with diverse industry/seniority data
 - Test fixtures contain 20 jobs with full classification across 4+ industries and 3+ seniority levels
+- All client components using useSearchParams() must wrap content in Suspense boundary (Next.js 16 requirement)
+- Matching engine in src/lib/matching/engine.ts implements 8-criteria scoring system with threshold filtering
 
 ---
 
@@ -30,3 +32,7 @@ Started: 2026-03-08T20:41:42Z
 ---
 
 [S-01][done] Batch LLM job classification: classify-job.ts with GPT-4o-mini, batch-classify.ts for bulk processing, classify-jobs.ts CLI script, JOB_CLASSIFICATION_SYSTEM_PROMPT with all bounded categories, validation against criteria constants, timeout/retry logic, and comprehensive test coverage | tests:PASS
+
+---
+
+[S-01][done] Matching engine (src/lib/matching/engine.ts) with 8-criteria scoring (years_experience, education_level, field_of_study, sphere_of_expertise, seniority_level, languages, industry, key_skills), adjacency/overqualification rules, null-as-match benefit-of-doubt, threshold filtering (>=5), delta mode, search/search_results DB tracking. Search API routes (POST /api/search, POST /api/search/delta) with 200/404 responses. Results page (src/app/results/page.tsx) with match cards, score badges, expandable criteria, delta search button. Suspense boundaries for useSearchParams in profile/preferences/results pages. 14 matching engine tests + 4 search API tests | tests:PASS

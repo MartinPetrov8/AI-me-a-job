@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, FormEvent } from 'react';
+import { useState, FormEvent, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { WORK_MODES, EMPLOYMENT_TYPES } from '@/lib/criteria';
 
-export default function PreferencesPage() {
+function PreferencesForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const userId = searchParams.get('user_id');
@@ -237,5 +237,13 @@ export default function PreferencesPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function PreferencesPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-gray-50 p-4 flex justify-center items-center">Loading...</div>}>
+      <PreferencesForm />
+    </Suspense>
   );
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, FormEvent } from 'react';
+import { useState, useEffect, FormEvent, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import TagInput from '@/components/tag-input';
 import {
@@ -25,7 +25,7 @@ interface ProfileData {
   keySkills: string[] | null;
 }
 
-export default function ProfilePage() {
+function ProfileForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const userId = searchParams.get('user_id');
@@ -382,5 +382,17 @@ export default function ProfilePage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function ProfilePage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 p-4 flex justify-center items-center">
+        <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    }>
+      <ProfileForm />
+    </Suspense>
   );
 }
