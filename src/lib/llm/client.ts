@@ -16,7 +16,8 @@ import Anthropic from '@anthropic-ai/sdk';
 export const LLM_PROVIDER = process.env.LLM_PROVIDER ?? 'openrouter';
 
 // Default: Qwen 2.5 72B via OpenRouter — cheap ($0.15/1M tokens), fast, excellent for extraction
-export const LLM_MODEL = process.env.LLM_MODEL ?? 'openrouter/qwen/qwen-2.5-72b-instruct';
+// NOTE: OpenRouter API expects bare model ID (no "openrouter/" prefix)
+export const LLM_MODEL = process.env.LLM_MODEL ?? 'qwen/qwen-2.5-72b-instruct';
 
 let _anthropicClient: Anthropic | null = null;
 
