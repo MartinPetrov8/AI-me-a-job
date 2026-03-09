@@ -1,4 +1,4 @@
-# Repo Map — generated 2026-03-09T08:57:23Z
+# Repo Map — generated 2026-03-09T08:59:38Z
 # Architecture snapshot: class/function signatures, routes, exports
 # Use this to find the right file/function without reading full source.
 
@@ -143,16 +143,23 @@ node_modules/flatted/golang/pkg/flatted/flatted.go:
   .git
   .gitignore
   .next
+  .next/BUILD_ID
+  .next/app-path-routes-manifest.json
   .next/build
+  .next/build-manifest.json
   .next/cache
   .next/diagnostics
+  .next/export
+  .next/export-detail.json
+  .next/fallback-build-manifest.json
   .next/next-minimal-server.js.nft.json
   .next/next-server.js.nft.json
   .next/package.json
+  .next/required-server-files.js
+  .next/required-server-files.json
+  .next/routes-manifest.json
   .next/server
   .next/static
-  .next/trace
-  .next/trace-build
   .next/turbopack
   .next/types
   README.md

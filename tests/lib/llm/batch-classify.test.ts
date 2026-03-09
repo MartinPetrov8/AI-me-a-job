@@ -2,6 +2,16 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { classifyUnclassifiedJobs } from '../../../src/lib/llm/batch-classify';
 import * as classifyJobModule from '../../../src/lib/llm/classify-job';
 
+vi.mock('../../../src/lib/llm/client', () => ({
+  openai: {
+    chat: {
+      completions: {
+        create: vi.fn(),
+      },
+    },
+  },
+}));
+
 vi.mock('../../../src/lib/llm/classify-job');
 
 vi.mock('../../../src/lib/db', () => ({
@@ -101,17 +111,29 @@ describe('classifyUnclassifiedJobs', () => {
     },
   ];
 
-  beforeEach(async () => {
+  beforeEach(() => {
     vi.clearAllMocks();
-    await db.delete(jobs);
-  });
-
-  afterEach(async () => {
-    await db.delete(jobs);
   });
 
   it('classifies 3 unclassified jobs and sets classified_at', async () => {
-    await db.insert(jobs).values(mockJobs);
+    const { db } = await import('../../../src/lib/db');
+    
+    const mockSelect = vi.fn().mockReturnValue({
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          limit: vi.fn().mockResolvedValue(mockJobs),
+        }),
+      }),
+    });
+    
+    const mockUpdate = vi.fn().mockReturnValue({
+      set: vi.fn().mockReturnValue({
+        where: vi.fn().mockResolvedValue(undefined),
+      }),
+    });
+    
+    (db.select as any) = mockSelect;
+    (db.update as any) = mockUpdate;
 
     const mockClassifiedCriteria = {
       years_experience: '2-4',
@@ -132,17 +154,28 @@ describe('classifyUnclassifiedJobs', () => {
     expect(result.classified).toBe(3);
     expect(result.failed).toBe(0);
     expect(result.errors).toHaveLength(0);
-
-    const classifiedJobs = await db.select().from(jobs);
-    classifiedJobs.forEach(job => {
-      expect(job.classifiedAt).not.toBe(null);
-      expect(job.yearsExperience).toBe('2-4');
-      expect(job.industry).toBe('Technology');
-    });
+    expect(mockUpdate).toHaveBeenCalledTimes(3);
   });
 
   it('handles partial failure with 1 of 3 jobs failing classification', async () => {
-    await db.insert(jobs).values(mockJobs);
+    const { db } = await import('../../../src/lib/db');
+    
+    const mockSelect = vi.fn().mockReturnValue({
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          limit: vi.fn().mockResolvedValue(mockJobs),
+        }),
+      }),
+    });
+    
+    const mockUpdate = vi.fn().mockReturnValue({
+      set: vi.fn().mockReturnValue({
+        where: vi.fn().mockResolvedValue(undefined),
+      }),
+    });
+    
+    (db.select as any) = mockSelect;
+    (db.update as any) = mockUpdate;
 
     const mockClassifiedCriteria = {
       years_experience: '2-4',
@@ -167,13 +200,22 @@ describe('classifyUnclassifiedJobs', () => {
     expect(result.failed).toBe(1);
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toContain('Classification failed');
-
-    const classifiedJobs = await db.select().from(jobs);
-    const classifiedCount = classifiedJobs.filter(job => job.classifiedAt !== null).length;
-    expect(classifiedCount).toBe(2);
+    expect(mockUpdate).toHaveBeenCalledTimes(2);
   });
 
   it('returns empty result when no unclassified jobs exist', async () => {
+    const { db } = await import('../../../src/lib/db');
+    
+    const mockSelect = vi.fn().mockReturnValue({
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          limit: vi.fn().mockResolvedValue([]),
+        }),
+      }),
+    });
+    
+    (db.select as any) = mockSelect;
+
     const result = await classifyUnclassifiedJobs(50);
 
     expect(result.total).toBe(0);

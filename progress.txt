@@ -26,3 +26,7 @@ Started: 2026-03-08T20:41:42Z
 ---
 
 [S-01][done] Profile review/edit page, preferences page, TagInput component, and preferences API route with full form validation, tag management (max limit, duplicate prevention), and comprehensive test coverage | tests:PASS
+
+---
+
+[S-01][done] Batch LLM job classification: classify-job.ts with GPT-4o-mini, batch-classify.ts for bulk processing, classify-jobs.ts CLI script, JOB_CLASSIFICATION_SYSTEM_PROMPT with all bounded categories, validation against criteria constants, timeout/retry logic, and comprehensive test coverage | tests:PASS
