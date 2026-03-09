@@ -41,6 +41,9 @@ export async function POST(request: NextRequest) {
 
     const userId = user[0].id;
 
+    // Invalidate token — single use only (ISSUE-2 fix)
+    await db.update(users).set({ restoreToken: null, updatedAt: new Date() }).where(eq(users.id, userId));
+
     // Get the profile
     const profile = await db
       .select()

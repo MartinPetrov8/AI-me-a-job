@@ -11,7 +11,8 @@ const saveSchema = z.object({
 });
 
 function generateRestoreToken(): string {
-  return crypto.randomBytes(9).toString('base64url').slice(0, 12);
+  // 24 bytes = 192 bits entropy, 32-char base64url token
+  return crypto.randomBytes(24).toString('base64url');
 }
 
 export async function POST(request: NextRequest) {

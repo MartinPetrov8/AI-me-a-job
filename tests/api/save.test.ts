@@ -60,8 +60,9 @@ describe('POST /api/save', () => {
 
     expect(res.status).toBe(200);
     expect(data.data.saved).toBe(true);
-    expect(data.data.restore_token).toHaveLength(12);
-    expect(data.data.restore_token).toMatch(/^[A-Za-z0-9_-]{12}$/);
+    // Token is now 32 chars (192-bit entropy — ISSUE-3 fix)
+    expect(data.data.restore_token.length).toBeGreaterThanOrEqual(32);
+    expect(data.data.restore_token).toMatch(/^[A-Za-z0-9_-]+$/);
   });
 
   it('returns 400 for invalid email format', async () => {

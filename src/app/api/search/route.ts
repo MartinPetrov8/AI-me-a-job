@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { findMatches } from '@/lib/matching/engine';
+import { verifyProfileOwnership } from '@/lib/auth';
 
 export async function POST(request: NextRequest) {
   try {
@@ -11,6 +12,15 @@ export async function POST(request: NextRequest) {
         { error: 'profile_id is required and must be a string' },
         { status: 400 }
       );
+    }
+
+    // Verify ownership — prevent IDOR (ISSUE-1 fix)
+    const auth = await verifyProfileOwnership(
+      request.headers.get('authorization'),
+      profile_id
+    );
+    if (!auth.ok) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
     }
 
     const result = await findMatches(profile_id);
@@ -28,8 +38,8 @@ export async function POST(request: NextRequest) {
         searched_at: searchedAt,
       },
     });
-  } catch (error: any) {
-    if (error.message === 'Profile not found') {
+  } catch (error: unknown) {
+    if (error instanceof Error && error.message === 'Profile not found') {
       return NextResponse.json(
         { error: 'Profile not found' },
         { status: 404 }

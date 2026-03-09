@@ -2,6 +2,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { POST } from '../../src/app/api/search/route';
 import { findMatches } from '../../src/lib/matching/engine';
 
+// Mock auth — bypass ownership check in unit tests (ISSUE-1 fix applied)
+vi.mock('../../src/lib/auth', () => ({
+  verifyProfileOwnership: vi.fn().mockResolvedValue({ ok: true, userId: 'test-user-id' }),
+}));
+
 // Mock the matching engine
 vi.mock('../../src/lib/matching/engine', () => ({
   findMatches: vi.fn(),

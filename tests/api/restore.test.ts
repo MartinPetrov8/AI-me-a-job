@@ -7,6 +7,12 @@ vi.mock('@/lib/db', () => ({
     from: vi.fn().mockReturnThis(),
     where: vi.fn().mockReturnThis(),
     limit: vi.fn().mockReturnThis(),
+    // Token invalidation (ISSUE-2 fix)
+    update: vi.fn().mockReturnValue({
+      set: vi.fn().mockReturnValue({
+        where: vi.fn().mockResolvedValue([]),
+      }),
+    }),
   },
 }));
 

@@ -4,6 +4,7 @@ import { profiles } from '@/lib/db/schema';
 import { preferencesInputSchema } from '@/lib/validation';
 import { eq } from 'drizzle-orm';
 import { ZodError } from 'zod';
+import { verifyProfileOwnership } from '@/lib/auth';
 
 export async function PUT(request: NextRequest) {
   try {
@@ -17,6 +18,15 @@ export async function PUT(request: NextRequest) {
         { error: 'Missing profileId' },
         { status: 400 }
       );
+    }
+
+    // Verify ownership — prevent IDOR (ISSUE-1 fix)
+    const auth = await verifyProfileOwnership(
+      request.headers.get('authorization'),
+      profileId
+    );
+    if (!auth.ok) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
     }
 
     // Validate preferences

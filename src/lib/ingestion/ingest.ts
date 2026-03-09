@@ -97,18 +97,16 @@ export async function ingestAllSources(): Promise<IngestionResult[]> {
   console.log('[ingest] Fetching Adzuna jobs...');
   const adzunaJobs = await fetchAllAdzunaJobs();
   const adzunaUpsert = await upsertJobs(adzunaJobs);
-  const adzunaDeleted = await cleanupOldJobs();
-  await truncateOldDescriptions();
 
   results.push({
     source: 'adzuna',
     fetched: adzunaJobs.length,
     new: adzunaUpsert.newCount,
     errors: adzunaUpsert.errorCount,
-    deleted: adzunaDeleted,
+    deleted: 0, // cleanup runs once at the end
   });
 
-  console.log(`[ingest] Adzuna: ${adzunaJobs.length} fetched, ${adzunaUpsert.newCount} upserted, ${adzunaUpsert.errorCount} errors, ${adzunaDeleted} deleted`);
+  console.log(`[ingest] Adzuna: ${adzunaJobs.length} fetched, ${adzunaUpsert.newCount} upserted, ${adzunaUpsert.errorCount} errors`);
 
   // Jooble
   console.log('[ingest] Fetching Jooble jobs...');
@@ -120,18 +118,27 @@ export async function ingestAllSources(): Promise<IngestionResult[]> {
   }
 
   const joobleUpsert = await upsertJobs(allJoobleJobs);
-  const joobleDeleted = await cleanupOldJobs();
-  await truncateOldDescriptions();
 
   results.push({
     source: 'jooble',
     fetched: allJoobleJobs.length,
     new: joobleUpsert.newCount,
     errors: joobleUpsert.errorCount,
-    deleted: joobleDeleted,
+    deleted: 0, // cleanup runs once at the end
   });
 
-  console.log(`[ingest] Jooble: ${allJoobleJobs.length} fetched, ${joobleUpsert.newCount} upserted, ${joobleUpsert.errorCount} errors, ${joobleDeleted} deleted`);
+  console.log(`[ingest] Jooble: ${allJoobleJobs.length} fetched, ${joobleUpsert.newCount} upserted, ${joobleUpsert.errorCount} errors`);
+
+  // Cleanup runs ONCE after all sources are ingested (ISSUE-4 fix — prevents race condition)
+  console.log('[ingest] Running post-ingestion cleanup...');
+  const deleted = await cleanupOldJobs();
+  const truncated = await truncateOldDescriptions();
+  console.log(`[ingest] Cleanup: ${deleted} jobs deleted (>30d), ${truncated} descriptions truncated (>7d)`);
+
+  // Attach cleanup totals to first result for reporting
+  if (results.length > 0) {
+    results[0].deleted = deleted;
+  }
 
   return results;
 }
