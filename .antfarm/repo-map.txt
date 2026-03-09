@@ -1,4 +1,4 @@
-# Repo Map — generated 2026-03-08T22:05:06Z
+# Repo Map — generated 2026-03-09T08:57:23Z
 # Architecture snapshot: class/function signatures, routes, exports
 # Use this to find the right file/function without reading full source.
 
@@ -7,8 +7,8 @@
 ## TypeScript/JavaScript
 
 .next/types/routes.d.ts:
-  21:export type ParamsOf<Route extends Routes> = ParamMap[Route]
-  28:export type { AppRoutes, PageRoutes, LayoutRoutes, RedirectRoutes, RewriteRoutes, ParamMap, AppRouteHandlerRoutes }
+  24:export type ParamsOf<Route extends Routes> = ParamMap[Route]
+  31:export type { AppRoutes, PageRoutes, LayoutRoutes, RedirectRoutes, RewriteRoutes, ParamMap, AppRouteHandlerRoutes }
 
 drizzle.config.ts:
   3:export default {
@@ -74,6 +74,29 @@ src/lib/db/schema.ts:
   70:export const searches = pgTable('searches', {
   78:export const searchResults = pgTable('search_results', {
 
+src/lib/ingestion/adzuna.ts:
+  24:export async function fetchAdzunaJobs(
+  76:export async function fetchAllAdzunaJobs(): Promise<RawJobPosting[]> {
+
+src/lib/ingestion/ingest.ts:
+  93:export async function ingestAllSources(): Promise<IngestionResult[]> {
+
+src/lib/ingestion/jooble.ts:
+  21:export async function fetchJoobleJobs(
+
+src/lib/ingestion/types.ts:
+  6:export interface RawJobPosting {
+  23:export interface IngestionResult {
+
+src/lib/llm/batch-classify.ts:
+  6:export interface BatchResult {
+  13:export async function classifyUnclassifiedJobs(batchSize: number = 50): Promise<BatchResult> {
+
+src/lib/llm/classify-job.ts:
+  18:export interface ClassifiedCriteria {
+  29:export class JobClassificationError extends Error {
+  49:export async function classifyJob(title: string, description: string): Promise<ClassifiedCriteria> {
+
 src/lib/llm/client.ts:
   3:export const openai = new OpenAI({
 
@@ -84,6 +107,7 @@ src/lib/llm/extract-cv.ts:
 
 src/lib/llm/prompts.ts:
   1:export const CV_EXTRACTION_SYSTEM_PROMPT = `You are a CV parsing assistant. Extract structured information from a CV text.
+  21:export const JOB_CLASSIFICATION_SYSTEM_PROMPT = `You are a job posting classification assistant. Extract the requirements and qualifications from a job posting.
 
 src/lib/validation.ts:
   13:export const profileInputSchema = z.object({
@@ -119,22 +143,12 @@ node_modules/flatted/golang/pkg/flatted/flatted.go:
   .git
   .gitignore
   .next
-  .next/BUILD_ID
-  .next/app-path-routes-manifest.json
   .next/build
-  .next/build-manifest.json
   .next/cache
   .next/diagnostics
-  .next/export-marker.json
-  .next/fallback-build-manifest.json
-  .next/images-manifest.json
   .next/next-minimal-server.js.nft.json
   .next/next-server.js.nft.json
   .next/package.json
-  .next/prerender-manifest.json
-  .next/required-server-files.js
-  .next/required-server-files.json
-  .next/routes-manifest.json
   .next/server
   .next/static
   .next/trace
@@ -169,6 +183,8 @@ node_modules/flatted/golang/pkg/flatted/flatted.go:
   postcss.config.js
   progress.txt
   scripts
+  scripts/classify-jobs.ts
+  scripts/ingest-jobs.ts
   scripts/seed.ts
   src
   src/app
