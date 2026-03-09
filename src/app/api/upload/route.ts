@@ -10,14 +10,9 @@ const ALLOWED_MIME_TYPES = [
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
 ];
 
-// Vercel route config: allow up to 15MB body (our app-level check is 10MB)
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};
-
+// App Router route config (Next.js 13+)
 export const maxDuration = 60;
+export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
   try {
