@@ -1,4 +1,4 @@
-# Repo Map — generated 2026-03-08T21:37:18Z
+# Repo Map — generated 2026-03-08T22:05:06Z
 # Architecture snapshot: class/function signatures, routes, exports
 # Use this to find the right file/function without reading full source.
 
@@ -12,6 +12,9 @@
 
 drizzle.config.ts:
   3:export default {
+
+src/app/api/preferences/route.ts:
+  8:export async function PUT(request: NextRequest) {
 
 src/app/api/profile/route.ts:
   15:export async function GET(request: NextRequest) {
@@ -27,8 +30,17 @@ src/app/layout.tsx:
 src/app/page.tsx:
   1:export default function Home() {
 
+src/app/preferences/page.tsx:
+  7:export default function PreferencesPage() {
+
+src/app/profile/page.tsx:
+  28:export default function ProfilePage() {
+
 src/app/upload/page.tsx:
   6:export default function UploadPage() {
+
+src/components/tag-input.tsx:
+  12:export default function TagInput({ value, onChange, max, placeholder }: TagInputProps) {
 
 src/lib/criteria.ts:
   1:export const YEARS_EXPERIENCE = ['0-1', '2-4', '5-9', '10-15', '15+'] as const;
@@ -160,10 +172,12 @@ node_modules/flatted/golang/pkg/flatted/flatted.go:
   scripts/seed.ts
   src
   src/app
+  src/components
   src/lib
   tailwind.config.ts
   tests
   tests/api
+  tests/components
   tests/fixtures
   tests/lib
   tsconfig.json
