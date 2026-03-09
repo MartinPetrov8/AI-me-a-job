@@ -8,11 +8,18 @@ if (!connectionString) {
   throw new Error('DATABASE_URL environment variable is not set');
 }
 
-// max: 1 required for serverless (Vercel) — prevents Supabase connection exhaustion (ISSUE-7 fix)
-// Each serverless function invocation gets exactly one connection, released on completion.
-const client = postgres(connectionString, {
+// Supabase pooler requires ?pgbouncer=true for serverless (transaction mode)
+// Without it, prepared statements fail and connections hang
+const url = connectionString.includes('pgbouncer') 
+  ? connectionString 
+  : `${connectionString}${connectionString.includes('?') ? '&' : '?'}pgbouncer=true`;
+
+// max: 1 required for serverless — prevents connection exhaustion
+// prepare: false required for pgbouncer transaction mode
+const client = postgres(url, {
   max: 1,
   idle_timeout: 20,
   connect_timeout: 10,
+  prepare: false,
 });
 export const db = drizzle(client, { schema });
