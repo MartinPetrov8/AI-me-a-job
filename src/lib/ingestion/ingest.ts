@@ -1,6 +1,6 @@
 import { db } from '../db';
 import { jobs } from '../db/schema';
-import { and, lt, ne } from 'drizzle-orm';
+import { and, lt, ne, or, isNull } from 'drizzle-orm';
 import { fetchAllAdzunaJobs } from './adzuna';
 import { fetchJoobleJobs } from './jooble';
 import { RawJobPosting, IngestionResult } from './types';
@@ -66,9 +66,15 @@ async function upsertJobs(postings: RawJobPosting[]): Promise<{ newCount: number
 
 async function cleanupOldJobs(): Promise<number> {
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+  // Use ingestedAt as fallback when postedAt is null — ensures null-postedAt jobs still get cleaned (ISSUE-F fix)
   const deleted = await db
     .delete(jobs)
-    .where(lt(jobs.postedAt, thirtyDaysAgo))
+    .where(
+      or(
+        lt(jobs.postedAt, thirtyDaysAgo),
+        and(isNull(jobs.postedAt), lt(jobs.ingestedAt, thirtyDaysAgo))
+      )
+    )
     .returning({ id: jobs.id });
 
   return deleted.length;
@@ -81,7 +87,10 @@ async function truncateOldDescriptions(): Promise<number> {
     .set({ descriptionRaw: '' })
     .where(
       and(
-        lt(jobs.postedAt, sevenDaysAgo),
+        or(
+          lt(jobs.postedAt, sevenDaysAgo),
+          and(isNull(jobs.postedAt), lt(jobs.ingestedAt, sevenDaysAgo))
+        ),
         ne(jobs.descriptionRaw, '')
       )
     )

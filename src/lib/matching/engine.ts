@@ -79,7 +79,8 @@ function matchLanguages(profileLanguages: string[], jobLanguages: string[] | nul
 }
 
 function matchKeySkills(profileSkills: string[], jobSkills: string[] | null): boolean {
-  if (jobSkills === null) return true;
+  // null OR empty = benefit of doubt (spec: "If job.key_skills IS NULL then score 1")
+  if (jobSkills === null || jobSkills.length === 0) return true;
   const profileSet = new Set(profileSkills.map(s => s.toLowerCase()));
   const overlapCount = jobSkills.filter(skill => profileSet.has(skill.toLowerCase())).length;
   return overlapCount >= 2;

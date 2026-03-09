@@ -3,6 +3,7 @@ import { findMatches } from '@/lib/matching/engine';
 import { db } from '@/lib/db/index';
 import { profiles } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
+import { verifyProfileOwnership } from '@/lib/auth';
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,6 +15,12 @@ export async function POST(request: NextRequest) {
         { error: 'profile_id is required and must be a string' },
         { status: 400 }
       );
+    }
+
+    // Verify ownership — prevent IDOR (same fix as /api/search)
+    const auth = await verifyProfileOwnership(request.headers.get('authorization'), profile_id);
+    if (!auth.ok) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
     }
 
     // Get profile to check last_search_at
