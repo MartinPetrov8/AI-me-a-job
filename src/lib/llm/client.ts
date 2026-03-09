@@ -1,21 +1,22 @@
 /**
  * LLM client factory — provider-swappable.
  *
- * MVP:  Anthropic (claude-haiku-3-5) — no OpenAI key needed
+ * MVP:  OpenRouter (Qwen 2.5 72B) — cheap, fast, open-source
+ * Alt:  Anthropic (claude-haiku-4-5) when using Anthropic key
  * Next: Ollama/Qwen3 when Mac Studio arrives
  *
- * Provider is selected via LLM_PROVIDER env var (default: "anthropic").
- * Model is selected via LLM_MODEL env var (default: "claude-haiku-3-5-20241022").
+ * Provider is selected via LLM_PROVIDER env var (default: "openrouter").
+ * Model is selected via LLM_MODEL env var (default: "openrouter/qwen/qwen-2.5-72b-instruct").
  *
  * This module MUST only be imported server-side.
  */
 
 import Anthropic from '@anthropic-ai/sdk';
 
-export const LLM_PROVIDER = process.env.LLM_PROVIDER ?? 'anthropic';
+export const LLM_PROVIDER = process.env.LLM_PROVIDER ?? 'openrouter';
 
-// Default: Haiku 4.5 — fast, cheap, good enough for structured extraction
-export const LLM_MODEL = process.env.LLM_MODEL ?? 'claude-haiku-4-5-20251001';
+// Default: Qwen 2.5 72B via OpenRouter — cheap ($0.15/1M tokens), fast, excellent for extraction
+export const LLM_MODEL = process.env.LLM_MODEL ?? 'openrouter/qwen/qwen-2.5-72b-instruct';
 
 let _anthropicClient: Anthropic | null = null;
 
@@ -41,6 +42,39 @@ export async function callLLM(
   userMessage: string,
   signal?: AbortSignal
 ): Promise<string> {
+  if (LLM_PROVIDER === 'openrouter') {
+    const apiKey = process.env.OPENROUTER_API_KEY;
+    if (!apiKey) {
+      throw new Error('OPENROUTER_API_KEY environment variable is required');
+    }
+
+    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: LLM_MODEL,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userMessage },
+        ],
+        max_tokens: 1024,
+        temperature: 0.1, // low for structured extraction
+      }),
+      signal,
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`OpenRouter API error: ${response.status} ${error}`);
+    }
+
+    const data = (await response.json()) as { choices: Array<{ message: { content: string } }> };
+    return data.choices[0]?.message?.content || '';
+  }
+
   if (LLM_PROVIDER === 'anthropic') {
     const client = getAnthropicClient();
     const response = await client.messages.create(
