@@ -146,7 +146,7 @@ describe('classifyUnclassifiedJobs', () => {
       key_skills: ['JavaScript'],
     };
 
-    vi.mocked(classifyJobModule.classifyJob).mockResolvedValue(mockClassifiedCriteria);
+    vi.mocked(classifyJobModule.classifyJob).mockResolvedValue(mockClassifiedCriteria as any);
 
     const result = await classifyUnclassifiedJobs(50);
 
@@ -189,9 +189,9 @@ describe('classifyUnclassifiedJobs', () => {
     };
 
     vi.mocked(classifyJobModule.classifyJob)
-      .mockResolvedValueOnce(mockClassifiedCriteria)
+      .mockResolvedValueOnce(mockClassifiedCriteria as any)
       .mockRejectedValueOnce(new Error('Classification failed'))
-      .mockResolvedValueOnce(mockClassifiedCriteria);
+      .mockResolvedValueOnce(mockClassifiedCriteria as any);
 
     const result = await classifyUnclassifiedJobs(50);
 

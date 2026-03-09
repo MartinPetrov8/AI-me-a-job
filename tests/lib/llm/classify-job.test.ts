@@ -1,16 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { classifyJob, JobClassificationError } from '../../../src/lib/llm/classify-job';
-import * as client from '../../../src/lib/llm/client';
+import { classifyJob } from '../../../src/lib/llm/classify-job';
 
 vi.mock('../../../src/lib/llm/client', () => ({
-  openai: {
-    chat: {
-      completions: {
-        create: vi.fn(),
-      },
-    },
-  },
+  callLLM: vi.fn(),
+  LLM_PROVIDER: 'anthropic',
+  LLM_MODEL: 'claude-haiku-3-5-20241022',
 }));
+
+import { callLLM } from '../../../src/lib/llm/client';
 
 describe('classifyJob', () => {
   beforeEach(() => {
@@ -18,26 +15,18 @@ describe('classifyJob', () => {
   });
 
   it('returns populated ClassifiedCriteria for job with clear qualifications', async () => {
-    const mockResponse = {
-      choices: [
-        {
-          message: {
-            content: JSON.stringify({
-              years_experience: '5-9',
-              education_level: 'Bachelors',
-              field_of_study: 'STEM',
-              sphere_of_expertise: 'Engineering',
-              seniority_level: 'Senior',
-              languages: ['English', 'German'],
-              industry: 'Technology',
-              key_skills: ['TypeScript', 'React', 'Node.js'],
-            }),
-          },
-        },
-      ],
+    const mockPayload = {
+      years_experience: '5-9',
+      education_level: 'Bachelors',
+      field_of_study: 'STEM',
+      sphere_of_expertise: 'Engineering',
+      seniority_level: 'Senior',
+      languages: ['English', 'German'],
+      industry: 'Technology',
+      key_skills: ['TypeScript', 'React', 'Node.js'],
     };
 
-    vi.mocked(client.openai.chat.completions.create).mockResolvedValue(mockResponse as any);
+    vi.mocked(callLLM).mockResolvedValue(JSON.stringify(mockPayload));
 
     const result = await classifyJob(
       'Senior Software Engineer',
@@ -55,36 +44,28 @@ describe('classifyJob', () => {
   });
 
   it('sets field to null when LLM returns category not in bounded list', async () => {
-    const mockResponse = {
-      choices: [
-        {
-          message: {
-            content: JSON.stringify({
-              years_experience: 'invalid-range',
-              education_level: 'PhD',
-              field_of_study: 'InvalidField',
-              sphere_of_expertise: 'Data Science',
-              seniority_level: 'Mid',
-              languages: ['English'],
-              industry: 'InvalidIndustry',
-              key_skills: ['Python'],
-            }),
-          },
-        },
-      ],
+    const mockPayload = {
+      years_experience: 'invalid-range',
+      education_level: 'PhD',
+      field_of_study: 'InvalidField',
+      sphere_of_expertise: 'Data Science',
+      seniority_level: 'Mid',
+      languages: ['English'],
+      industry: 'InvalidIndustry',
+      key_skills: ['Python'],
     };
 
-    vi.mocked(client.openai.chat.completions.create).mockResolvedValue(mockResponse as any);
+    vi.mocked(callLLM).mockResolvedValue(JSON.stringify(mockPayload));
 
     const result = await classifyJob('Data Scientist', 'Looking for a mid-level data scientist...');
 
-    expect(result.years_experience).toBe(null);
+    expect(result.years_experience).toBeNull();
     expect(result.education_level).toBe('PhD');
-    expect(result.field_of_study).toBe(null);
+    expect(result.field_of_study).toBeNull();
     expect(result.sphere_of_expertise).toBe('Data Science');
     expect(result.seniority_level).toBe('Mid');
     expect(result.languages).toEqual(['English']);
-    expect(result.industry).toBe(null);
+    expect(result.industry).toBeNull();
     expect(result.key_skills).toEqual(['Python']);
   });
 
@@ -92,17 +73,17 @@ describe('classifyJob', () => {
     const abortError = new Error('Request timed out');
     abortError.name = 'AbortError';
 
-    vi.mocked(client.openai.chat.completions.create).mockRejectedValue(abortError);
+    vi.mocked(callLLM).mockRejectedValue(abortError);
 
     const result = await classifyJob('Software Engineer', 'Job description...');
 
-    expect(result.years_experience).toBe(null);
-    expect(result.education_level).toBe(null);
-    expect(result.field_of_study).toBe(null);
-    expect(result.sphere_of_expertise).toBe(null);
-    expect(result.seniority_level).toBe(null);
-    expect(result.languages).toBe(null);
-    expect(result.industry).toBe(null);
-    expect(result.key_skills).toBe(null);
+    expect(result.years_experience).toBeNull();
+    expect(result.education_level).toBeNull();
+    expect(result.field_of_study).toBeNull();
+    expect(result.sphere_of_expertise).toBeNull();
+    expect(result.seniority_level).toBeNull();
+    expect(result.languages).toBeNull();
+    expect(result.industry).toBeNull();
+    expect(result.key_skills).toBeNull();
   });
 });

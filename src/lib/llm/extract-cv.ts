@@ -1,4 +1,4 @@
-import { openai } from './client';
+import { callLLM } from './client';
 import { CV_EXTRACTION_SYSTEM_PROMPT } from './prompts';
 import {
   YEARS_EXPERIENCE,
@@ -54,26 +54,17 @@ export async function extractCvCriteria(rawText: string): Promise<ExtractedCrite
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
-      const completion = await openai.chat.completions.create(
-        {
-          model: 'gpt-4o-mini',
-          messages: [
-            { role: 'system', content: CV_EXTRACTION_SYSTEM_PROMPT },
-            { role: 'user', content: rawText },
-          ],
-          response_format: { type: 'json_object' },
-        },
-        { signal: controller.signal }
+      const rawResponse = await callLLM(
+        CV_EXTRACTION_SYSTEM_PROMPT,
+        rawText,
+        controller.signal
       );
 
       clearTimeout(timeoutId);
 
-      const content = completion.choices[0]?.message?.content;
-      if (!content) {
-        throw new LLMExtractionError('No content in LLM response');
-      }
-
-      const parsed = JSON.parse(content);
+      // Strip markdown code fences if model wraps JSON
+      const jsonText = rawResponse.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/i, '').trim();
+      const parsed = JSON.parse(jsonText);
 
       const validated: ExtractedCriteria = {
         years_experience: validateValue(parsed.years_experience, YEARS_EXPERIENCE),
@@ -89,15 +80,15 @@ export async function extractCvCriteria(rawText: string): Promise<ExtractedCrite
       return validated;
     } catch (error) {
       lastError = error as Error;
-      
+
       if (error instanceof Error && error.name === 'AbortError') {
-        continue;
+        continue; // timeout — retry
       }
-      
+
       if (error instanceof SyntaxError) {
-        continue;
+        continue; // bad JSON — retry
       }
-      
+
       throw error;
     }
   }

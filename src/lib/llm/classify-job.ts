@@ -1,4 +1,4 @@
-import { openai } from './client';
+import { callLLM } from './client';
 import { JOB_CLASSIFICATION_SYSTEM_PROMPT } from './prompts';
 import {
   YEARS_EXPERIENCE,
@@ -16,13 +16,13 @@ import {
 } from '../criteria';
 
 export interface ClassifiedCriteria {
-  years_experience: string | null;
-  education_level: string | null;
-  field_of_study: string | null;
-  sphere_of_expertise: string | null;
-  seniority_level: string | null;
+  years_experience: YearsExperience | null;
+  education_level: EducationLevel | null;
+  field_of_study: FieldOfStudy | null;
+  sphere_of_expertise: SphereOfExpertise | null;
+  seniority_level: SeniorityLevel | null;
   languages: string[] | null;
-  industry: string | null;
+  industry: Industry | null;
   key_skills: string[] | null;
 }
 
@@ -39,9 +39,9 @@ const MAX_RETRIES = 2;
 function validateValue<T extends readonly string[]>(
   value: unknown,
   allowedValues: T
-): string | null {
+): T[number] | null {
   if (typeof value === 'string' && allowedValues.includes(value as T[number])) {
-    return value;
+    return value as T[number];
   }
   return null;
 }
@@ -56,26 +56,17 @@ export async function classifyJob(title: string, description: string): Promise<C
 
       const jobText = `Job Title: ${title}\n\n${description}`;
 
-      const completion = await openai.chat.completions.create(
-        {
-          model: 'gpt-4o-mini',
-          messages: [
-            { role: 'system', content: JOB_CLASSIFICATION_SYSTEM_PROMPT },
-            { role: 'user', content: jobText },
-          ],
-          response_format: { type: 'json_object' },
-        },
-        { signal: controller.signal }
+      const rawResponse = await callLLM(
+        JOB_CLASSIFICATION_SYSTEM_PROMPT,
+        jobText,
+        controller.signal
       );
 
       clearTimeout(timeoutId);
 
-      const content = completion.choices[0]?.message?.content;
-      if (!content) {
-        throw new JobClassificationError('No content in LLM response');
-      }
-
-      const parsed = JSON.parse(content);
+      // Strip markdown code fences if model wraps JSON
+      const jsonText = rawResponse.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/i, '').trim();
+      const parsed = JSON.parse(jsonText);
 
       const validated: ClassifiedCriteria = {
         years_experience: validateValue(parsed.years_experience, YEARS_EXPERIENCE),
@@ -91,19 +82,20 @@ export async function classifyJob(title: string, description: string): Promise<C
       return validated;
     } catch (error) {
       lastError = error as Error;
-      
+
       if (error instanceof Error && error.name === 'AbortError') {
         continue;
       }
-      
+
       if (error instanceof SyntaxError) {
         continue;
       }
-      
+
       throw error;
     }
   }
 
+  // Graceful degradation — return null fields so job is stored but unclassified
   return {
     years_experience: null,
     education_level: null,
