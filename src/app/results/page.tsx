@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 
 interface MatchedJob {
@@ -224,6 +224,70 @@ function ResultsContent() {
           })}
         </div>
       )}
+
+      {profileId && <SaveProfileCard profileId={profileId} />}
+    </div>
+  );
+}
+
+function SaveProfileCard({ profileId }: { profileId: string }) {
+  const [email, setEmail] = React.useState('');
+  const [status, setStatus] = React.useState<'idle' | 'loading' | 'success' | 'conflict' | 'error'>('idle');
+  const [restoreToken, setRestoreToken] = React.useState<string | null>(null);
+
+  async function handleSave(e: React.FormEvent) {
+    e.preventDefault();
+    setStatus('loading');
+    try {
+      const res = await fetch('/api/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ profile_id: profileId, email }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setRestoreToken(data.data.restore_token);
+        setStatus('success');
+      } else if (res.status === 409) {
+        setStatus('conflict');
+      } else {
+        setStatus('error');
+      }
+    } catch {
+      setStatus('error');
+    }
+  }
+
+  return (
+    <div className="mt-6 bg-white rounded-lg shadow-sm p-4 border border-gray-200">
+      <h2 className="font-semibold text-gray-900 mb-3">Save your profile for next time</h2>
+      {status === 'success' && restoreToken ? (
+        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+          <p className="text-green-800 font-medium mb-1">Profile saved!</p>
+          <p className="text-green-700 text-sm">Your restore code: <span className="font-mono font-bold">{restoreToken}</span></p>
+          <p className="text-green-600 text-xs mt-1">Save this to access your profile later</p>
+        </div>
+      ) : (
+        <form onSubmit={handleSave} className="flex gap-2">
+          <input
+            type="email"
+            value={email}
+            onChange={e => setEmail(e.target.value)}
+            required
+            placeholder="your@email.com"
+            className="flex-1 border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          <button
+            type="submit"
+            disabled={status === 'loading'}
+            className="px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 disabled:opacity-50"
+          >
+            {status === 'loading' ? 'Saving...' : 'Save'}
+          </button>
+        </form>
+      )}
+      {status === 'conflict' && <p className="text-red-600 text-sm mt-2">This email is already registered</p>}
+      {status === 'error' && <p className="text-red-600 text-sm mt-2">Something went wrong, please try again</p>}
     </div>
   );
 }
