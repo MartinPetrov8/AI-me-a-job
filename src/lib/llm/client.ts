@@ -14,8 +14,8 @@ import Anthropic from '@anthropic-ai/sdk';
 
 export const LLM_PROVIDER = process.env.LLM_PROVIDER ?? 'anthropic';
 
-// Default: Haiku 3.5 — fast, cheap, good enough for structured extraction
-export const LLM_MODEL = process.env.LLM_MODEL ?? 'claude-haiku-3-5-20241022';
+// Default: Haiku 4.5 — fast, cheap, good enough for structured extraction
+export const LLM_MODEL = process.env.LLM_MODEL ?? 'claude-haiku-4-5-20251001';
 
 let _anthropicClient: Anthropic | null = null;
 
