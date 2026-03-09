@@ -101,17 +101,16 @@ describe('POST /api/upload', () => {
   });
 
   it('should return 400 for file too large', async () => {
-    const formData = new FormData();
-    const largeContent = 'x'.repeat(11 * 1024 * 1024);
-    const file = new File([largeContent], 'large.pdf', { type: 'application/pdf' });
-    
-    Object.defineProperty(file, 'size', { value: 11 * 1024 * 1024 });
-    
-    formData.append('file', file);
+    const oversizeBytes = 11 * 1024 * 1024;
 
+    // Send Content-Length header so the pre-flight check fires before formData() is called
     const request = new NextRequest('http://localhost:3000/api/upload', {
       method: 'POST',
-      body: formData
+      headers: {
+        'content-type': 'multipart/form-data; boundary=----boundary',
+        'content-length': String(oversizeBytes),
+      },
+      body: '----boundary--', // minimal body — pre-flight check fires before parsing
     });
 
     const response = await POST(request);

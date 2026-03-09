@@ -4,14 +4,33 @@ import { extractCvCriteria, LLMExtractionError } from '@/lib/llm/extract-cv';
 import { db } from '@/lib/db';
 import { users, profiles } from '@/lib/db/schema';
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024;
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const ALLOWED_MIME_TYPES = [
   'application/pdf',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
 ];
 
+// Vercel route config: allow up to 15MB body (our app-level check is 10MB)
+export const config = {
+  api: {
+    bodyParser: false,
+  },
+};
+
+export const maxDuration = 60;
+
 export async function POST(request: NextRequest) {
   try {
+    // Pre-flight size check via Content-Length header before parsing body
+    // This catches oversized requests before formData() is called (ISSUE-5 fix)
+    const contentLength = request.headers.get('content-length');
+    if (contentLength && parseInt(contentLength, 10) > MAX_FILE_SIZE) {
+      return NextResponse.json(
+        { error: 'File too large. Maximum size is 10MB' },
+        { status: 400 }
+      );
+    }
+
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
 
