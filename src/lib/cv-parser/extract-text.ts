@@ -1,4 +1,4 @@
-import { PDFParse } from 'pdf-parse';
+import pdfParse from 'pdf-parse';
 import mammoth from 'mammoth';
 
 export class UnsupportedFileTypeError extends Error {
@@ -28,10 +28,8 @@ export async function extractText(buffer: Buffer, mimeType: string): Promise<str
   let text = '';
 
   if (mimeType === 'application/pdf') {
-    // PDFParse constructor takes LoadParameters (DocumentInitParameters), not raw Buffer
-    // Buffer must be passed as { data: Uint8Array }
-    const parser = new PDFParse({ data: new Uint8Array(buffer) });
-    const result = await parser.getText();
+    // pdf-parse v1.1.4 — takes a Buffer directly, returns { text }
+    const result = await pdfParse(buffer);
     text = result.text;
   } else if (mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
     const result = await mammoth.extractRawText({ buffer });
