@@ -125,6 +125,7 @@ function ProfileForm() {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          profile_id: profileId,
           userId,
           yearsExperience,
           educationLevel,
