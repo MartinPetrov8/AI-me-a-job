@@ -38,6 +38,7 @@ interface SearchResponse {
 function ResultsContent() {
   const searchParams = useSearchParams();
   const profileId = searchParams.get('profile_id');
+  const token = searchParams.get('token');
 
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<MatchedJob[]>([]);
@@ -61,7 +62,10 @@ function ResultsContent() {
       const endpoint = delta ? '/api/search/delta' : '/api/search';
       const response = await fetch(endpoint, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({ profile_id: profileId }),
       });
 
