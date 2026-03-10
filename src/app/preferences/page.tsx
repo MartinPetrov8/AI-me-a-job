@@ -9,6 +9,7 @@ function PreferencesForm() {
   const searchParams = useSearchParams();
   const userId = searchParams.get('user_id');
   const profileId = searchParams.get('profile_id');
+  const token = searchParams.get('token');
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -62,7 +63,10 @@ function PreferencesForm() {
 
       const response = await fetch('/api/preferences', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify(body),
       });
 
@@ -71,7 +75,7 @@ function PreferencesForm() {
         throw new Error(data.error || 'Failed to update preferences');
       }
 
-      router.push(`/results?user_id=${userId}&profile_id=${profileId}`);
+      router.push(`/results?user_id=${userId}&profile_id=${profileId}&token=${token}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save preferences');
       setSaving(false);
@@ -79,7 +83,7 @@ function PreferencesForm() {
   };
 
   const handleSkip = () => {
-    router.push(`/results?user_id=${userId}&profile_id=${profileId}`);
+    router.push(`/results?user_id=${userId}&profile_id=${profileId}&token=${token}`);
   };
 
   return (

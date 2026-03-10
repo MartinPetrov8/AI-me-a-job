@@ -30,6 +30,7 @@ function ProfileForm() {
   const searchParams = useSearchParams();
   const userId = searchParams.get('user_id');
   const profileId = searchParams.get('profile_id');
+  const token = searchParams.get('token');
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -145,7 +146,7 @@ function ProfileForm() {
 
       const data = await response.json();
       const updatedProfileId = data.data.id;
-      router.push(`/preferences?user_id=${userId}&profile_id=${updatedProfileId}`);
+      router.push(`/preferences?user_id=${userId}&profile_id=${updatedProfileId}&token=${token}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save profile');
       setSaving(false);

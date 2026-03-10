@@ -59,7 +59,7 @@ export default function UploadPage() {
         return;
       }
 
-      router.push(`/profile?user_id=${data.data.user_id}&profile_id=${data.data.profile_id}`);
+      router.push(`/profile?user_id=${data.data.user_id}&profile_id=${data.data.profile_id}&token=${data.data.restore_token}`);
     } catch (err) {
       setError('An error occurred during upload');
       setLoading(false);

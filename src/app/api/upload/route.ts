@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import crypto from 'crypto';
 import { extractText, UnsupportedFileTypeError, EmptyDocumentError } from '@/lib/cv-parser/extract-text';
 import { extractCvCriteria, LLMExtractionError } from '@/lib/llm/extract-cv';
 import { db } from '@/lib/db';
@@ -81,7 +82,9 @@ export async function POST(request: NextRequest) {
       throw error;
     }
 
-    const [user] = await db.insert(users).values({}).returning();
+    // Generate restore token at user creation — needed for auth on subsequent steps (preferences, etc.)
+    const restoreToken = crypto.randomBytes(24).toString('base64url');
+    const [user] = await db.insert(users).values({ restoreToken }).returning();
 
     const [profile] = await db.insert(profiles).values({
       userId: user.id,
@@ -101,6 +104,7 @@ export async function POST(request: NextRequest) {
       data: {
         user_id: user.id,
         profile_id: profile.id,
+        restore_token: restoreToken,
         extracted,
       }
     });
