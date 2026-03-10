@@ -166,8 +166,8 @@ function ProfileForm() {
 
   if (error && !profile) {
     return (
-      <div className="min-h-screen bg-gray-50 p-4">
-        <div className="max-w-2xl mx-auto">
+      <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
+        <div className="max-w-2xl mx-auto px-6 py-8">
           <div className="bg-red-50 border border-red-200 text-red-800 rounded-lg p-4">
             {error}
           </div>
@@ -184,10 +184,10 @@ function ProfileForm() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4">
-      <div className="max-w-2xl mx-auto">
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h1 className="text-2xl font-bold mb-6">Review Your Profile</h1>
+    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
+      <div className="max-w-2xl mx-auto px-6 py-8">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
+          <h1 className="text-2xl font-bold mb-8 text-gray-900">Review Your Profile</h1>
 
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-800 rounded-lg p-4 mb-6">
