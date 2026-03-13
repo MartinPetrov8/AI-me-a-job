@@ -33,6 +33,8 @@
     "@types/node": "^25.3.5",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
+    "clsx": "^2.1.1",
+    "framer-motion": "^12.36.0",
     "mammoth": "^1.11.0",
     "next": "^16.1.6",
     "pdf-parse": "^1.1.4",
