@@ -143,6 +143,14 @@ function ResultsContent() {
   const [meta, setMeta] = useState<SearchResponse['meta'] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // Story 2 — Filter state
+  const [filterRemote, setFilterRemote] = useState<boolean | null>(null);
+  const [filterMinScore, setFilterMinScore] = useState<number>(5);
+  const [filterEmploymentType, setFilterEmploymentType] = useState<string>('');
+
+  // Story 3 — Sort state
+  const [sortBy, setSortBy] = useState<'score' | 'date' | 'company'>('score');
+
   useEffect(() => { if (profileId) performSearch(false); }, [profileId]);
 
   const performSearch = async (delta: boolean) => {
@@ -190,12 +198,103 @@ function ResultsContent() {
       </nav>
 
       <div className="max-w-3xl mx-auto px-6 py-8">
-        <div className="flex items-baseline justify-between mb-6">
+        <div className="flex items-baseline justify-between mb-4">
           <h1 className="text-2xl font-bold text-gray-900">
             {loading ? 'Finding your matches…' : results.length > 0 ? `${results.length} Matches` : 'Job Matches'}
           </h1>
           {meta && <span className="text-sm text-gray-400">Min score {meta.threshold}/{meta.max_score}</span>}
         </div>
+
+        {/* Story 2 — Filter bar */}
+        {!loading && results.length > 0 && (() => {
+          const filteredResults = results
+            .filter(j => filterRemote === null || j.is_remote === filterRemote)
+            .filter(j => j.match_score >= filterMinScore)
+            .filter(j => filterEmploymentType === '' || j.employment_type === filterEmploymentType);
+
+          const employmentTypes = Array.from(new Set(results.map(j => j.employment_type).filter(Boolean))) as string[];
+          const hasFilters = filterRemote !== null || filterMinScore > 5 || filterEmploymentType !== '';
+
+          // Story 3 — Sort
+          const sortedFilteredResults = [...filteredResults].sort((a, b) => {
+            if (sortBy === 'score') return b.match_score - a.match_score;
+            if (sortBy === 'date') return (b.posted_at ? new Date(b.posted_at).getTime() : 0) - (a.posted_at ? new Date(a.posted_at).getTime() : 0);
+            if (sortBy === 'company') return (a.company || '').localeCompare(b.company || '');
+            return 0;
+          });
+
+          return (
+            <>
+              {/* Filter pills */}
+              <div className="flex flex-wrap items-center gap-2 mb-4">
+                {/* Remote toggle */}
+                <button
+                  onClick={() => setFilterRemote(filterRemote === true ? null : true)}
+                  className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${filterRemote === true ? 'bg-indigo-600 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:border-indigo-300'}`}
+                >
+                  🌍 Remote only
+                </button>
+
+                {/* Score pills */}
+                {[6, 7, 8].map(s => (
+                  <button key={s}
+                    onClick={() => setFilterMinScore(filterMinScore === s ? 5 : s)}
+                    className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${filterMinScore === s ? 'bg-indigo-600 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:border-indigo-300'}`}
+                  >
+                    {s}+ score
+                  </button>
+                ))}
+
+                {/* Employment type pills */}
+                {employmentTypes.map(type => (
+                  <button key={type}
+                    onClick={() => setFilterEmploymentType(filterEmploymentType === type ? '' : type)}
+                    className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${filterEmploymentType === type ? 'bg-indigo-600 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:border-indigo-300'}`}
+                  >
+                    {type}
+                  </button>
+                ))}
+
+                {/* Clear */}
+                {hasFilters && (
+                  <button
+                    onClick={() => { setFilterRemote(null); setFilterMinScore(5); setFilterEmploymentType(''); }}
+                    className="px-3 py-1.5 rounded-full text-sm font-medium bg-red-50 text-red-600 border border-red-100 hover:bg-red-100 transition-colors"
+                  >
+                    ✕ Clear
+                  </button>
+                )}
+
+                <span className="ml-auto text-sm text-gray-400">{sortedFilteredResults.length} of {results.length}</span>
+              </div>
+
+              {/* Story 3 — Sort controls */}
+              <div className="flex gap-2 mb-6">
+                {([['score', '🎯 Best match'], ['date', '🕐 Newest'], ['company', '🏢 Company']] as const).map(([val, label]) => (
+                  <button key={val}
+                    onClick={() => setSortBy(val)}
+                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${sortBy === val ? 'bg-gray-900 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:border-gray-300'}`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              {sortedFilteredResults.length === 0 ? (
+                <div className="bg-white rounded-2xl border border-gray-100 p-10 text-center">
+                  <div className="text-4xl mb-3">🔎</div>
+                  <p className="text-gray-500 text-sm">No jobs match your current filters.</p>
+                  <button onClick={() => { setFilterRemote(null); setFilterMinScore(5); setFilterEmploymentType(''); }}
+                    className="mt-4 text-indigo-600 text-sm font-medium hover:underline">Clear filters</button>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {sortedFilteredResults.map((job, i) => <JobCard key={job.job_id} job={job} index={i} />)}
+                </div>
+              )}
+            </>
+          );
+        })()}
 
         {loading && <div className="space-y-4"><SkeletonCard /><SkeletonCard /><SkeletonCard /></div>}
 
@@ -213,12 +312,6 @@ function ResultsContent() {
             <h3 className="font-semibold text-gray-900 text-lg mb-2">No matches yet</h3>
             <p className="text-gray-500 text-sm mb-6 max-w-sm mx-auto">Try broadening your profile criteria, or check back as new jobs are added daily.</p>
             <Link href="/" className="inline-flex items-center gap-2 bg-indigo-600 text-white px-6 py-3 rounded-xl font-semibold hover:bg-indigo-700 transition-colors text-sm">Start a new search</Link>
-          </div>
-        )}
-
-        {!loading && results.length > 0 && (
-          <div className="space-y-4">
-            {results.map((job, i) => <JobCard key={job.job_id} job={job} index={i} />)}
           </div>
         )}
 
