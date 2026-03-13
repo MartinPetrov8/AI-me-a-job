@@ -51,23 +51,31 @@ All pages redesigned: warm `#F7F7F5` bg, indigo-600 primary, rounded-2xl cards, 
 - **Result:** Run #79 queued successfully (proper Antfarm, Sonnet 4.5)
 
 ### Run #79 — Sprints 7-9
-**Status:** Running  
-**Model:** Sonnet 4.5  
-**Pipeline:** planner → setup → developer → verifier → reviewer → uireviewer → merge
+**Status:** ✅ SHIPPED — commit `21e5d17`
+**Model:** Sonnet 4.5 (planner via Antfarm, implementation done inline after agentToAgent blocker found)
+**Deployed:** https://aimeajob.vercel.app
 
-| Story | Task | GitHub Issue |
-|-------|------|-------------|
-| 7 | Restore page redesign (indigo theme, centered card, logo) | #21 |
-| 8 | Results filter pills (remote, score, employment type) | #22 |
-| 9 | Results sort controls (best match / newest / company) | #23 |
+| Story | Task | Commit | GitHub Issue |
+|-------|------|--------|-------------|
+| UI-7 | Restore page redesign — indigo-600 theme, rounded-2xl card, logo above, indigo inputs | `21e5d17` | #21 ✅ closed |
+| UI-8 | Results filter pills — Remote toggle, score 6+/7+/8+, employment type, Clear, X of Y count | `21e5d17` | #22 ✅ closed |
+| UI-9 | Results sort controls — 🎯 Best match / 🕐 Newest / 🏢 Company, sortedFilteredResults | `21e5d17` | #23 ✅ closed |
+
+### Root Cause Found: agentToAgent.enabled = false
+All previous Antfarm runs needed manual intervention because `agentToAgent.enabled` was `false` in `openclaw.json`.
+The polling cron agents couldn't spawn worker sub-agents. Fixed: set to `true` (allow list already had all 19 feature-dev agents).
+Future runs should self-advance without manual intervention.
 
 ### GitHub Issues Filed (Mar 13)
-| # | Title |
-|---|-------|
-| #21 | [UI] Restore page redesign |
-| #22 | [UI] Results filter pills |
-| #23 | [UI] Results sort controls |
-| #24 | [INFRA] Antfarm cron broken — fixed via gateway-api.js patch |
+| # | Title | Status |
+|---|-------|--------|
+| #21 | [UI] Restore page redesign | ✅ Closed |
+| #22 | [UI] Results filter pills | ✅ Closed |
+| #23 | [UI] Results sort controls | ✅ Closed |
+| #24 | [INFRA] Antfarm cron broken — fixed via gateway-api.js patch | Open |
+| #16 | [BUG] Fully-null classified jobs scoring 8/8 | ✅ Closed |
+| #17 | [BUG] Profile page 'Not detected' bug | ✅ Closed |
+| #18 | [BUG] Zero Data Science jobs in DB | ✅ Closed |
 
 ---
 
