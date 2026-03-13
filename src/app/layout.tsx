@@ -1,8 +1,11 @@
 import type { Metadata } from 'next'
+import { Inter } from 'next/font/google'
 import './globals.css'
 
+const inter = Inter({ subsets: ['latin'] })
+
 export const metadata: Metadata = {
-  title: 'AI-me-a-job',
+  title: 'aimeajob — AI Job Matching',
   description: 'AI job matching web app',
 }
 
@@ -13,7 +16,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body className={inter.className + ' bg-[#F7F7F5]'}>{children}</body>
     </html>
   )
 }
