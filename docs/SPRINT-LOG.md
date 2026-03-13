@@ -91,3 +91,26 @@ Future runs should self-advance without manual intervention.
 | 6 | Matching engine (8-criteria scoring) | `d7d53e7` |
 | 7 | Landing page + save/restore | `ab6f9f9` |
 | Security | IDOR fixes, token hardening, pool exhaustion | `a6558fd`, `8d5cfd3` |
+
+---
+
+## 2026-03-14 (midnight) — Production Hotfixes
+
+### Tailwind v4 CSS fix — commit `d80a342`
+**Issue:** #26 — `@tailwind base/components/utilities` directives are no-ops in Tailwind v4. CSS bundle was 7KB (empty utilities). All UI redesign classes existed in JSX but were purged.
+**Fix:** Replaced with `@import "tailwindcss"` in `globals.css`. CSS bundle: 7KB → 27KB.
+
+### Node.js runtime fix — commit `88a25ca`  
+**Issue:** #25 — 5 of 6 API routes missing `export const runtime = 'nodejs'`. Vercel Edge runtime can't use `pg` (Postgres driver). Caused 500 Internal Server Error on `/api/profile`, `/api/preferences`, etc.
+**Fix:** Added `export const runtime = 'nodejs'` to all 6 routes. Supabase cold-start latency also contributes — first request after inactivity can timeout.
+
+### Deployment
+- Multiple Vercel deployments got stuck in QUEUED (free tier build concurrency limit)
+- Cancelled duplicates, final deploy: `88a25ca` → READY
+- All API routes verified: profile ✅, preferences ✅, search ✅, save ✅
+
+### GitHub Issues Filed
+| # | Title | Status |
+|---|-------|--------|
+| #25 | Supabase cold-start 500s — all routes need runtime='nodejs' | Open |
+| #26 | Tailwind v4 @tailwind directives ignored — 0 utilities compiled | Open |
