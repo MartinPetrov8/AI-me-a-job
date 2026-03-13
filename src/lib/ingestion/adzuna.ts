@@ -21,9 +21,28 @@ interface AdzunaResponse {
 
 const ADZUNA_COUNTRIES = ['gb', 'us', 'de', 'fr', 'nl', 'au'] as const;
 
+// Targeted search queries covering all spheres we match against
+const ADZUNA_QUERIES = [
+  'data scientist',
+  'data analyst',
+  'machine learning engineer',
+  'data engineer',
+  'analytics manager',
+  'software engineer',
+  'product manager',
+  'devops engineer',
+  'finance analyst',
+  'marketing manager',
+  'sales manager',
+  'hr manager',
+  'operations manager',
+  'consultant',
+] as const;
+
 export async function fetchAdzunaJobs(
   country: string,
-  page: number = 1
+  page: number = 1,
+  query: string = ''
 ): Promise<RawJobPosting[]> {
   const appId = process.env.ADZUNA_APP_ID;
   const appKey = process.env.ADZUNA_APP_KEY;
@@ -33,7 +52,8 @@ export async function fetchAdzunaJobs(
     return [];
   }
 
-  const url = `https://api.adzuna.com/v1/api/jobs/${encodeURIComponent(country)}/search/${page}?app_id=${encodeURIComponent(appId)}&app_key=${encodeURIComponent(appKey)}&results_per_page=50`;
+  const queryParam = query ? `&what=${encodeURIComponent(query)}` : '';
+  const url = `https://api.adzuna.com/v1/api/jobs/${encodeURIComponent(country)}/search/${page}?app_id=${encodeURIComponent(appId)}&app_key=${encodeURIComponent(appKey)}&results_per_page=50${queryParam}`;
 
   try {
     const controller = new AbortController();
@@ -71,15 +91,29 @@ export async function fetchAdzunaJobs(
   }
 }
 
-export { ADZUNA_COUNTRIES };
+export { ADZUNA_COUNTRIES, ADZUNA_QUERIES };
 
 export async function fetchAllAdzunaJobs(): Promise<RawJobPosting[]> {
   const all: RawJobPosting[] = [];
+  const seen = new Set<string>();
 
-  for (const country of ADZUNA_COUNTRIES) {
-    const jobs = await fetchAdzunaJobs(country, 1);
-    all.push(...jobs);
+  // Sample 3 countries × all queries (keeps API usage reasonable while covering all spheres)
+  const countries: typeof ADZUNA_COUNTRIES[number][] = ['gb', 'us', 'de'];
+
+  for (const country of countries) {
+    for (const query of ADZUNA_QUERIES) {
+      console.log(`[adzuna] Fetching "${query}" in ${country}...`);
+      const jobs = await fetchAdzunaJobs(country, 1, query);
+      // Deduplicate by external_id
+      for (const job of jobs) {
+        if (!seen.has(job.external_id)) {
+          seen.add(job.external_id);
+          all.push(job);
+        }
+      }
+    }
   }
 
+  console.log(`[adzuna] Total unique jobs fetched: ${all.length}`);
   return all;
 }
