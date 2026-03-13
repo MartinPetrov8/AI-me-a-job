@@ -67,14 +67,16 @@ function ProfileForm() {
         const p = data.data;
         setProfile(p);
 
-        setYearsExperience(p.yearsExperience || '');
-        setEducationLevel(p.educationLevel || '');
-        setFieldOfStudy(p.fieldOfStudy || '');
-        setSphereOfExpertise(p.sphereOfExpertise || '');
-        setSeniorityLevel(p.seniorityLevel || '');
-        setLanguages(p.languages || []);
-        setIndustry(p.industry || '');
-        setKeySkills(p.keySkills || []);
+        // API returns criteria nested under data.criteria (snake_case)
+        const c = p.criteria || p;
+        setYearsExperience(c.years_experience || c.yearsExperience || '');
+        setEducationLevel(c.education_level || c.educationLevel || '');
+        setFieldOfStudy(c.field_of_study || c.fieldOfStudy || '');
+        setSphereOfExpertise(c.sphere_of_expertise || c.sphereOfExpertise || '');
+        setSeniorityLevel(c.seniority_level || c.seniorityLevel || '');
+        setLanguages(c.languages || []);
+        setIndustry(c.industry || '');
+        setKeySkills(c.key_skills || c.keySkills || []);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load profile');
       } finally {
