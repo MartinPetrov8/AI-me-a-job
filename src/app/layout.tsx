@@ -1,12 +1,9 @@
 import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
 import './globals.css'
 
-const inter = Inter({ subsets: ['latin'] })
-
 export const metadata: Metadata = {
-  title: 'aimeajob — AI Job Matching',
-  description: 'AI job matching web app',
+  title: 'AI-me-a-job · AI Job Matching',
+  description: 'Upload your CV and get AI-matched jobs ranked by fit',
 }
 
 export default function RootLayout({
@@ -16,7 +13,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={inter.className + ' bg-[#F7F7F5]'}>{children}</body>
+      <body className="bg-[#F7F7F5] text-gray-900 antialiased">{children}</body>
     </html>
   )
 }
