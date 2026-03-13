@@ -5,6 +5,8 @@ import { db } from '@/lib/db';
 import { users, profiles } from '@/lib/db/schema';
 import { eq, ne, and } from 'drizzle-orm';
 
+export const runtime = 'nodejs';
+
 const saveSchema = z.object({
   profile_id: z.string().uuid(),
   email: z.string().email(),

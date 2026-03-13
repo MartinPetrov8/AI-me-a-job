@@ -5,6 +5,8 @@ import { preferencesInputSchema } from '@/lib/validation';
 import { eq } from 'drizzle-orm';
 import { ZodError } from 'zod';
 
+export const runtime = 'nodejs';
+
 export async function PUT(request: NextRequest) {
   try {
     const body = await request.json();

@@ -12,6 +12,8 @@ import {
 } from '@/lib/criteria';
 import { z } from 'zod';
 
+export const runtime = 'nodejs';
+
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const userId = searchParams.get('user_id');

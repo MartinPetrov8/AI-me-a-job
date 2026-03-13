@@ -4,6 +4,8 @@ import { db } from '@/lib/db';
 import { users, profiles } from '@/lib/db/schema';
 import { eq, and } from 'drizzle-orm';
 
+export const runtime = 'nodejs';
+
 const restoreSchema = z.object({
   email: z.string().email(),
   restore_token: z.string().min(1),
