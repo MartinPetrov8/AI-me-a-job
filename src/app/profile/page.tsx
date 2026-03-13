@@ -2,6 +2,7 @@
 
 import { useState, useEffect, FormEvent, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 import TagInput from '@/components/tag-input';
 import {
   YEARS_EXPERIENCE,
@@ -103,18 +104,8 @@ function ProfileForm() {
     return Object.keys(errors).length === 0;
   };
 
-  const isFormComplete = 
-    yearsExperience &&
-    educationLevel &&
-    fieldOfStudy &&
-    sphereOfExpertise &&
-    seniorityLevel &&
-    languages.length > 0 &&
-    industry &&
-    keySkills.length > 0;
-
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (e?: FormEvent) => {
+    if (e) e.preventDefault();
 
     if (!validateFields()) {
       return;
@@ -167,237 +158,148 @@ function ProfileForm() {
     );
   }
 
-  return (
+  if (fetching) return (
     <div className="min-h-screen bg-[#F7F7F5]">
+      <nav className="bg-white border-b border-gray-100"><div className="max-w-2xl mx-auto px-6 py-4"><span className="text-xl font-bold text-indigo-600">aimeajob</span></div></nav>
+      <div className="max-w-2xl mx-auto px-6 py-8 space-y-3">
+        <div className="h-7 w-40 bg-gray-200 animate-pulse rounded-md" />
+        <div className="h-4 w-56 bg-gray-200 animate-pulse rounded-md" />
+        <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4 mt-4">
+          {[1,2,3,4,5].map(i => <div key={i} className="h-12 bg-gray-100 animate-pulse rounded-xl" />)}
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="min-h-screen bg-[#F7F7F5] pb-24">
+      <nav className="bg-white border-b border-gray-100">
+        <div className="max-w-2xl mx-auto px-6 py-4">
+          <Link href="/" className="text-xl font-bold text-indigo-600">aimeajob</Link>
+        </div>
+      </nav>
+
       <div className="max-w-2xl mx-auto px-6 py-8">
-        {/* Progress */}
         <div className="flex items-center justify-center gap-2 mb-8">
-          <div className="w-2 h-2 rounded-full bg-gray-300" />
-          <div className="w-2 h-2 rounded-full bg-[#6366F1]" />
-          <div className="w-2 h-2 rounded-full bg-gray-300" />
-          <span className="ml-4 text-sm text-gray-500">Step 2 of 3</span>
-        </div>
-
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold text-gray-900 mb-1">Your AI-extracted profile</h1>
-          <p className="text-gray-600">Review and adjust — then find your matches</p>
-        </div>
-
-        {fetching && (
-          <div className="space-y-4">
-            {[...Array(6)].map((_, i) => (
-              <div key={i} className="h-10 bg-gray-200 rounded-xl animate-pulse" />
-            ))}
-          </div>
-        )}
-
-        {!fetching && (
-          <>
-            {error && (
-              <div className="bg-red-50 border border-red-100 text-red-700 rounded-2xl p-4 mb-6">
-                {error}
+          {['Upload', 'Profile', 'Preferences', 'Results'].map((step, i) => (
+            <div key={step} className="flex items-center gap-2">
+              <div className={`flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold ${i === 1 ? 'bg-indigo-600 text-white' : i < 1 ? 'bg-indigo-200 text-indigo-700' : 'bg-gray-200 text-gray-400'}`}>
+                {i < 1 ? '✓' : i + 1}
               </div>
-            )}
-
-            <form onSubmit={handleSubmit} className="space-y-6 pb-32">
-              {/* Years Experience */}
-              <div>
-                <label htmlFor="yearsExperience" className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">
-                  Years of Experience *
-                </label>
-                <select
-                  id="yearsExperience"
-                  value={yearsExperience}
-                  onChange={(e) => setYearsExperience(e.target.value)}
-                  className={`w-full border rounded-xl px-4 py-3 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#6366F1] focus:border-transparent transition-all ${yearsExperience ? 'border-gray-200 text-[#6366F1]' : 'border-gray-200'}`}
-                >
-                  <option value="">
-                    {!profile?.yearsExperience ? 'Not detected — please select' : 'Select...'}
-                  </option>
-                  {YEARS_EXPERIENCE.map((exp) => (
-                    <option key={exp} value={exp}>
-                      {exp}
-                    </option>
-                  ))}
-                </select>
-                {fieldErrors.yearsExperience && (
-                  <p className="text-red-600 text-sm mt-1">{fieldErrors.yearsExperience}</p>
-                )}
-              </div>
-
-              {/* Education Level */}
-              <div>
-                <label htmlFor="educationLevel" className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">
-                  Education Level *
-                </label>
-                <select
-                  id="educationLevel"
-                  value={educationLevel}
-                  onChange={(e) => setEducationLevel(e.target.value)}
-                  className={`w-full border rounded-xl px-4 py-3 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#6366F1] focus:border-transparent transition-all ${educationLevel ? 'border-gray-200 text-[#6366F1]' : 'border-gray-200'}`}
-                >
-                  <option value="">
-                    {!profile?.educationLevel ? 'Not detected — please select' : 'Select...'}
-                  </option>
-                  {EDUCATION_LEVELS.map((level) => (
-                    <option key={level} value={level}>
-                      {level}
-                    </option>
-                  ))}
-                </select>
-                {fieldErrors.educationLevel && (
-                  <p className="text-red-600 text-sm mt-1">{fieldErrors.educationLevel}</p>
-                )}
-              </div>
-
-              {/* Field of Study */}
-              <div>
-                <label htmlFor="fieldOfStudy" className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">
-                  Field of Study *
-                </label>
-                <select
-                  id="fieldOfStudy"
-                  value={fieldOfStudy}
-                  onChange={(e) => setFieldOfStudy(e.target.value)}
-                  className={`w-full border rounded-xl px-4 py-3 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#6366F1] focus:border-transparent transition-all ${fieldOfStudy ? 'border-gray-200 text-[#6366F1]' : 'border-gray-200'}`}
-                >
-                  <option value="">
-                    {!profile?.fieldOfStudy ? 'Not detected — please select' : 'Select...'}
-                  </option>
-                  {FIELDS_OF_STUDY.map((field) => (
-                    <option key={field} value={field}>
-                      {field}
-                    </option>
-                  ))}
-                </select>
-                {fieldErrors.fieldOfStudy && (
-                  <p className="text-red-600 text-sm mt-1">{fieldErrors.fieldOfStudy}</p>
-                )}
-              </div>
-
-              {/* Sphere of Expertise */}
-              <div>
-                <label htmlFor="sphereOfExpertise" className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">
-                  Sphere of Expertise *
-                </label>
-                <select
-                  id="sphereOfExpertise"
-                  value={sphereOfExpertise}
-                  onChange={(e) => setSphereOfExpertise(e.target.value)}
-                  className={`w-full border rounded-xl px-4 py-3 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#6366F1] focus:border-transparent transition-all ${sphereOfExpertise ? 'border-gray-200 text-[#6366F1]' : 'border-gray-200'}`}
-                >
-                  <option value="">
-                    {!profile?.sphereOfExpertise ? 'Not detected — please select' : 'Select...'}
-                  </option>
-                  {SPHERES_OF_EXPERTISE.map((sphere) => (
-                    <option key={sphere} value={sphere}>
-                      {sphere}
-                    </option>
-                  ))}
-                </select>
-                {fieldErrors.sphereOfExpertise && (
-                  <p className="text-red-600 text-sm mt-1">{fieldErrors.sphereOfExpertise}</p>
-                )}
-              </div>
-
-              {/* Seniority Level */}
-              <div>
-                <label htmlFor="seniorityLevel" className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">
-                  Seniority Level *
-                </label>
-                <select
-                  id="seniorityLevel"
-                  value={seniorityLevel}
-                  onChange={(e) => setSeniorityLevel(e.target.value)}
-                  className={`w-full border rounded-xl px-4 py-3 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#6366F1] focus:border-transparent transition-all ${seniorityLevel ? 'border-gray-200 text-[#6366F1]' : 'border-gray-200'}`}
-                >
-                  <option value="">
-                    {!profile?.seniorityLevel ? 'Not detected — please select' : 'Select...'}
-                  </option>
-                  {SENIORITY_LEVELS.map((level) => (
-                    <option key={level} value={level}>
-                      {level}
-                    </option>
-                  ))}
-                </select>
-                {fieldErrors.seniorityLevel && (
-                  <p className="text-red-600 text-sm mt-1">{fieldErrors.seniorityLevel}</p>
-                )}
-              </div>
-
-              {/* Languages */}
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">Languages *</label>
-                <TagInput
-                  value={languages}
-                  onChange={setLanguages}
-                  placeholder="Enter a language and press Add or Enter"
-                />
-                {fieldErrors.languages && (
-                  <p className="text-red-600 text-sm mt-1">{fieldErrors.languages}</p>
-                )}
-              </div>
-
-              {/* Industry */}
-              <div>
-                <label htmlFor="industry" className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">
-                  Industry *
-                </label>
-                <select
-                  id="industry"
-                  value={industry}
-                  onChange={(e) => setIndustry(e.target.value)}
-                  className={`w-full border rounded-xl px-4 py-3 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#6366F1] focus:border-transparent transition-all ${industry ? 'border-gray-200 text-[#6366F1]' : 'border-gray-200'}`}
-                >
-                  <option value="">
-                    {!profile?.industry ? 'Not detected — please select' : 'Select...'}
-                  </option>
-                  {INDUSTRIES.map((ind) => (
-                    <option key={ind} value={ind}>
-                      {ind}
-                    </option>
-                  ))}
-                </select>
-                {fieldErrors.industry && (
-                  <p className="text-red-600 text-sm mt-1">{fieldErrors.industry}</p>
-                )}
-              </div>
-
-              {/* Key Skills */}
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">Key Skills * (max 10)</label>
-                <TagInput
-                  value={keySkills}
-                  onChange={setKeySkills}
-                  max={10}
-                  placeholder="e.g. Python, Machine Learning, SQL"
-                />
-                {fieldErrors.keySkills && (
-                  <p className="text-red-600 text-sm mt-1">{fieldErrors.keySkills}</p>
-                )}
-              </div>
-            </form>
-
-            {/* Sticky bottom bar */}
-            <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-6 py-4">
-              <div className="max-w-2xl mx-auto flex items-center gap-4">
-                <button
-                  onClick={() => router.back()}
-                  className="text-gray-600 hover:text-gray-900 text-sm font-medium"
-                >
-                  ← Back
-                </button>
-                <button
-                  onClick={handleSubmit}
-                  disabled={!isFormComplete || saving}
-                  className="flex-1 bg-[#6366F1] text-white py-3 px-4 rounded-2xl font-semibold hover:bg-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                >
-                  {saving ? 'Saving...' : 'Continue to preferences →'}
-                </button>
-              </div>
+              <span className={`text-xs font-medium hidden sm:block ${i === 1 ? 'text-indigo-600' : 'text-gray-400'}`}>{step}</span>
+              {i < 3 && <div className="w-8 h-px bg-gray-200" />}
             </div>
-          </>
-        )}
+          ))}
+        </div>
+
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-gray-900">Your Profile</h1>
+          <p className="text-gray-500 text-sm mt-1">AI extracted this from your CV. Correct anything before searching.</p>
+        </div>
+
+        {error && <div className="mb-4 p-4 bg-red-50 rounded-xl border border-red-100"><p className="text-sm text-red-700">{error}</p></div>}
+
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-5">
+          <div>
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">AI Detected</p>
+            <div className="flex flex-wrap gap-2">
+              {[
+                { label: yearsExperience || 'Experience?', filled: !!yearsExperience },
+                { label: educationLevel || 'Education?', filled: !!educationLevel },
+                { label: sphereOfExpertise || 'Sphere?', filled: !!sphereOfExpertise },
+                { label: seniorityLevel || 'Seniority?', filled: !!seniorityLevel },
+                { label: industry || 'Industry?', filled: !!industry },
+              ].map(({ label, filled }) => (
+                <span key={label} className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${filled ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-100 text-gray-400'}`}>
+                  {filled ? '✓ ' : ''}{label}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          <div className="border-t border-gray-100 pt-4 space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Years of Experience *</label>
+              <select value={yearsExperience} onChange={e => setYearsExperience(e.target.value)}
+                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
+                <option value="">Select...</option>
+                {YEARS_EXPERIENCE.map((v) => <option key={v} value={v}>{v} years</option>)}
+              </select>
+              {fieldErrors.yearsExperience && <p className="text-red-500 text-xs mt-1">{fieldErrors.yearsExperience}</p>}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Education Level *</label>
+              <select value={educationLevel} onChange={e => setEducationLevel(e.target.value)}
+                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
+                <option value="">Select...</option>
+                {EDUCATION_LEVELS.map((v) => <option key={v} value={v}>{v}</option>)}
+              </select>
+              {fieldErrors.educationLevel && <p className="text-red-500 text-xs mt-1">{fieldErrors.educationLevel}</p>}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Field of Study *</label>
+              <select value={fieldOfStudy} onChange={e => setFieldOfStudy(e.target.value)}
+                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
+                <option value="">Select...</option>
+                {FIELDS_OF_STUDY.map((v) => <option key={v} value={v}>{v}</option>)}
+              </select>
+              {fieldErrors.fieldOfStudy && <p className="text-red-500 text-xs mt-1">{fieldErrors.fieldOfStudy}</p>}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Sphere of Expertise *</label>
+              <select value={sphereOfExpertise} onChange={e => setSphereOfExpertise(e.target.value)}
+                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
+                <option value="">Select...</option>
+                {SPHERES_OF_EXPERTISE.map((v) => <option key={v} value={v}>{v}</option>)}
+              </select>
+              {fieldErrors.sphereOfExpertise && <p className="text-red-500 text-xs mt-1">{fieldErrors.sphereOfExpertise}</p>}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Seniority Level *</label>
+              <select value={seniorityLevel} onChange={e => setSeniorityLevel(e.target.value)}
+                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
+                <option value="">Select...</option>
+                {SENIORITY_LEVELS.map((v) => <option key={v} value={v}>{v}</option>)}
+              </select>
+              {fieldErrors.seniorityLevel && <p className="text-red-500 text-xs mt-1">{fieldErrors.seniorityLevel}</p>}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Industry *</label>
+              <select value={industry} onChange={e => setIndustry(e.target.value)}
+                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
+                <option value="">Select...</option>
+                {INDUSTRIES.map((v) => <option key={v} value={v}>{v}</option>)}
+              </select>
+              {fieldErrors.industry && <p className="text-red-500 text-xs mt-1">{fieldErrors.industry}</p>}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Languages *</label>
+              <TagInput value={languages} onChange={setLanguages} placeholder="Type a language and press Enter" />
+              {fieldErrors.languages && <p className="text-red-500 text-xs mt-1">{fieldErrors.languages}</p>}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Key Skills *</label>
+              <TagInput value={keySkills} onChange={setKeySkills} placeholder="Type a skill and press Enter" />
+              {fieldErrors.keySkills && <p className="text-red-500 text-xs mt-1">{fieldErrors.keySkills}</p>}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-6 py-4 z-10">
+        <div className="max-w-2xl mx-auto">
+          <button type="button" onClick={() => handleSubmit()} disabled={saving}
+            className="w-full bg-indigo-600 text-white py-3.5 px-6 rounded-xl font-semibold hover:bg-indigo-700 disabled:bg-gray-200 disabled:text-gray-400 transition-colors">
+            {saving ? 'Saving…' : 'Looks good → Continue'}
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -406,8 +308,15 @@ function ProfileForm() {
 export default function ProfilePage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-[#F7F7F5] p-4 flex justify-center items-center">
-        <div className="w-12 h-12 border-4 border-[#6366F1] border-t-transparent rounded-full animate-spin"></div>
+      <div className="min-h-screen bg-[#F7F7F5]">
+        <nav className="bg-white border-b border-gray-100"><div className="max-w-2xl mx-auto px-6 py-4"><span className="text-xl font-bold text-indigo-600">aimeajob</span></div></nav>
+        <div className="max-w-2xl mx-auto px-6 py-8 space-y-3">
+          <div className="h-7 w-40 bg-gray-200 animate-pulse rounded-md" />
+          <div className="h-4 w-56 bg-gray-200 animate-pulse rounded-md" />
+          <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4 mt-4">
+            {[1,2,3,4,5].map(i => <div key={i} className="h-12 bg-gray-100 animate-pulse rounded-xl" />)}
+          </div>
+        </div>
       </div>
     }>
       <ProfileForm />
