@@ -50,37 +50,42 @@ interface JobRow {
 
 function matchYearsExperience(profileValue: string, jobValue: string | null): boolean {
   if (jobValue === null) return true;
+  if (!profileValue) return true; // unknown profile field = benefit of doubt
   const profileIndex = YEARS_EXPERIENCE.indexOf(profileValue as any);
   const jobIndex = YEARS_EXPERIENCE.indexOf(jobValue as any);
-  if (profileIndex === -1 || jobIndex === -1) return false;
+  if (profileIndex === -1 || jobIndex === -1) return true; // unrecognised = benefit of doubt
   return Math.abs(profileIndex - jobIndex) <= 1;
 }
 
 function matchEducationLevel(profileValue: string, jobValue: string | null): boolean {
   if (jobValue === null) return true;
+  if (!profileValue) return true; // unknown profile field = benefit of doubt
   const profileIndex = EDUCATION_LEVELS.indexOf(profileValue as any);
   const jobIndex = EDUCATION_LEVELS.indexOf(jobValue as any);
-  if (profileIndex === -1 || jobIndex === -1) return false;
+  if (profileIndex === -1 || jobIndex === -1) return true; // unrecognised = benefit of doubt
   return profileIndex >= jobIndex;
 }
 
 function matchSeniorityLevel(profileValue: string, jobValue: string | null): boolean {
   if (jobValue === null) return true;
+  if (!profileValue) return true; // unknown profile field = benefit of doubt
   const profileIndex = SENIORITY_LEVELS.indexOf(profileValue as any);
   const jobIndex = SENIORITY_LEVELS.indexOf(jobValue as any);
-  if (profileIndex === -1 || jobIndex === -1) return false;
+  if (profileIndex === -1 || jobIndex === -1) return true; // unrecognised = benefit of doubt
   return Math.abs(profileIndex - jobIndex) <= 1;
 }
 
-function matchLanguages(profileLanguages: string[], jobLanguages: string[] | null): boolean {
+function matchLanguages(profileLanguages: string[] | null, jobLanguages: string[] | null): boolean {
   if (jobLanguages === null || jobLanguages.length === 0) return true;
+  if (!profileLanguages || profileLanguages.length === 0) return true; // unknown = benefit of doubt
   const profileSet = new Set(profileLanguages.map(l => l.toLowerCase()));
   return jobLanguages.every(lang => profileSet.has(lang.toLowerCase()));
 }
 
-function matchKeySkills(profileSkills: string[], jobSkills: string[] | null): boolean {
+function matchKeySkills(profileSkills: string[] | null, jobSkills: string[] | null): boolean {
   // null OR empty = benefit of doubt (spec: "If job.key_skills IS NULL then score 1")
   if (jobSkills === null || jobSkills.length === 0) return true;
+  if (!profileSkills || profileSkills.length === 0) return true; // unknown profile = benefit of doubt
   const profileSet = new Set(profileSkills.map(s => s.toLowerCase()));
   const overlapCount = jobSkills.filter(skill => profileSet.has(skill.toLowerCase())).length;
   return overlapCount >= 2;
@@ -105,14 +110,14 @@ function calculateMatch(profile: any, job: JobRow): { score: number; matched: st
   }
 
   // c) field_of_study
-  if (job.field_of_study === null || profile.fieldOfStudy === job.field_of_study) {
+  if (job.field_of_study === null || !profile.fieldOfStudy || profile.fieldOfStudy === job.field_of_study) {
     matched.push('field_of_study');
   } else {
     unmatched.push('field_of_study');
   }
 
   // d) sphere_of_expertise
-  if (job.sphere_of_expertise === null || profile.sphereOfExpertise === job.sphere_of_expertise) {
+  if (job.sphere_of_expertise === null || !profile.sphereOfExpertise || profile.sphereOfExpertise === job.sphere_of_expertise) {
     matched.push('sphere_of_expertise');
   } else {
     unmatched.push('sphere_of_expertise');
@@ -133,7 +138,7 @@ function calculateMatch(profile: any, job: JobRow): { score: number; matched: st
   }
 
   // g) industry
-  if (job.industry === null || profile.industry === job.industry) {
+  if (job.industry === null || !profile.industry || profile.industry === job.industry) {
     matched.push('industry');
   } else {
     unmatched.push('industry');
