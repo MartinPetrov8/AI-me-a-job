@@ -2,6 +2,7 @@
 
 import { useState, FormEvent, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 import { WORK_MODES, EMPLOYMENT_TYPES } from '@/lib/criteria';
 
 function PreferencesForm() {
@@ -87,166 +88,108 @@ function PreferencesForm() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F7F7F5]">
-      <div className="max-w-2xl mx-auto px-6 py-8">
-        {/* Progress */}
+    <div className="min-h-screen bg-[#F7F7F5] pb-24">
+      <nav className="bg-white border-b border-gray-100">
+        <div className="max-w-lg mx-auto px-6 py-4">
+          <Link href="/" className="text-xl font-bold text-indigo-600">aimeajob</Link>
+        </div>
+      </nav>
+
+      <div className="max-w-lg mx-auto px-6 py-8">
         <div className="flex items-center justify-center gap-2 mb-8">
-          <div className="w-2 h-2 rounded-full bg-gray-300" />
-          <div className="w-2 h-2 rounded-full bg-gray-300" />
-          <div className="w-2 h-2 rounded-full bg-[#6366F1]" />
-          <span className="ml-4 text-sm text-gray-500">Step 3 of 3</span>
-        </div>
-
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold text-gray-900 mb-1">Set your preferences</h1>
-          <p className="text-gray-600">All fields are optional</p>
-        </div>
-
-        {error && (
-          <div className="bg-red-50 border border-red-100 text-red-700 rounded-2xl p-4 mb-6">
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-4 pb-8">
-          {/* Employment Type */}
-          <div className="bg-white rounded-2xl border border-gray-100 p-6">
-            <h2 className="text-base font-semibold text-gray-900 mb-4">What type of role?</h2>
-            <div className="flex flex-wrap gap-2">
-              {EMPLOYMENT_TYPES.map((type) => (
-                <button
-                  key={type}
-                  type="button"
-                  onClick={() => handleEmploymentTypeChange(type)}
-                  className={`px-4 py-2 rounded-xl border text-sm font-medium transition-all ${
-                    employmentTypes.includes(type)
-                      ? 'bg-[#6366F1] text-white border-[#6366F1]'
-                      : 'bg-white text-gray-700 border-gray-200 hover:border-[#6366F1]'
-                  }`}
-                >
-                  {type}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Work Mode */}
-          <div className="bg-white rounded-2xl border border-gray-100 p-6">
-            <h2 className="text-base font-semibold text-gray-900 mb-4">Work mode?</h2>
-            <div className="flex flex-wrap gap-2">
-              {WORK_MODES.map((mode) => (
-                <button
-                  key={mode}
-                  type="button"
-                  onClick={() => setWorkMode(workMode === mode ? '' : mode)}
-                  className={`px-4 py-2 rounded-xl border text-sm font-medium transition-all ${
-                    workMode === mode
-                      ? 'bg-[#6366F1] text-white border-[#6366F1]'
-                      : 'bg-white text-gray-700 border-gray-200 hover:border-[#6366F1]'
-                  }`}
-                >
-                  {mode}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Location */}
-          <div className="bg-white rounded-2xl border border-gray-100 p-6">
-            <h2 className="text-base font-semibold text-gray-900 mb-4">Preferred location</h2>
-            <input
-              type="text"
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
-              placeholder="e.g. London, UK or Remote"
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#6366F1] focus:border-transparent"
-            />
-          </div>
-
-          {/* Salary Range */}
-          <div className="bg-white rounded-2xl border border-gray-100 p-6">
-            <h2 className="text-base font-semibold text-gray-900 mb-4">Salary range (optional)</h2>
-            <div className="space-y-3">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1">Min</label>
-                  <input
-                    type="number"
-                    value={salaryMin}
-                    onChange={(e) => setSalaryMin(e.target.value)}
-                    placeholder="Minimum"
-                    className="w-full border border-gray-200 rounded-xl px-4 py-3 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#6366F1] focus:border-transparent"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1">Max</label>
-                  <input
-                    type="number"
-                    value={salaryMax}
-                    onChange={(e) => setSalaryMax(e.target.value)}
-                    placeholder="Maximum"
-                    className="w-full border border-gray-200 rounded-xl px-4 py-3 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#6366F1] focus:border-transparent"
-                  />
-                </div>
+          {['Upload', 'Profile', 'Preferences', 'Results'].map((step, i) => (
+            <div key={step} className="flex items-center gap-2">
+              <div className={`flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold ${i === 2 ? 'bg-indigo-600 text-white' : i < 2 ? 'bg-indigo-200 text-indigo-700' : 'bg-gray-200 text-gray-400'}`}>
+                {i < 2 ? '✓' : i + 1}
               </div>
-              <select
-                value={salaryCurrency}
-                onChange={(e) => setSalaryCurrency(e.target.value)}
-                className="w-full border border-gray-200 rounded-xl px-4 py-3 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#6366F1] focus:border-transparent"
-              >
-                <option value="EUR">EUR</option>
-                <option value="USD">USD</option>
-                <option value="GBP">GBP</option>
-                <option value="Other">Other</option>
-              </select>
+              <span className={`text-xs font-medium hidden sm:block ${i === 2 ? 'text-indigo-600' : 'text-gray-400'}`}>{step}</span>
+              {i < 3 && <div className="w-8 h-px bg-gray-200" />}
+            </div>
+          ))}
+        </div>
+
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-gray-900">Job Preferences</h1>
+          <p className="text-gray-500 text-sm mt-1">Optional — skip to see all matches.</p>
+        </div>
+
+        {error && <div className="mb-4 p-4 bg-red-50 rounded-xl border border-red-100"><p className="text-sm text-red-700">{error}</p></div>}
+
+        <form id="prefs-form" onSubmit={handleSubmit} className="space-y-4">
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-6">
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-3">Employment Type</label>
+              <div className="flex flex-wrap gap-2">
+                {EMPLOYMENT_TYPES.map(type => (
+                  <button key={type} type="button" onClick={() => handleEmploymentTypeChange(type)}
+                    className={`px-4 py-2 rounded-xl text-sm font-medium border-2 transition-all ${employmentTypes.includes(type) ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white border-gray-200 text-gray-600 hover:border-indigo-300'}`}>
+                    {type}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-3">Work Mode</label>
+              <div className="flex gap-2">
+                {WORK_MODES.map(mode => (
+                  <button key={mode} type="button" onClick={() => setWorkMode(mode === workMode ? '' : mode)}
+                    className={`flex-1 py-2.5 rounded-xl text-sm font-medium border-2 transition-all ${workMode === mode ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white border-gray-200 text-gray-600 hover:border-indigo-300'}`}>
+                    {mode}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Preferred Location</label>
+              <input type="text" value={location} onChange={e => setLocation(e.target.value)}
+                placeholder="e.g. London, Remote UK, Sofia"
+                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-3">Open to Relocation?</label>
+              <div className="flex gap-3">
+                {([{ label: 'Yes', val: true }, { label: 'No', val: false }] as const).map(({ label, val }) => (
+                  <button key={label} type="button" onClick={() => setRelocation(relocation === val ? null : val)}
+                    className={`px-6 py-2.5 rounded-xl text-sm font-medium border-2 transition-all ${relocation === val ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white border-gray-200 text-gray-600 hover:border-indigo-300'}`}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-3">Salary Range</label>
+              <div className="flex items-center gap-3">
+                <select value={salaryCurrency} onChange={e => setSalaryCurrency(e.target.value)}
+                  className="border border-gray-200 rounded-xl px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white w-24">
+                  {['EUR', 'GBP', 'USD'].map(c => <option key={c}>{c}</option>)}
+                </select>
+                <input type="number" value={salaryMin} onChange={e => setSalaryMin(e.target.value)} placeholder="Min" min="0"
+                  className="flex-1 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                <span className="text-gray-400">–</span>
+                <input type="number" value={salaryMax} onChange={e => setSalaryMax(e.target.value)} placeholder="Max" min="0"
+                  className="flex-1 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+              </div>
             </div>
           </div>
-
-          {/* Relocation */}
-          <div className="bg-white rounded-2xl border border-gray-100 p-6">
-            <h2 className="text-base font-semibold text-gray-900 mb-4">Open to relocation?</h2>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => setRelocation(relocation === true ? null : true)}
-                className={`flex-1 px-4 py-2 rounded-xl border text-sm font-medium transition-all ${
-                  relocation === true
-                    ? 'bg-[#6366F1] text-white border-[#6366F1]'
-                    : 'bg-white text-gray-700 border-gray-200 hover:border-[#6366F1]'
-                }`}
-              >
-                Yes
-              </button>
-              <button
-                type="button"
-                onClick={() => setRelocation(relocation === false ? null : false)}
-                className={`flex-1 px-4 py-2 rounded-xl border text-sm font-medium transition-all ${
-                  relocation === false
-                    ? 'bg-[#6366F1] text-white border-[#6366F1]'
-                    : 'bg-white text-gray-700 border-gray-200 hover:border-[#6366F1]'
-                }`}
-              >
-                No
-              </button>
-            </div>
-          </div>
-
-          <button
-            type="submit"
-            disabled={saving}
-            className="w-full bg-[#6366F1] text-white py-4 px-4 rounded-2xl font-semibold text-lg hover:bg-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            {saving ? 'Saving...' : 'Find my matches →'}
-          </button>
-
-          <button
-            type="button"
-            onClick={handleSkip}
-            className="w-full text-gray-500 text-sm py-2 hover:text-gray-700"
-          >
-            Skip and see all matches
-          </button>
         </form>
+      </div>
+
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-6 py-4 z-10">
+        <div className="max-w-lg mx-auto flex gap-3">
+          <button type="button" onClick={handleSkip}
+            className="px-5 py-3.5 border-2 border-gray-200 text-gray-600 rounded-xl text-sm font-semibold hover:border-gray-300 transition-colors">
+            Skip
+          </button>
+          <button type="submit" form="prefs-form" disabled={saving}
+            className="flex-1 bg-indigo-600 text-white py-3.5 px-6 rounded-xl font-semibold hover:bg-indigo-700 disabled:bg-gray-200 disabled:text-gray-400 transition-colors">
+            {saving ? 'Saving…' : 'Find My Jobs →'}
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -254,7 +197,15 @@ function PreferencesForm() {
 
 export default function PreferencesPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-[#F7F7F5] p-4 flex justify-center items-center">Loading...</div>}>
+    <Suspense fallback={
+      <div className="min-h-screen bg-[#F7F7F5]">
+        <nav className="bg-white border-b border-gray-100"><div className="max-w-lg mx-auto px-6 py-4"><span className="text-xl font-bold text-indigo-600">aimeajob</span></div></nav>
+        <div className="max-w-lg mx-auto px-6 py-8 space-y-3">
+          <div className="h-7 w-40 bg-gray-200 animate-pulse rounded-md" />
+          <div className="h-4 w-56 bg-gray-200 animate-pulse rounded-md" />
+        </div>
+      </div>
+    }>
       <PreferencesForm />
     </Suspense>
   );
