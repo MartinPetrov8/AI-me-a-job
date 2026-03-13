@@ -116,8 +116,8 @@ function calculateMatch(profile: any, job: JobRow): { score: number; matched: st
     unmatched.push('field_of_study');
   }
 
-  // d) sphere_of_expertise
-  if (job.sphere_of_expertise === null || !profile.sphereOfExpertise || profile.sphereOfExpertise === job.sphere_of_expertise) {
+  // d) sphere_of_expertise — only auto-pass null if profile also has no sphere
+  if (!profile.sphereOfExpertise || job.sphere_of_expertise === null || profile.sphereOfExpertise === job.sphere_of_expertise) {
     matched.push('sphere_of_expertise');
   } else {
     unmatched.push('sphere_of_expertise');
@@ -137,8 +137,8 @@ function calculateMatch(profile: any, job: JobRow): { score: number; matched: st
     unmatched.push('languages');
   }
 
-  // g) industry
-  if (job.industry === null || !profile.industry || profile.industry === job.industry) {
+  // g) industry — only auto-pass null if profile also has no industry
+  if (!profile.industry || job.industry === null || profile.industry === job.industry) {
     matched.push('industry');
   } else {
     unmatched.push('industry');
@@ -189,7 +189,13 @@ export async function findMatches(profileId: string, options?: { delta?: boolean
     jobsQuery = jobsQuery.where(gt(jobs.ingestedAt, profile.lastSearchAt)) as any;
   }
 
-  const allJobs = await jobsQuery;
+  const allJobs = (await jobsQuery).filter(job =>
+    // Only match jobs that have at least one classified field — exclude fully-null junk jobs
+    job.sphere_of_expertise !== null ||
+    job.key_skills !== null ||
+    job.industry !== null ||
+    job.seniority_level !== null
+  );
 
   // Calculate matches
   const scoredJobs = allJobs.map(job => {
