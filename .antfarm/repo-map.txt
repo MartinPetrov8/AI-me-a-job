@@ -1,4 +1,4 @@
-# Repo Map — generated 2026-03-09T12:26:30Z
+# Repo Map — generated 2026-03-14T16:54:35Z
 # Architecture snapshot: class/function signatures, routes, exports
 # Use this to find the right file/function without reading full source.
 
@@ -7,49 +7,78 @@
 ## TypeScript/JavaScript
 
 .next/types/routes.d.ts:
-  27:export type ParamsOf<Route extends Routes> = ParamMap[Route]
-  34:export type { AppRoutes, PageRoutes, LayoutRoutes, RedirectRoutes, RewriteRoutes, ParamMap, AppRouteHandlerRoutes }
+  30:export type ParamsOf<Route extends Routes> = ParamMap[Route]
+  37:export type { AppRoutes, PageRoutes, LayoutRoutes, RedirectRoutes, RewriteRoutes, ParamMap, AppRouteHandlerRoutes }
 
 drizzle.config.ts:
   3:export default {
 
 src/app/api/preferences/route.ts:
-  8:export async function PUT(request: NextRequest) {
+  8:export const runtime = 'nodejs';
+  10:export async function PUT(request: NextRequest) {
 
 src/app/api/profile/route.ts:
-  15:export async function GET(request: NextRequest) {
-  63:export async function PUT(request: NextRequest) {
+  15:export const runtime = 'nodejs';
+  17:export async function GET(request: NextRequest) {
+  65:export async function PUT(request: NextRequest) {
+
+src/app/api/restore/route.ts:
+  7:export const runtime = 'nodejs';
+  19:export async function POST(request: NextRequest) {
+
+src/app/api/save/route.ts:
+  8:export const runtime = 'nodejs';
+  20:export async function POST(request: NextRequest) {
 
 src/app/api/search/delta/route.ts:
-  7:export async function POST(request: NextRequest) {
+  7:export const runtime = 'nodejs';
+  9:export async function POST(request: NextRequest) {
 
 src/app/api/search/route.ts:
-  4:export async function POST(request: NextRequest) {
+  4:export const runtime = 'nodejs';
+  6:export async function POST(request: NextRequest) {
 
 src/app/api/upload/route.ts:
-  13:export async function POST(request: NextRequest) {
+  16:export const runtime = 'nodejs';
+  17:export const maxDuration = 60;
+  18:export const dynamic = 'force-dynamic';
+  20:export async function POST(request: NextRequest) {
 
 src/app/layout.tsx:
   4:export const metadata: Metadata = {
   9:export default function RootLayout({
 
 src/app/page.tsx:
-  1:export default function Home() {
+  3:export default function Home() {
 
 src/app/preferences/page.tsx:
-  243:export default function PreferencesPage() {
+  198:export default function PreferencesPage() {
 
 src/app/profile/page.tsx:
-  388:export default function ProfilePage() {
+  320:export default function ProfilePage() {
+
+src/app/restore/page.tsx:
+  7:export default function RestorePage() {
 
 src/app/results/page.tsx:
-  231:export default function ResultsPage() {
+  412:export default function ResultsPage() {
 
 src/app/upload/page.tsx:
-  6:export default function UploadPage() {
+  7:export default function UploadPage() {
 
 src/components/tag-input.tsx:
   12:export default function TagInput({ value, onChange, max, placeholder }: TagInputProps) {
+
+src/components/ui/badge.tsx:
+  20:export function Badge({ variant = 'gray', children, className }: BadgeProps) {
+
+src/components/ui/skeleton.tsx:
+  7:export function Skeleton({ className }: SkeletonProps) {
+  18:export function SkeletonCard() {
+
+src/lib/auth.ts:
+  18:export interface OwnershipResult {
+  29:export async function verifyProfileOwnership(
 
 src/lib/criteria.ts:
   1:export const YEARS_EXPERIENCE = ['0-1', '2-4', '5-9', '10-15', '15+'] as const;
@@ -74,24 +103,29 @@ src/lib/cv-parser/extract-text.ts:
   23:export async function extractText(buffer: Buffer, mimeType: string): Promise<string> {
 
 src/lib/db/index.ts:
-  12:export const db = drizzle(client, { schema });
+  25:export const db = drizzle(client, { schema });
 
 src/lib/db/schema.ts:
   4:export const users = pgTable('users', {
   12:export const profiles = pgTable('profiles', {
   37:export const jobs = pgTable('jobs', {
-  70:export const searches = pgTable('searches', {
-  78:export const searchResults = pgTable('search_results', {
+  75:export const searches = pgTable('searches', {
+  83:export const searchResults = pgTable('search_results', {
 
 src/lib/ingestion/adzuna.ts:
-  24:export async function fetchAdzunaJobs(
-  76:export async function fetchAllAdzunaJobs(): Promise<RawJobPosting[]> {
+  42:export async function fetchAdzunaJobs(
+  107:export async function fetchAllAdzunaJobs(): Promise<RawJobPosting[]> {
+
+src/lib/ingestion/dedup.ts:
+  12:export function normalizeUrl(url: string): string | null {
+  56:export function computeContentHash(
 
 src/lib/ingestion/ingest.ts:
-  93:export async function ingestAllSources(): Promise<IngestionResult[]> {
+  115:export async function ingestAllSources(): Promise<IngestionResult[]> {
 
 src/lib/ingestion/jooble.ts:
-  21:export async function fetchJoobleJobs(
+  38:export async function fetchJoobleJobs(
+  127:export async function fetchAllJoobleJobs(): Promise<RawJobPosting[]> {
 
 src/lib/ingestion/types.ts:
   6:export interface RawJobPosting {
@@ -107,12 +141,15 @@ src/lib/llm/classify-job.ts:
   49:export async function classifyJob(title: string, description: string): Promise<ClassifiedCriteria> {
 
 src/lib/llm/client.ts:
-  3:export const openai = new OpenAI({
+  16:export const LLM_PROVIDER = process.env.LLM_PROVIDER ?? 'openrouter';
+  20:export const LLM_MODEL = process.env.LLM_MODEL ?? 'qwen/qwen-2.5-72b-instruct';
+  24:export function getAnthropicClient(): Anthropic {
+  41:export async function callLLM(
 
 src/lib/llm/extract-cv.ts:
   18:export interface ExtractedCriteria {
   29:export class LLMExtractionError extends Error {
-  49:export async function extractCvCriteria(rawText: string): Promise<ExtractedCriteria> {
+  185:export async function extractCvCriteria(rawText: string): Promise<ExtractedCriteria> {
 
 src/lib/llm/prompts.ts:
   1:export const CV_EXTRACTION_SYSTEM_PROMPT = `You are a CV parsing assistant. Extract structured information from a CV text.
@@ -121,7 +158,7 @@ src/lib/llm/prompts.ts:
 src/lib/matching/engine.ts:
   6:export interface MatchedJob {
   23:export interface MatchResult {
-  151:export async function findMatches(profileId: string, options?: { delta?: boolean }): Promise<MatchResult> {
+  167:export async function findMatches(profileId: string, options?: { delta?: boolean }): Promise<MatchResult> {
 
 src/lib/validation.ts:
   13:export const profileInputSchema = z.object({
@@ -179,11 +216,15 @@ node_modules/flatted/golang/pkg/flatted/flatted.go:
   .next/trace-build
   .next/turbopack
   .next/types
+  .vercel
+  .vercel/README.txt
+  .vercel/project.json
   README.md
   architecture_notes.txt
   commit.sh
   docs
   docs/ADR
+  docs/ANTFARM.md
   docs/API.md
   docs/ARCHITECTURE.md
   docs/DATA_MODEL.md
@@ -192,12 +233,14 @@ node_modules/flatted/golang/pkg/flatted/flatted.go:
   docs/PROBLEM.md
   docs/RISKS.md
   docs/SCOPE.md
+  docs/SPRINT-LOG.md
   docs/STAKEHOLDER_INTERVIEW.md
   docs/STRUCTURE.md
   docs/USER_STORIES.md
   drizzle
   drizzle.config.ts
   drizzle/0000_calm_colleen_wing.sql
+  drizzle/0001_cross_source_dedup.sql
   drizzle/meta
   next-env.d.ts
   next.config.js

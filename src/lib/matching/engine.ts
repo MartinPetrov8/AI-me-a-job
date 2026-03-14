@@ -200,11 +200,12 @@ export async function findMatches(profileId: string, options?: { delta?: boolean
   }
 
   const allJobs = (await jobsQuery).filter(job => {
-    // Only match jobs that have at least one classified field — exclude fully-null junk jobs
+    // Only exclude jobs that have no classified fields AND no title — pure junk rows
     const hasClassifiedField = job.sphere_of_expertise !== null ||
       job.key_skills !== null ||
       job.industry !== null ||
-      job.seniority_level !== null;
+      job.seniority_level !== null ||
+      job.title !== null;  // null title = true junk; null criteria = benefit of doubt
     if (!hasClassifiedField) return false;
 
     // Apply preference pre-filters

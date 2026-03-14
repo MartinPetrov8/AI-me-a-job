@@ -37,3 +37,5 @@ Started: 2026-03-08T20:41:42Z
 
 [S-01][done] Matching engine (src/lib/matching/engine.ts) with 8-criteria scoring (years_experience, education_level, field_of_study, sphere_of_expertise, seniority_level, languages, industry, key_skills), adjacency/overqualification rules, null-as-match benefit-of-doubt, threshold filtering (>=5), delta mode, search/search_results DB tracking. Search API routes (POST /api/search, POST /api/search/delta) with 200/404 responses. Results page (src/app/results/page.tsx) with match cards, score badges, expandable criteria, delta search button. Suspense boundaries for useSearchParams in profile/preferences/results pages. 14 matching engine tests + 4 search API tests | tests:PASS
 [S-01][done] Landing page, save/restore APIs, results save card, restore page, 7/7 tests pass | tests:PASS
+
+[S-01][done] Expanded Adzuna to 7 countries (GB, US, DE, FR, NL, BG, PL) with currency mapping (EUR, BGN, PLN). Added 12 location-targeted Jooble searches for Eastern Europe (BG, PL, RO, CZ) with country inference. Both ingestion modules now cover Western + Eastern Europe | tests:PASS

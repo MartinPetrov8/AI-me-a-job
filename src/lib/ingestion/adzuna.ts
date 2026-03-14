@@ -19,7 +19,7 @@ interface AdzunaResponse {
   count: number;
 }
 
-const ADZUNA_COUNTRIES = ['gb', 'us', 'de', 'fr', 'nl', 'au'] as const;
+const ADZUNA_COUNTRIES = ['gb', 'us', 'de', 'fr', 'nl', 'bg', 'pl', 'au'] as const;
 
 // Targeted search queries covering all spheres we match against
 const ADZUNA_QUERIES = [
@@ -69,6 +69,17 @@ export async function fetchAdzunaJobs(
 
     const data = (await res.json()) as AdzunaResponse;
 
+    const currencyMap: Record<string, string> = {
+      us: 'USD',
+      gb: 'GBP',
+      au: 'AUD',
+      de: 'EUR',
+      fr: 'EUR',
+      nl: 'EUR',
+      bg: 'BGN',
+      pl: 'PLN',
+    };
+
     return (data.results ?? []).map((job): RawJobPosting => ({
       external_id: String(job.id),
       source: 'adzuna',
@@ -80,7 +91,7 @@ export async function fetchAdzunaJobs(
       description_raw: job.description,
       salary_min: job.salary_min ?? null,
       salary_max: job.salary_max ?? null,
-      salary_currency: country === 'us' ? 'USD' : country === 'gb' || country === 'au' ? (country === 'gb' ? 'GBP' : 'AUD') : 'EUR',
+      salary_currency: currencyMap[country] ?? 'EUR',
       employment_type: job.contract_type ?? null,
       is_remote: null,
       posted_at: job.created ? new Date(job.created) : null,
@@ -97,8 +108,8 @@ export async function fetchAllAdzunaJobs(): Promise<RawJobPosting[]> {
   const all: RawJobPosting[] = [];
   const seen = new Set<string>();
 
-  // Sample 3 countries × all queries (keeps API usage reasonable while covering all spheres)
-  const countries: typeof ADZUNA_COUNTRIES[number][] = ['gb', 'us', 'de'];
+  // Expanded to 7 countries (GB, US, DE, FR, NL, BG, PL) covering Western + Eastern Europe
+  const countries: typeof ADZUNA_COUNTRIES[number][] = ['gb', 'us', 'de', 'fr', 'nl', 'bg', 'pl'];
 
   for (const country of countries) {
     for (const query of ADZUNA_QUERIES) {

@@ -16,10 +16,9 @@ describe('TagInput', () => {
     render(<TagInput value={[]} onChange={onChange} />);
 
     const input = screen.getByRole('textbox');
-    const button = screen.getByRole('button', { name: /add/i });
 
     fireEvent.change(input, { target: { value: 'Python' } });
-    fireEvent.click(button);
+    fireEvent.keyDown(input, { key: 'Enter', code: 'Enter' });
 
     expect(onChange).toHaveBeenCalledWith(['Python']);
   });
@@ -41,11 +40,10 @@ describe('TagInput', () => {
     render(<TagInput value={tags} onChange={onChange} />);
 
     const input = screen.getByRole('textbox');
-    const button = screen.getByRole('button', { name: /add/i });
 
     // Try to add duplicate (case-insensitive)
     fireEvent.change(input, { target: { value: 'javascript' } });
-    fireEvent.click(button);
+    fireEvent.keyDown(input, { key: 'Enter', code: 'Enter' });
 
     // onChange should not be called because it's a duplicate
     expect(onChange).not.toHaveBeenCalled();
@@ -60,14 +58,13 @@ describe('TagInput', () => {
     expect(screen.getByText(/maximum 2 reached/i)).toBeTruthy();
 
     const input = screen.getByRole('textbox');
-    const button = screen.getByRole('button', { name: /add/i });
 
     // Input should be disabled
     expect(input.hasAttribute('disabled')).toBe(true);
 
-    // Try to add another tag
+    // Try to add another tag via Enter (input is disabled so no-op)
     fireEvent.change(input, { target: { value: 'Three' } });
-    fireEvent.click(button);
+    fireEvent.keyDown(input, { key: 'Enter', code: 'Enter' });
 
     // onChange should not be called because max is reached
     expect(onChange).not.toHaveBeenCalled();
