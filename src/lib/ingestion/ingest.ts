@@ -3,6 +3,7 @@ import { jobs } from '../db/schema';
 import { and, lt, ne, or, isNull } from 'drizzle-orm';
 import { fetchAllAdzunaJobs } from './adzuna';
 import { fetchJoobleJobs } from './jooble';
+import { normalizeUrl, computeContentHash } from './dedup';
 import { RawJobPosting, IngestionResult } from './types';
 
 const JOOBLE_SEARCHES = [
@@ -19,6 +20,14 @@ async function upsertJobs(postings: RawJobPosting[]): Promise<{ newCount: number
 
   for (const posting of postings) {
     try {
+      const canonicalUrl = normalizeUrl(posting.url);
+      const contentHash = computeContentHash(
+        posting.title,
+        posting.company,
+        posting.country,
+        posting.posted_at,
+      );
+
       await db
         .insert(jobs)
         .values({
@@ -36,6 +45,8 @@ async function upsertJobs(postings: RawJobPosting[]): Promise<{ newCount: number
           employmentType: posting.employment_type,
           isRemote: posting.is_remote,
           postedAt: posting.posted_at,
+          canonicalUrl,
+          contentHash,
         })
         .onConflictDoUpdate({
           target: [jobs.source, jobs.externalId],
@@ -51,6 +62,8 @@ async function upsertJobs(postings: RawJobPosting[]): Promise<{ newCount: number
             employmentType: posting.employment_type,
             isRemote: posting.is_remote,
             postedAt: posting.posted_at,
+            canonicalUrl,
+            contentHash,
           },
         });
 

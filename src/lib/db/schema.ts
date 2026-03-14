@@ -61,10 +61,15 @@ export const jobs = pgTable('jobs', {
   keySkills: text('key_skills').array(),
   classifiedAt: timestamp('classified_at', { withTimezone: true }),
   ingestedAt: timestamp('ingested_at', { withTimezone: true }).notNull().defaultNow(),
+  // Cross-source dedup fields (Sprint A)
+  canonicalUrl: text('canonical_url'),    // Normalized URL, UNIQUE WHERE NOT NULL
+  contentHash: text('content_hash'),      // MD5(title+company+country+week), UNIQUE WHERE NOT NULL
 }, (table) => ({
   uniqueSourceExternal: unique().on(table.source, table.externalId),
   keySkillsIdx: index('jobs_key_skills_idx').using('gin', table.keySkills),
   languagesIdx: index('jobs_languages_idx').using('gin', table.languages),
+  canonicalUrlIdx: index('jobs_canonical_url_idx').on(table.canonicalUrl),
+  contentHashIdx: index('jobs_content_hash_idx').on(table.contentHash),
 }));
 
 export const searches = pgTable('searches', {

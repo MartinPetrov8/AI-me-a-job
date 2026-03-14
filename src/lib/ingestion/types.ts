@@ -5,7 +5,7 @@
 
 export interface RawJobPosting {
   external_id: string;
-  source: 'adzuna' | 'jooble';
+  source: 'adzuna' | 'jooble' | 'reed' | 'jobs_bg' | 'dev_bg';
   title: string;
   company: string | null;
   location: string | null;
