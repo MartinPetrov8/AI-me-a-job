@@ -1,4 +1,4 @@
-# Repo Map — generated 2026-03-14T19:32:43Z
+# Repo Map — generated 2026-03-14T21:07:15Z
 # Architecture snapshot: class/function signatures, routes, exports
 # Use this to find the right file/function without reading full source.
 
@@ -7,11 +7,16 @@
 ## TypeScript/JavaScript
 
 .next/types/routes.d.ts:
-  30:export type ParamsOf<Route extends Routes> = ParamMap[Route]
-  37:export type { AppRoutes, PageRoutes, LayoutRoutes, RedirectRoutes, RewriteRoutes, ParamMap, AppRouteHandlerRoutes }
+  31:export type ParamsOf<Route extends Routes> = ParamMap[Route]
+  38:export type { AppRoutes, PageRoutes, LayoutRoutes, RedirectRoutes, RewriteRoutes, ParamMap, AppRouteHandlerRoutes }
 
 drizzle.config.ts:
   3:export default {
+
+src/app/api/pipeline/route.ts:
+  5:export const runtime = 'nodejs';
+  6:export const maxDuration = 300;
+  8:export async function POST(request: NextRequest) {
 
 src/app/api/preferences/route.ts:
   8:export const runtime = 'nodejs';
@@ -79,6 +84,9 @@ src/components/ui/skeleton.tsx:
 src/lib/auth.ts:
   18:export interface OwnershipResult {
   29:export async function verifyProfileOwnership(
+
+src/lib/auth/validate-restore-token.ts:
+  29:export async function validateRestoreToken(
 
 src/lib/criteria.ts:
   1:export const YEARS_EXPERIENCE = ['0-1', '2-4', '5-9', '10-15', '15+'] as const;
@@ -258,4 +266,5 @@ node_modules/flatted/golang/pkg/flatted/flatted.go:
   tests/lib
   tsconfig.json
   tsconfig.tsbuildinfo
+  vercel.json
   vitest.config.ts
