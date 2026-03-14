@@ -91,6 +91,16 @@ function matchKeySkills(profileSkills: string[] | null, jobSkills: string[] | nu
   return overlapCount >= 2;
 }
 
+function matchLocation(prefLocation: string | null, jobLocation: string | null, isRemote: boolean | null): boolean {
+  if (!prefLocation) return true; // no pref = any location
+  if (isRemote) return true;      // remote jobs match any location pref
+  if (!jobLocation) return true;  // unknown job location = benefit of doubt
+  const pref = prefLocation.toLowerCase().trim();
+  const loc = jobLocation.toLowerCase();
+  // Check if pref appears anywhere in location string (city, region, country)
+  return loc.includes(pref) || pref.includes(loc.split(',')[0].trim());
+}
+
 function calculateMatch(profile: any, job: JobRow): { score: number; matched: string[]; unmatched: string[] } {
   const matched: string[] = [];
   const unmatched: string[] = [];
@@ -189,13 +199,39 @@ export async function findMatches(profileId: string, options?: { delta?: boolean
     jobsQuery = jobsQuery.where(gt(jobs.ingestedAt, profile.lastSearchAt)) as any;
   }
 
-  const allJobs = (await jobsQuery).filter(job =>
+  const allJobs = (await jobsQuery).filter(job => {
     // Only match jobs that have at least one classified field — exclude fully-null junk jobs
-    job.sphere_of_expertise !== null ||
-    job.key_skills !== null ||
-    job.industry !== null ||
-    job.seniority_level !== null
-  );
+    const hasClassifiedField = job.sphere_of_expertise !== null ||
+      job.key_skills !== null ||
+      job.industry !== null ||
+      job.seniority_level !== null;
+    if (!hasClassifiedField) return false;
+
+    // Apply preference pre-filters
+    // Work mode
+    if (profile.prefWorkMode) {
+      if (profile.prefWorkMode === 'Remote' && job.is_remote === false) return false;
+      if (profile.prefWorkMode === 'On-site' && job.is_remote === true) return false;
+      // 'Hybrid' and 'Any' = no filter
+    }
+
+    // Employment type
+    if (profile.prefEmploymentType && profile.prefEmploymentType.length > 0 && job.employment_type) {
+      if (!profile.prefEmploymentType.includes(job.employment_type)) return false;
+    }
+
+    // Location
+    if (profile.prefLocation) {
+      if (!matchLocation(profile.prefLocation, job.location, job.is_remote)) return false;
+    }
+
+    // Salary min — only filter when job has salary data
+    if (profile.prefSalaryMin && job.salary_max !== null) {
+      if (job.salary_max < profile.prefSalaryMin) return false;
+    }
+
+    return true;
+  });
 
   // Calculate matches
   const scoredJobs = allJobs.map(job => {
