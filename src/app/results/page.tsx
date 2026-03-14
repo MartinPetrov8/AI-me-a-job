@@ -105,6 +105,22 @@ function JobCard({ job, index }: { job: MatchedJob; index: number }) {
         </div>
       </div>
 
+      {/* Inline criteria dots — always visible */}
+      <div className="mt-3 flex flex-wrap gap-1.5">
+        {job.matched_criteria.map(c => (
+          <span key={c} className="inline-flex items-center gap-1 text-xs bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
+            {formatLabel(c)}
+          </span>
+        ))}
+        {job.unmatched_criteria.map(c => (
+          <span key={c} className="inline-flex items-center gap-1 text-xs bg-gray-100 text-gray-400 px-2 py-0.5 rounded-full">
+            <span className="w-1.5 h-1.5 rounded-full bg-gray-300 inline-block" />
+            {formatLabel(c)}
+          </span>
+        ))}
+      </div>
+
       {expanded && (
         <div className="mt-4 pt-4 border-t border-gray-100 grid grid-cols-2 gap-4">
           <div>
@@ -122,12 +138,15 @@ function JobCard({ job, index }: { job: MatchedJob; index: number }) {
 
       <div className="flex items-center gap-3 mt-4">
         <a href={job.url} target="_blank" rel="noopener noreferrer"
-          className="flex-1 text-center bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 px-4 rounded-xl text-sm transition-colors">
-          View Job →
+          className="flex-1 text-center bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 px-4 rounded-xl text-sm transition-colors flex items-center justify-center gap-1.5">
+          View Job
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+          </svg>
         </a>
         <button onClick={() => setExpanded(v => !v)}
           className="text-sm text-gray-500 hover:text-gray-700 px-4 py-2.5 rounded-xl border border-gray-200 hover:border-gray-300 transition-colors whitespace-nowrap">
-          {expanded ? 'Hide' : 'Why matched?'}
+          {expanded ? 'Hide details' : 'Details'}
         </button>
       </div>
     </div>
@@ -137,6 +156,7 @@ function JobCard({ job, index }: { job: MatchedJob; index: number }) {
 function ResultsContent() {
   const searchParams = useSearchParams();
   const profileId = searchParams.get('profile_id');
+  const userId = searchParams.get('user_id');
   const token = searchParams.get('token');
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<MatchedJob[]>([]);
@@ -198,6 +218,33 @@ function ResultsContent() {
       </nav>
 
       <div className="max-w-3xl mx-auto px-6 py-8">
+        {/* Step indicator */}
+        <div className="flex items-center justify-center gap-2 mb-6">
+          {['Upload', 'Profile', 'Preferences', 'Results'].map((step, i) => (
+            <div key={step} className="flex items-center gap-2">
+              <div className={`flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold ${i === 3 ? 'bg-indigo-600 text-white' : 'bg-indigo-200 text-indigo-700'}`}>
+                {i < 3 ? '✓' : '4'}
+              </div>
+              <span className={`text-xs font-medium hidden sm:block ${i === 3 ? 'text-indigo-600' : 'text-gray-400'}`}>{step}</span>
+              {i < 3 && <div className="w-8 h-px bg-gray-200" />}
+            </div>
+          ))}
+        </div>
+
+        {/* Refine links */}
+        {userId && profileId && (
+          <div className="flex gap-4 text-xs text-gray-400 mb-5">
+            <Link href={`/profile?user_id=${userId}&profile_id=${profileId}&token=${token}`}
+              className="hover:text-indigo-600 transition-colors">
+              ✏️ Edit profile
+            </Link>
+            <Link href={`/preferences?user_id=${userId}&profile_id=${profileId}&token=${token}`}
+              className="hover:text-indigo-600 transition-colors">
+              🎛 Edit preferences
+            </Link>
+          </div>
+        )}
+
         <div className="flex items-baseline justify-between mb-4">
           <h1 className="text-2xl font-bold text-gray-900">
             {loading ? 'Finding your matches…' : results.length > 0 ? `${results.length} Matches` : 'Job Matches'}

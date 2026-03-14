@@ -88,18 +88,15 @@ function ProfileForm() {
     fetchProfile();
   }, [userId]);
 
+  // Count filled fields for progress hint
+  const filledCount = [yearsExperience, educationLevel, fieldOfStudy, sphereOfExpertise, seniorityLevel, industry]
+    .filter(Boolean).length + (languages.length > 0 ? 1 : 0) + (keySkills.length > 0 ? 1 : 0);
+
   const validateFields = (): boolean => {
     const errors: Record<string, string> = {};
-
-    if (!yearsExperience) errors.yearsExperience = 'Years of experience is required';
-    if (!educationLevel) errors.educationLevel = 'Education level is required';
-    if (!fieldOfStudy) errors.fieldOfStudy = 'Field of study is required';
-    if (!sphereOfExpertise) errors.sphereOfExpertise = 'Sphere of expertise is required';
-    if (!seniorityLevel) errors.seniorityLevel = 'Seniority level is required';
-    if (languages.length === 0) errors.languages = 'At least one language is required';
-    if (!industry) errors.industry = 'Industry is required';
+    // Only two fields are truly required — AI should fill the rest
+    if (!yearsExperience) errors.yearsExperience = 'Required';
     if (keySkills.length === 0) errors.keySkills = 'At least one key skill is required';
-
     setFieldErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -195,6 +192,11 @@ function ProfileForm() {
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-gray-900">Your Profile</h1>
           <p className="text-gray-500 text-sm mt-1">AI extracted this from your CV. Correct anything before searching.</p>
+          {filledCount < 8 && (
+            <p className="text-xs text-amber-600 font-medium mt-2">
+              {filledCount}/8 criteria filled — more fields = better matches
+            </p>
+          )}
         </div>
 
         {error && <div className="mb-4 p-4 bg-red-50 rounded-xl border border-red-100"><p className="text-sm text-red-700">{error}</p></div>}
@@ -219,9 +221,11 @@ function ProfileForm() {
 
           <div className="border-t border-gray-100 pt-4 space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Years of Experience *</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Years of Experience <span className="text-red-500">*</span>
+              </label>
               <select value={yearsExperience} onChange={e => setYearsExperience(e.target.value)}
-                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
+                className={`w-full border rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white ${fieldErrors.yearsExperience ? 'border-red-300' : 'border-gray-200'}`}>
                 <option value="">Select...</option>
                 {YEARS_EXPERIENCE.map((v) => <option key={v} value={v}>{v} years</option>)}
               </select>
@@ -229,64 +233,72 @@ function ProfileForm() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Education Level *</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Education Level <span className="text-xs text-gray-400 font-normal">(recommended)</span>
+              </label>
               <select value={educationLevel} onChange={e => setEducationLevel(e.target.value)}
                 className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
                 <option value="">Select...</option>
                 {EDUCATION_LEVELS.map((v) => <option key={v} value={v}>{v}</option>)}
               </select>
-              {fieldErrors.educationLevel && <p className="text-red-500 text-xs mt-1">{fieldErrors.educationLevel}</p>}
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Field of Study *</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Field of Study <span className="text-xs text-gray-400 font-normal">(recommended)</span>
+              </label>
               <select value={fieldOfStudy} onChange={e => setFieldOfStudy(e.target.value)}
                 className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
                 <option value="">Select...</option>
                 {FIELDS_OF_STUDY.map((v) => <option key={v} value={v}>{v}</option>)}
               </select>
-              {fieldErrors.fieldOfStudy && <p className="text-red-500 text-xs mt-1">{fieldErrors.fieldOfStudy}</p>}
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Sphere of Expertise *</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Sphere of Expertise <span className="text-xs text-gray-400 font-normal">(recommended)</span>
+              </label>
               <select value={sphereOfExpertise} onChange={e => setSphereOfExpertise(e.target.value)}
                 className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
                 <option value="">Select...</option>
                 {SPHERES_OF_EXPERTISE.map((v) => <option key={v} value={v}>{v}</option>)}
               </select>
-              {fieldErrors.sphereOfExpertise && <p className="text-red-500 text-xs mt-1">{fieldErrors.sphereOfExpertise}</p>}
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Seniority Level *</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Seniority Level <span className="text-xs text-gray-400 font-normal">(recommended)</span>
+              </label>
               <select value={seniorityLevel} onChange={e => setSeniorityLevel(e.target.value)}
                 className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
                 <option value="">Select...</option>
                 {SENIORITY_LEVELS.map((v) => <option key={v} value={v}>{v}</option>)}
               </select>
-              {fieldErrors.seniorityLevel && <p className="text-red-500 text-xs mt-1">{fieldErrors.seniorityLevel}</p>}
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Industry *</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Industry <span className="text-xs text-gray-400 font-normal">(recommended)</span>
+              </label>
               <select value={industry} onChange={e => setIndustry(e.target.value)}
                 className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
                 <option value="">Select...</option>
                 {INDUSTRIES.map((v) => <option key={v} value={v}>{v}</option>)}
               </select>
-              {fieldErrors.industry && <p className="text-red-500 text-xs mt-1">{fieldErrors.industry}</p>}
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Languages *</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Languages <span className="text-xs text-gray-400 font-normal">(recommended)</span>
+              </label>
               <TagInput value={languages} onChange={setLanguages} placeholder="Type a language and press Enter" />
-              {fieldErrors.languages && <p className="text-red-500 text-xs mt-1">{fieldErrors.languages}</p>}
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Key Skills *</label>
-              <TagInput value={keySkills} onChange={setKeySkills} placeholder="Type a skill and press Enter" />
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Key Skills <span className="text-red-500">*</span>
+              </label>
+              <TagInput value={keySkills} onChange={setKeySkills} placeholder="e.g. Python, SQL, React — press Enter after each" />
               {fieldErrors.keySkills && <p className="text-red-500 text-xs mt-1">{fieldErrors.keySkills}</p>}
             </div>
           </div>

@@ -108,12 +108,20 @@ export default function UploadPage() {
           {loading && (
             <div className="mt-5">
               <div className="flex items-center justify-between text-sm text-gray-600 mb-2">
-                <span>Analysing your CV...</span>
+                <span>Analysing your CV…</span>
                 <span className="text-indigo-600 font-medium">AI reading</span>
               </div>
               <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                <div className="h-full bg-indigo-500 rounded-full w-3/5 transition-all" />
+                <div className="h-full bg-indigo-500 rounded-full animate-[indeterminate_1.5s_ease-in-out_infinite]"
+                  style={{ width: '40%', animation: 'indeterminate 1.5s ease-in-out infinite' }} />
               </div>
+              <style>{`
+                @keyframes indeterminate {
+                  0% { transform: translateX(-100%) scaleX(0.5); }
+                  50% { transform: translateX(100%) scaleX(0.8); }
+                  100% { transform: translateX(250%) scaleX(0.5); }
+                }
+              `}</style>
             </div>
           )}
 

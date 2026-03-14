@@ -55,16 +55,8 @@ export default function TagInput({ value, onChange, max, placeholder }: TagInput
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
           disabled={isAtMax}
-          className="flex-1 border border-gray-300 rounded-lg px-3 py-3 focus:ring-2 focus:ring-blue-500 focus:outline-none disabled:bg-gray-100 disabled:cursor-not-allowed"
+          className="flex-1 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none disabled:bg-gray-100 disabled:cursor-not-allowed"
         />
-        <button
-          type="button"
-          onClick={handleAdd}
-          disabled={isAtMax || !input.trim()}
-          className="bg-blue-600 text-white hover:bg-blue-700 rounded-lg py-3 px-4 disabled:bg-gray-400 disabled:cursor-not-allowed"
-        >
-          Add
-        </button>
       </div>
       {isAtMax && (
         <p className="text-sm text-gray-600">Maximum {max} reached</p>
@@ -73,13 +65,13 @@ export default function TagInput({ value, onChange, max, placeholder }: TagInput
         {value.map((tag, index) => (
           <div
             key={index}
-            className="inline-flex items-center gap-2 bg-blue-100 text-blue-800 px-3 py-1 rounded-full"
+            className="inline-flex items-center gap-1.5 bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full text-sm"
           >
             <span>{tag}</span>
             <button
               type="button"
               onClick={() => handleRemove(index)}
-              className="text-blue-600 hover:text-blue-800 font-bold"
+              className="text-indigo-500 hover:text-indigo-700 font-bold leading-none"
               aria-label={`Remove ${tag}`}
             >
               ×
