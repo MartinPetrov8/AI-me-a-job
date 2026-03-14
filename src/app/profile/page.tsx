@@ -138,7 +138,7 @@ function ProfileForm() {
       }
 
       const data = await response.json();
-      const updatedProfileId = data.data.id;
+      const updatedProfileId = data.data.profile_id;
       router.push(`/preferences?user_id=${userId}&profile_id=${updatedProfileId}&token=${token}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save profile');
