@@ -1,4 +1,4 @@
-import { callLLM } from './client';
+import Anthropic from '@anthropic-ai/sdk';
 import { JOB_CLASSIFICATION_SYSTEM_PROMPT } from './prompts';
 import {
   YEARS_EXPERIENCE,
@@ -47,6 +47,12 @@ function validateValue<T extends readonly string[]>(
 }
 
 export async function classifyJob(title: string, description: string): Promise<ClassifiedCriteria> {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) {
+    throw new Error('ANTHROPIC_API_KEY environment variable is required');
+  }
+
+  const client = new Anthropic({ apiKey });
   let lastError: Error | null = null;
 
   for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
@@ -56,13 +62,24 @@ export async function classifyJob(title: string, description: string): Promise<C
 
       const jobText = `Job Title: ${title}\n\n${description}`;
 
-      const rawResponse = await callLLM(
-        JOB_CLASSIFICATION_SYSTEM_PROMPT,
-        jobText,
-        controller.signal
+      const response = await client.messages.create(
+        {
+          model: 'claude-haiku-4-5',
+          max_tokens: 1024,
+          system: JOB_CLASSIFICATION_SYSTEM_PROMPT,
+          messages: [{ role: 'user', content: jobText }],
+        },
+        { signal: controller.signal }
       );
 
       clearTimeout(timeoutId);
+
+      const block = response.content[0];
+      if (block.type !== 'text') {
+        throw new JobClassificationError('Unexpected LLM response block type');
+      }
+
+      const rawResponse = block.text;
 
       // Strip markdown code fences if model wraps JSON
       const jsonText = rawResponse.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/i, '').trim();

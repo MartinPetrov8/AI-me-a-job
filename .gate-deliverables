@@ -1,17 +1,6 @@
-src/app/layout.tsx
-src/app/page.tsx
-src/app/globals.css
-src/lib/db/schema.ts
-src/lib/db/index.ts
-src/lib/criteria.ts
-src/lib/validation.ts
-scripts/seed.ts
-tests/lib/criteria.test.ts
-tests/lib/validation.test.ts
-tests/fixtures/sample-jobs.json
-drizzle.config.ts
-tsconfig.json
-tailwind.config.ts
-vitest.config.ts
-package.json
-.env.example
+# Required deliverables for sprint-c pipeline automation
+
+src/lib/llm/classify-job.ts
+src/app/api/pipeline/route.ts
+vercel.json
+src/lib/llm/extract-cv.ts

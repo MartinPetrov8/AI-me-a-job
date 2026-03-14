@@ -39,3 +39,5 @@ Started: 2026-03-08T20:41:42Z
 [S-01][done] Landing page, save/restore APIs, results save card, restore page, 7/7 tests pass | tests:PASS
 
 [S-01][done] Expanded Adzuna to 7 countries (GB, US, DE, FR, NL, BG, PL) with currency mapping (EUR, BGN, PLN). Added 12 location-targeted Jooble searches for Eastern Europe (BG, PL, RO, CZ) with country inference. Both ingestion modules now cover Western + Eastern Europe | tests:PASS
+
+[S-01][done] Switch job classification to Claude Haiku 4.5 via Anthropic SDK direct — classify-job.ts now uses @anthropic-ai/sdk with model claude-haiku-4-5 instead of generic callLLM() wrapper. Full test coverage with mock Anthropic client | tests:PASS

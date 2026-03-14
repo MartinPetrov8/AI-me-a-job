@@ -1,4 +1,4 @@
-# Repo Map — generated 2026-03-14T16:54:35Z
+# Repo Map — generated 2026-03-14T19:32:43Z
 # Architecture snapshot: class/function signatures, routes, exports
 # Use this to find the right file/function without reading full source.
 
@@ -216,9 +216,6 @@ node_modules/flatted/golang/pkg/flatted/flatted.go:
   .next/trace-build
   .next/turbopack
   .next/types
-  .vercel
-  .vercel/README.txt
-  .vercel/project.json
   README.md
   architecture_notes.txt
   commit.sh
@@ -237,11 +234,7 @@ node_modules/flatted/golang/pkg/flatted/flatted.go:
   docs/STAKEHOLDER_INTERVIEW.md
   docs/STRUCTURE.md
   docs/USER_STORIES.md
-  drizzle
   drizzle.config.ts
-  drizzle/0000_calm_colleen_wing.sql
-  drizzle/0001_cross_source_dedup.sql
-  drizzle/meta
   next-env.d.ts
   next.config.js
   node_modules

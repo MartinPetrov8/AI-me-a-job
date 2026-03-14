@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { classifyJob } from '@/lib/llm/classify-job';
+import { classifyJob } from './classify-job';
 
 const mockCreate = vi.fn();
 

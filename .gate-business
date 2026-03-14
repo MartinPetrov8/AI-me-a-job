@@ -1,9 +1,14 @@
-db_rows:users:3
-db_rows:profiles:3
-db_rows:jobs:50
-file_nonempty:src/lib/db/schema.ts
-file_nonempty:src/lib/criteria.ts
-file_nonempty:src/lib/validation.ts
-file_exists:tests/fixtures/sample-jobs.json
-cmd_exit0:npx tsc --noEmit
-cmd_exit0:npm run test
+# Business-level checks for AI Job Matcher pipeline automation
+# Format: <check_type> <arguments>
+
+# S-02: /api/pipeline route must exist
+file_exists src/app/api/pipeline/route.ts
+
+# S-03: Vercel cron configuration must exist
+file_exists vercel.json
+
+# S-01: classify-job.ts should import Anthropic SDK directly
+cmd_exit0 grep -q "@anthropic-ai/sdk" src/lib/llm/classify-job.ts
+
+# S-04: languages field extraction fix — test should pass
+cmd_exit0 npm run test -- tests/lib/extract-cv.test.ts --reporter=verbose 2>&1 | grep -q "✓"

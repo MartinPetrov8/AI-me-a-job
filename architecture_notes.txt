@@ -1,112 +1,88 @@
-# Architecture Notes
+# Codebase Architecture Patterns
 
-## Project Overview
-AI-me-a-job is a Next.js 14+ web application for AI-powered job matching with TypeScript, Tailwind CSS, and Drizzle ORM connected to Supabase Postgres.
+## API Routes (src/app/api/*/route.ts)
+- **Structure**: App Router convention — each route is a `route.ts` file exporting async handler functions (GET, POST, etc.)
+- **Runtime**: Export `export const runtime = 'nodejs';` for Node.js runtime (required for DB access, LLM calls)
+- **Request/Response**: Use NextRequest and NextResponse from 'next/server'
+- **Error handling**: 
+  - Validate input with Zod schemas using `.safeParse()` — return 400 with `{ errors: [...] }` structure
+  - Catch errors and return 500 with `{ errors: [{ code: 'INTERNAL_ERROR', message: '...' }] }`
+  - Use status codes: 200 (success), 400 (validation), 404 (not found), 409 (conflict), 500 (internal error)
+- **Response format**: `{ data: {...} }` on success, `{ errors: [{code, message}] }` on error
+- **Example**: src/app/api/save/route.ts — POST handler with Zod validation, DB interaction, conflict detection
 
-## Tech Stack
-- Next.js 14+ (App Router)
-- TypeScript (strict mode)
-- Tailwind CSS for styling
-- Drizzle ORM with postgres-js driver
-- Supabase Postgres database
-- Zod for validation
-- Vitest for testing
+## LLM Integration (src/lib/llm/)
+- **Client**: `callLLM()` in client.ts — generic wrapper supporting multiple providers (OpenRouter, Anthropic, future: Ollama)
+- **Provider selection**: Uses LLM_PROVIDER env var ('openrouter' | 'anthropic')
+- **Prompts**: System prompts in prompts.ts — CV_EXTRACTION_SYSTEM_PROMPT and JOB_CLASSIFICATION_SYSTEM_PROMPT
+- **Retry logic**: MAX_RETRIES = 2, TIMEOUT_MS = 30000 (30s) — retry on AbortError and SyntaxError (bad JSON)
+- **JSON parsing**: Strip markdown code fences before parsing: `.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/i, '')`
+- **Validation**: Use `validateValue()` or `fuzzyNormalize()` to enforce enum constraints — set to null if value doesn't match
+- **Classification**: 
+  - CV extraction (extract-cv.ts) uses callLLM() → OpenRouter/Qwen by default
+  - Job classification (classify-job.ts) currently uses callLLM() → to be changed to Anthropic SDK directly
+- **Graceful degradation**: If all retries fail, return null fields instead of throwing (jobs stored but unclassified)
 
-## Folder Structure
-```
-src/
-  app/              # Next.js App Router pages
-    layout.tsx      # Root layout
-    page.tsx        # Home page
-    globals.css     # Global styles with Tailwind directives
-  lib/              # Shared utilities and business logic
-    db/             # Database layer
-      schema.ts     # Drizzle schema definitions
-      index.ts      # Database client export
-    criteria.ts     # Bounded constants and types
-    validation.ts   # Zod schemas
-  components/       # React components (to be added)
-scripts/
-  seed.ts           # Database seeding script
-tests/
-  lib/              # Unit tests for lib modules
-  fixtures/         # Test data fixtures
-```
+## Database (src/lib/db/)
+- **ORM**: Drizzle ORM with Postgres (Supabase)
+- **Schema**: src/lib/db/schema.ts — tables: jobs, users, profiles
+- **Query patterns**: 
+  - `db.select().from(table).where(condition).limit(n)`
+  - `db.insert(table).values({...}).onConflictDoUpdate({target, set})`
+  - `db.update(table).set({...}).where(condition)`
+  - Use `eq`, `ne`, `and`, `or`, `isNull`, `lt` from drizzle-orm
+- **Jobs table**: Has all classification fields (yearsExperience, educationLevel, etc.) + classifiedAt timestamp
 
-## Key Patterns
+## Ingestion (src/lib/ingestion/)
+- **Sources**: Adzuna (7 countries) and Jooble (Eastern Europe) — see adzuna.ts, jooble.ts
+- **Orchestration**: `ingestAllSources()` in ingest.ts — fetches from all sources, upserts jobs, runs cleanup
+- **Deduplication**: `normalizeUrl()` and `computeContentHash()` in dedup.ts
+- **Upsert strategy**: `onConflictDoUpdate` on [source, externalId] — updates existing jobs if external data changed
+- **Cleanup**: Runs AFTER all sources ingested (prevents race conditions)
+  - Delete jobs older than 30 days
+  - Truncate descriptions for jobs older than 7 days
+- **Return type**: `IngestionResult[]` — array of {source, fetched, new, errors, deleted}
 
-### Database Schema
-- All tables use UUID primary keys with `.defaultRandom()`
-- Timestamps use `timestamptz` with `.defaultNow()` for created_at/updated_at
-- Foreign keys use cascade delete where appropriate
-- Array columns for languages and key_skills use `.array()` with GIN indexes for efficient querying
-- Unique constraints implemented via `.unique()` or `unique().on(...)`
+## Testing (tests/)
+- **Runner**: Vitest (v4.0.18) — run with `npm run test` or `npm run test:watch`
+- **Mocking**: Use `vi.mock()` at top of test file to mock modules
+- **DB mocking**: Mock fluent query builder chains (see tests/api/save.test.ts)
+- **LLM mocking**: Mock callLLM() to return JSON strings (see tests/lib/llm/classify-job.test.ts)
+- **Structure**: tests/ mirrors src/ structure
+- **Coverage**: 16 test files, 102 tests — focus on lib/ and api/ routes
 
-### Criteria Constants
-- All bounded enums defined as `const` arrays in `src/lib/criteria.ts`
-- TypeScript types derived using `typeof ARRAY[number]` pattern
-- Used by both Zod schemas and database schema for consistency
+## Naming Conventions
+- **Files**: kebab-case (classify-job.ts, batch-classify.ts)
+- **Functions**: camelCase (classifyJob, extractCvCriteria, ingestAllSources)
+- **Types/Interfaces**: PascalCase (ClassifiedCriteria, ExtractedCriteria, IngestionResult)
+- **Database fields**: snake_case in schema (years_experience, education_level) — matches DB column names
+- **API fields**: camelCase in request/response (yearsExperience in TypeScript, years_experience in DB)
 
-### Validation
-- Zod schemas in `src/lib/validation.ts`
-- profileInputSchema: all 8 criteria fields required, uses z.enum() from criteria constants
-- preferencesInputSchema: all fields optional, allows flexible user preferences
-- Arrays must have minimum 1 item where required (languages, keySkills)
+## Utility Functions to Reuse
+- **src/lib/llm/classify-job.ts**: `validateValue()` — validates enum values with exact match
+- **src/lib/llm/extract-cv.ts**: `fuzzyNormalize()` — validates enum values with alias map + partial matching
+- **src/lib/ingestion/dedup.ts**: `normalizeUrl()`, `computeContentHash()` — deduplication helpers
+- **src/lib/validation.ts**: Zod schemas for common types
 
-### Testing
-- Vitest for unit testing
-- Tests organized by module in tests/lib/
-- Fixtures in tests/fixtures/ as JSON files
-- Each criteria constant tested for: non-empty + no duplicates
-- Validation schemas tested for: valid input passes, invalid values reject, missing required fields reject
+## Key Dependencies
+- @anthropic-ai/sdk: ^0.78.0 — Anthropic SDK (already installed)
+- drizzle-orm: ^0.45.1 — Postgres ORM
+- next: ^16.1.6 — Next.js framework
+- vitest: ^4.0.18 — test runner
+- zod: ^4.3.6 — runtime validation
 
-### Database Connection
-- Connection string via DATABASE_URL environment variable
-- Client instantiated in src/lib/db/index.ts and exported as `db`
-- Throws error if DATABASE_URL not set
+## Environment Variables
+- DATABASE_URL: Postgres connection string (required for build)
+- LLM_PROVIDER: 'openrouter' | 'anthropic'
+- LLM_MODEL: model identifier (e.g. 'claude-haiku-4-5-20251001')
+- OPENROUTER_API_KEY: for OpenRouter
+- ANTHROPIC_API_KEY: for Anthropic direct
+- CRON_SECRET: for Vercel cron auth (custom env var)
+- ADZUNA_APP_ID, ADZUNA_APP_KEY, JOOBLE_API_KEY: ingestion APIs
 
-### Naming Conventions
-- camelCase for TypeScript variables/functions
-- PascalCase for types and React components
-- snake_case for database columns (Drizzle convention)
-- Prefixed with "pref_" for user preference fields
-
-### Error Handling
-- Type-safe with TypeScript strict mode
-- Zod .safeParse() for input validation
-- Environment variable validation on startup
-
-### Build & Test Commands
-- `npm run dev` - Next.js development server
-- `npm run build` - Production build
-- `npm run test` - Run Vitest tests
-- `npm run typecheck` - TypeScript type checking
-- `npm run db:generate` - Generate Drizzle migrations
-- `npm run db:push` - Push schema to database
-- `npm run seed` - Seed database with sample data
-
-## Utility Functions
-- None yet - to be added as needed
-
-## Developer Guidelines
-1. Always use criteria constants from src/lib/criteria.ts - never hardcode enum values
-2. Validate all external input with Zod schemas before database operations
-3. Use TypeScript strict mode - no implicit any
-4. Follow existing naming conventions
-5. Add tests for new validation schemas or criteria constants
-6. Use Drizzle ORM for all database operations - no raw SQL
-7. Keep business logic in src/lib/, UI components in src/components/
-8. Use the commit.sh helper for all commits to capture commit hashes
-
-## Database Schema Summary
-- users: authentication and email storage
-- profiles: user CV data and job criteria (8 required fields + preferences)
-- jobs: job postings from external sources (classified and unclassified)
-- searches: search execution records
-- search_results: individual job matches per search
-
-## Next Steps for Developers
-1. Push schema to Supabase: `npm run db:push`
-2. Seed database: `npm run seed`
-3. Build features on top of this foundation
-4. Follow the patterns established in tests and validation
+## Build System
+- Build: `npm run build` (next build)
+- Test: `npm run test` (vitest run)
+- Typecheck: `npm run typecheck` (tsc --noEmit)
+- Dev: `npm run dev` (next dev)
+- No ESLint — use tsc --noEmit for type checking (Next.js 16 flat config incompatibility)
