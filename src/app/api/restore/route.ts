@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
 
     // Look up user — same 404 for wrong email OR wrong token (no enumeration)
     const user = await db
-      .select({ id: users.id })
+      .select({ id: users.id, restoreToken: users.restoreToken })
       .from(users)
       .where(and(eq(users.email, email), eq(users.restoreToken, restore_token)))
       .limit(1);
@@ -42,9 +42,8 @@ export async function POST(request: NextRequest) {
     }
 
     const userId = user[0].id;
-
-    // Invalidate token — single use only (ISSUE-2 fix)
-    await db.update(users).set({ restoreToken: null, updatedAt: new Date() }).where(eq(users.id, userId));
+    // NOTE: restore_token is long-lived — do NOT invalidate here.
+    // It is used for subsequent auth on /api/search and /api/preferences.
 
     // Get the profile
     const profile = await db
@@ -62,6 +61,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       data: {
         profile_id: p.id,
+        restore_token: user[0].restoreToken,
         profile: {
           id: p.id,
           userId: p.userId,

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { findMatches } from '@/lib/matching/engine';
+import { validateRestoreToken } from '@/lib/auth/validate-restore-token';
 
 export const runtime = 'nodejs';
 
@@ -15,8 +16,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // TODO: Add proper session auth (NextAuth/Supabase Auth) before scaling
-    // For MVP: profile_id is a non-guessable UUID, acceptable risk
+    // TODO: Replace with NextAuth session-based auth for production
+    const token = request.headers.get('x-restore-token');
+    await validateRestoreToken(profile_id, token);
 
     const result = await findMatches(profile_id);
     const searchedAt = new Date().toISOString();
@@ -34,6 +36,9 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error: unknown) {
+    if (error instanceof Response) {
+      return error;
+    }
     if (error instanceof Error && error.message === 'Profile not found') {
       return NextResponse.json(
         { error: 'Profile not found' },

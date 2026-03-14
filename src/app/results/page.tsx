@@ -177,10 +177,15 @@ function ResultsContent() {
     if (!profileId) return;
     setLoading(true); setError(null);
     try {
+      const restoreToken = localStorage.getItem('restore_token');
+      if (!restoreToken) {
+        window.location.href = '/restore';
+        return;
+      }
       const endpoint = delta ? '/api/search/delta' : '/api/search';
       const response = await fetch(endpoint, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) },
+        headers: { 'Content-Type': 'application/json', 'X-Restore-Token': restoreToken },
         body: JSON.stringify({ profile_id: profileId }),
       });
       if (!response.ok) throw new Error('Search failed');

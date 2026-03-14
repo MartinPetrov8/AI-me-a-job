@@ -62,11 +62,16 @@ function PreferencesForm() {
         body.prefSalaryCurrency = salaryCurrency;
       }
 
+      const restoreToken = localStorage.getItem('restore_token');
+      if (!restoreToken) {
+        window.location.href = '/restore';
+        return;
+      }
       const response = await fetch('/api/preferences', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+          'X-Restore-Token': restoreToken,
         },
         body: JSON.stringify(body),
       });

@@ -40,6 +40,10 @@ export default function UploadPage() {
       const response = await fetch('/api/upload', { method: 'POST', body: formData });
       const data = await response.json();
       if (!response.ok) { setError(data.error || 'Upload failed'); setLoading(false); return; }
+      // Store restore_token in localStorage for subsequent authenticated requests
+      if (data.data.restore_token) {
+        localStorage.setItem('restore_token', data.data.restore_token);
+      }
       router.push(`/profile?user_id=${data.data.user_id}&profile_id=${data.data.profile_id}&token=${data.data.restore_token}`);
     } catch {
       setError('An error occurred during upload'); setLoading(false);

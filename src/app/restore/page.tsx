@@ -26,6 +26,10 @@ export default function RestorePage() {
       const data = await res.json();
 
       if (res.ok) {
+        // Store restore_token in localStorage for subsequent authenticated requests
+        if (data.data.restore_token) {
+          localStorage.setItem('restore_token', data.data.restore_token);
+        }
         router.push(`/results?profile_id=${data.data.profile_id}`);
       } else {
         setError('Profile not found. Check your email and restore code.');

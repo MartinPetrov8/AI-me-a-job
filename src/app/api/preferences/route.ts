@@ -4,6 +4,7 @@ import { profiles } from '@/lib/db/schema';
 import { preferencesInputSchema } from '@/lib/validation';
 import { eq } from 'drizzle-orm';
 import { ZodError } from 'zod';
+import { validateRestoreToken } from '@/lib/auth/validate-restore-token';
 
 export const runtime = 'nodejs';
 
@@ -21,8 +22,9 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    // TODO: Add proper session auth before scaling
-    // For MVP: profileId is a non-guessable UUID
+    // TODO: Replace with NextAuth session-based auth for production
+    const token = request.headers.get('x-restore-token');
+    await validateRestoreToken(profileId, token);
 
     // Validate preferences
     const validated = preferencesInputSchema.parse(preferences);
@@ -56,6 +58,9 @@ export async function PUT(request: NextRequest) {
       },
     });
   } catch (error) {
+    if (error instanceof Response) {
+      return error;
+    }
     if (error instanceof ZodError) {
       return NextResponse.json(
         { error: 'Validation failed', details: error.issues },

@@ -3,6 +3,7 @@ import { findMatches } from '@/lib/matching/engine';
 import { db } from '@/lib/db/index';
 import { profiles } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
+import { validateRestoreToken } from '@/lib/auth/validate-restore-token';
 
 export const runtime = 'nodejs';
 
@@ -19,6 +20,8 @@ export async function POST(request: NextRequest) {
     }
 
     // TODO: Add proper session auth before scaling
+    const token = request.headers.get('x-restore-token');
+    await validateRestoreToken(profile_id, token);
 
     // Get profile to check last_search_at
     const profileResult = await db.select().from(profiles).where(eq(profiles.id, profile_id)).limit(1);
@@ -49,8 +52,11 @@ export async function POST(request: NextRequest) {
         since,
       },
     });
-  } catch (error: any) {
-    if (error.message === 'Profile not found') {
+  } catch (error: unknown) {
+    if (error instanceof Response) {
+      return error;
+    }
+    if (error instanceof Error && error.message === 'Profile not found') {
       return NextResponse.json(
         { error: 'Profile not found' },
         { status: 404 }
