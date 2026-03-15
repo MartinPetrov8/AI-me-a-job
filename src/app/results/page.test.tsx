@@ -325,3 +325,143 @@ describe('ResultsPage - Edit Preferences Panel (S-02)', () => {
     });
   });
 });
+
+describe('ResultsPage - Empty States (S-03)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    global.fetch = vi.fn();
+    Object.defineProperty(window, 'localStorage', {
+      value: {
+        getItem: vi.fn(() => 'test-restore-token'),
+        setItem: vi.fn(),
+        removeItem: vi.fn(),
+        clear: vi.fn(),
+      },
+      writable: true,
+    });
+  });
+
+  it('renders no results empty state with Edit preferences and Upload new CV buttons when API returns zero matches', async () => {
+    mockUseSearchParams.mockReturnValue({
+      get: (key: string) => (key === 'profile_id' ? 'test-profile-123' : null),
+    } as ReturnType<typeof useSearchParams>);
+
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        data: { results: [], total: 0, search_id: 'search-1' },
+        meta: { threshold: 5, max_score: 0, searched_at: new Date().toISOString() },
+      }),
+    } as Response);
+
+    const { container } = render(<ResultsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('No matches found')).toBeTruthy();
+    });
+
+    expect(screen.getByText(/Try adjusting your preferences or uploading an updated CV/i)).toBeTruthy();
+
+    const editPrefsButton = screen.getByText('Edit preferences');
+    expect(editPrefsButton).toBeTruthy();
+
+    const uploadButton = screen.getByText('Upload new CV');
+    expect(uploadButton).toBeTruthy();
+
+    fireEvent.click(editPrefsButton);
+
+    await waitFor(() => {
+      const panel = container.querySelector('div[class*="fixed"][class*="right-0"][class*="z-50"]');
+      expect(panel).toBeTruthy();
+    });
+  });
+
+  it('renders filtered-to-zero message with Clear filters button when all results are filtered out', async () => {
+    mockUseSearchParams.mockReturnValue({
+      get: (key: string) => (key === 'profile_id' ? 'test-profile-123' : null),
+    } as ReturnType<typeof useSearchParams>);
+
+    const mockJobs = [
+      {
+        job_id: 'job-1',
+        title: 'Software Engineer',
+        company: 'Test Corp',
+        location: 'Sofia',
+        url: 'https://example.com/job1',
+        posted_at: new Date('2026-03-01'),
+        match_score: 7,
+        matched_criteria: ['years_experience', 'sphere_of_expertise'],
+        unmatched_criteria: [],
+        salary_min: 50000,
+        salary_max: 70000,
+        salary_currency: 'EUR',
+        employment_type: 'Full-time',
+        is_remote: false,
+      },
+      {
+        job_id: 'job-2',
+        title: 'Senior Developer',
+        company: 'Another Co',
+        location: 'Berlin',
+        url: 'https://example.com/job2',
+        posted_at: new Date('2026-03-02'),
+        match_score: 6,
+        matched_criteria: ['seniority_level'],
+        unmatched_criteria: [],
+        salary_min: 60000,
+        salary_max: 80000,
+        salary_currency: 'EUR',
+        employment_type: 'Part-time',
+        is_remote: true,
+      },
+      {
+        job_id: 'job-3',
+        title: 'Tech Lead',
+        company: 'Big Tech',
+        location: 'Remote',
+        url: 'https://example.com/job3',
+        posted_at: new Date('2026-03-03'),
+        match_score: 8,
+        matched_criteria: ['years_experience', 'seniority_level', 'sphere_of_expertise'],
+        unmatched_criteria: [],
+        salary_min: 80000,
+        salary_max: 100000,
+        salary_currency: 'EUR',
+        employment_type: 'Full-time',
+        is_remote: true,
+      },
+    ];
+
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        data: { results: mockJobs, total: 3, search_id: 'search-1' },
+        meta: { threshold: 5, max_score: 8, searched_at: new Date().toISOString() },
+      }),
+    } as Response);
+
+    render(<ResultsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('3 Matches')).toBeTruthy();
+    });
+
+    const score9Button = screen.getByText('9+ score');
+    fireEvent.click(score9Button);
+
+    await waitFor(() => {
+      expect(screen.getByText(/No matches with current filters/i)).toBeTruthy();
+    });
+
+    const clearFiltersButton = screen.getByText('Clear filters');
+    expect(clearFiltersButton).toBeTruthy();
+
+    fireEvent.click(clearFiltersButton);
+
+    await waitFor(() => {
+      expect(screen.getByText('Software Engineer')).toBeTruthy();
+      expect(screen.getByText('Senior Developer')).toBeTruthy();
+      expect(screen.getByText('Tech Lead')).toBeTruthy();
+    });
+  });
+});

@@ -425,19 +425,35 @@ function ResultsContent() {
         {!loading && !error && results.length === 0 && (
           <div className="bg-white rounded-2xl border border-gray-100 p-12 text-center">
             <div className="text-5xl mb-4">🔍</div>
-            <h3 className="font-semibold text-gray-900 text-lg mb-2">No matches yet</h3>
-            <p className="text-gray-500 text-sm mb-6 max-w-sm mx-auto">Try broadening your profile criteria, or check back as new jobs are added daily.</p>
-            <Link href="/" className="inline-flex items-center gap-2 bg-indigo-600 text-white px-6 py-3 rounded-xl font-semibold hover:bg-indigo-700 transition-colors text-sm">Start a new search</Link>
+            <h3 className="font-semibold text-gray-900 text-lg mb-2">No matches found</h3>
+            <p className="text-gray-500 text-sm mb-6">Try adjusting your preferences or uploading an updated CV.</p>
+            <div className="flex gap-3 justify-center">
+              <button
+                onClick={() => setPanelOpen(true)}
+                className="bg-indigo-600 text-white px-6 py-3 rounded-xl font-semibold hover:bg-indigo-700 transition-colors"
+              >
+                Edit preferences
+              </button>
+              <Link
+                href="/upload"
+                className="bg-indigo-600 text-white px-6 py-3 rounded-xl font-semibold hover:bg-indigo-700 transition-colors"
+              >
+                Upload new CV
+              </Link>
+            </div>
           </div>
         )}
 
         {!loading && !error && results.length > 0 && sortedFilteredResults.length === 0 && (
-          <div className="bg-white rounded-2xl border border-gray-100 p-10 text-center">
-            <div className="text-4xl mb-3">🔎</div>
-            <p className="text-gray-500 text-sm">No jobs match your current filters.</p>
-            <button onClick={() => { setFilterRemote(null); setFilterMinScore(5); setFilterEmploymentType(''); }}
-              className="mt-4 text-indigo-600 text-sm font-medium hover:underline">Clear filters</button>
-          </div>
+          <p className="text-gray-500 text-sm">
+            No matches with current filters —{' '}
+            <button
+              onClick={() => { setFilterRemote(null); setFilterMinScore(5); setFilterEmploymentType(''); }}
+              className="text-indigo-600 font-medium hover:underline"
+            >
+              Clear filters
+            </button>
+          </p>
         )}
 
         {!loading && !error && sortedFilteredResults.length > 0 && (
