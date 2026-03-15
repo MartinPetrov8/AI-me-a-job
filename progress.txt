@@ -43,3 +43,5 @@ Started: 2026-03-08T20:41:42Z
 [S-01][done] Switch job classification to Claude Haiku 4.5 via Anthropic SDK direct — classify-job.ts now uses @anthropic-ai/sdk with model claude-haiku-4-5 instead of generic callLLM() wrapper. Full test coverage with mock Anthropic client | tests:PASS
 
 [S-01][done] Created shared auth validation helper (validateRestoreToken) for restore_token ownership verification — queries users JOIN profiles via Drizzle ORM, throws 401 Response on missing/mismatched token, returns void on success | tests:PASS
+[S-01][done] Created dev.bg scraper module (devbg.ts) with fetch-based HTML parsing, remote detection, error handling, and comprehensive tests | tests:PASS
+[S-03][done] Wired dev.bg and jobs.bg scrapers into ingestAllSources() with try/catch error handling and Jooble API key validation log | tests:PASS

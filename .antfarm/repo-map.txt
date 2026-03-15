@@ -1,4 +1,4 @@
-# Repo Map — generated 2026-03-14T21:07:15Z
+# Repo Map — generated 2026-03-15T11:26:41Z
 # Architecture snapshot: class/function signatures, routes, exports
 # Use this to find the right file/function without reading full source.
 
@@ -19,8 +19,8 @@ src/app/api/pipeline/route.ts:
   8:export async function POST(request: NextRequest) {
 
 src/app/api/preferences/route.ts:
-  8:export const runtime = 'nodejs';
-  10:export async function PUT(request: NextRequest) {
+  9:export const runtime = 'nodejs';
+  11:export async function PUT(request: NextRequest) {
 
 src/app/api/profile/route.ts:
   15:export const runtime = 'nodejs';
@@ -36,12 +36,12 @@ src/app/api/save/route.ts:
   20:export async function POST(request: NextRequest) {
 
 src/app/api/search/delta/route.ts:
-  7:export const runtime = 'nodejs';
-  9:export async function POST(request: NextRequest) {
+  8:export const runtime = 'nodejs';
+  10:export async function POST(request: NextRequest) {
 
 src/app/api/search/route.ts:
-  4:export const runtime = 'nodejs';
-  6:export async function POST(request: NextRequest) {
+  5:export const runtime = 'nodejs';
+  7:export async function POST(request: NextRequest) {
 
 src/app/api/upload/route.ts:
   16:export const runtime = 'nodejs';
@@ -57,7 +57,7 @@ src/app/page.tsx:
   3:export default function Home() {
 
 src/app/preferences/page.tsx:
-  198:export default function PreferencesPage() {
+  203:export default function PreferencesPage() {
 
 src/app/profile/page.tsx:
   320:export default function ProfilePage() {
@@ -66,7 +66,7 @@ src/app/restore/page.tsx:
   7:export default function RestorePage() {
 
 src/app/results/page.tsx:
-  412:export default function ResultsPage() {
+  417:export default function ResultsPage() {
 
 src/app/upload/page.tsx:
   7:export default function UploadPage() {
@@ -128,8 +128,14 @@ src/lib/ingestion/dedup.ts:
   12:export function normalizeUrl(url: string): string | null {
   56:export function computeContentHash(
 
+src/lib/ingestion/devbg.ts:
+  8:export async function fetchDevBgJobs(): Promise<RawJobPosting[]> {
+
 src/lib/ingestion/ingest.ts:
-  115:export async function ingestAllSources(): Promise<IngestionResult[]> {
+  117:export async function ingestAllSources(): Promise<IngestionResult[]> {
+
+src/lib/ingestion/jobsbg.ts:
+  8:export async function fetchJobsBgJobs(): Promise<RawJobPosting[]> {
 
 src/lib/ingestion/jooble.ts:
   38:export async function fetchJoobleJobs(
@@ -224,6 +230,9 @@ node_modules/flatted/golang/pkg/flatted/flatted.go:
   .next/trace-build
   .next/turbopack
   .next/types
+  .vercel
+  .vercel/README.txt
+  .vercel/project.json
   README.md
   architecture_notes.txt
   commit.sh
@@ -242,7 +251,11 @@ node_modules/flatted/golang/pkg/flatted/flatted.go:
   docs/STAKEHOLDER_INTERVIEW.md
   docs/STRUCTURE.md
   docs/USER_STORIES.md
+  drizzle
   drizzle.config.ts
+  drizzle/0000_calm_colleen_wing.sql
+  drizzle/0001_cross_source_dedup.sql
+  drizzle/meta
   next-env.d.ts
   next.config.js
   node_modules
