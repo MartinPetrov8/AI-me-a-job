@@ -114,3 +114,81 @@ Future runs should self-advance without manual intervention.
 |---|-------|--------|
 | #25 | Supabase cold-start 500s — all routes need runtime='nodejs' | Open |
 | #26 | Tailwind v4 @tailwind directives ignored — 0 utilities compiled | Open |
+
+---
+
+## 2026-03-15 — Sprint E, F, G (Antfarm #89, #90, #91)
+
+### Sprint E — BG Job Boards + Jooble Validation + LLM Model Audit
+
+**New scrapers:**
+- `src/lib/ingestion/devbg.ts` — dev.bg scraper (standard fetch, 3 pages, regex parsing)
+- `src/lib/ingestion/jobsbg.ts` — jobs.bg Playwright stealth scraper (returns `[]` gracefully on Vercel serverless where Playwright unavailable)
+
+**Pipeline wired:**
+- `src/lib/ingestion/ingest.ts` — `ingestAllSources()` now calls all 4 sources: Adzuna, Jooble, dev.bg, jobs.bg
+- Both BG scrapers wrapped in try/catch — one scraper failing never kills the pipeline
+- Dynamic Playwright import (`import('playwright').catch(() => null)`) prevents Vercel build error
+
+**LLM audit:**
+- `LLM_MODEL` env var only used for CV text extraction (not classification)
+- Classification is hardcoded to `claude-haiku-4-5` (intentional — documented in classify function header)
+
+**⚠️ Note:** dev.bg and jobs.bg scrapers are deployed but **zero BG jobs in DB yet** — no `/api/pipeline` trigger has run since Sprint E merged. The scrapers exist but haven't been called in production yet.
+
+**Commits:** `082b3a0`, `fea5ebd`, `0089df3`, `a1d1671`
+
+---
+
+### Sprint F — Results Page: Sticky Filters + Edit Filters Panel + Empty States
+
+**Changes to `src/app/results/page.tsx`:**
+- Sticky filter bar: moved outside `!loading && results.length > 0` block, always visible, skeleton pills during load
+- Score pills: 6+, 7+, 8+, **9+** (new)
+- Sort controls: 🎯/🕐/🏢 icon buttons in sticky bar (right side)
+- "🎛 Edit filters" button (opens slide-in panel)
+- `AnimatePresence` / `motion.div` slide-in panel from right: location, work mode toggles (Remote/Hybrid/Onsite), employment type (Full-Time/Part-Time/Contract), salary min, Re-run search button
+- Re-run calls `POST /api/search` with `X-Restore-Token` header from localStorage
+- Empty state: 0 API results → "No matches found" + Edit filters CTA + Upload CV CTA
+- Filtered-to-zero: inline "No matches with current filters — Clear filters"
+
+**Tests:** `src/app/results/page.test.tsx` — 467 lines, 11 tests. 2/11 pass fully in CI (framer-motion `AnimatePresence` doesn't work in jsdom — panel interaction tests fail in test env, work in browser).
+
+**Commits:** `624e08a`, `d036678`, `6685215`, `6471cd3`, `89626ae`
+
+---
+
+### Sprint G — Restore Page Redesign + PageHeader Component
+
+**New component:** `src/components/page-header.tsx` — `<PageHeader />` logo link component
+
+**Restore page `src/app/restore/page.tsx`:**
+- Uses `<PageHeader />` (replaces inline logo span)
+- Specific HTTP error messages: 404 → "We could not find a profile with that email and restore code", 401 → "Invalid restore code. Please check and try again.", other → generic
+- Design already matched Wellfound style from prior sprint — no visual regression
+
+**Commits:** `643cc28`, `f3a7154`, `7f2c565`
+
+---
+
+### Post-Sprint Adversarial Review Fixes (same day)
+
+**Commit `f3a7154`:**
+1. `devbg.ts` / `jobsbg.ts` — removed `console.warn/error` debris that slipped past engine guard (engine committed before manual debris check)
+2. `ingest.test.ts` — removed test asserting `console.log('[ingest] Jooble API key:')` which was removed from ingest.ts during spec fix
+3. `restore/page.tsx` — wire in `<PageHeader />` (Sprint G created it but forgot to use it)
+4. `restore/page.tsx` — proper 404/401 error messages
+
+---
+
+### AIfactory Engine Fixes (2026-03-15)
+
+4 root engine bugs found and fixed in MartinPetrov8/AIfactory:
+
+| Issue | Fix |
+|-------|-----|
+| `outputSchema` not exposed to agent on retries → agent returned plain text | Return `outputSchema` from `claimStep`, inject into agent prompt |
+| `last_error` not set on 3 of 4 retry paths → agents retried blind | `injectLastError()` helper called on all retry paths |
+| Debris checklist grep only covered `console.log`, not `console.warn/error` | Synced workflow.yml checklist with engine guard pattern |
+| `agentId` missing from REG-039 direct-write cron jobs → spawns defaulted to `main` agent | Set `agentId: job.agentId` in `writeCronJobDirectly()` |
+
