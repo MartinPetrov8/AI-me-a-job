@@ -1,6 +1,6 @@
 import { db } from '../db/index';
 import { profiles, jobs, searches, searchResults } from '../db/schema';
-import { eq, gt, sql, desc } from 'drizzle-orm';
+import { eq, gt, isNotNull, and, sql, desc } from 'drizzle-orm';
 import { YEARS_EXPERIENCE, EDUCATION_LEVELS, SENIORITY_LEVELS } from '../criteria';
 
 export interface MatchedJob {
@@ -18,6 +18,7 @@ export interface MatchedJob {
   salary_currency: string | null;
   employment_type: string | null;
   is_remote: boolean | null;
+  description_snippet: string | null;
 }
 
 export interface MatchResult {
@@ -172,7 +173,8 @@ export async function findMatches(profileId: string, options?: { delta?: boolean
   }
   const profile = profileResult[0];
 
-  // Fetch jobs with optional delta filter
+  // Fetch jobs with optional delta filter — only classified jobs (classifiedAt IS NOT NULL)
+  // Unclassified jobs have all criteria null → auto-pass everything → irrelevant jobs score 8/8
   let jobsQuery = db.select({
     id: jobs.id,
     title: jobs.title,
@@ -193,20 +195,15 @@ export async function findMatches(profileId: string, options?: { delta?: boolean
     industry: jobs.industry,
     languages: jobs.languages,
     key_skills: jobs.keySkills,
-  }).from(jobs);
+    description_raw: jobs.descriptionRaw,
+  }).from(jobs).where(isNotNull(jobs.classifiedAt));
 
   if (options?.delta && profile.lastSearchAt) {
-    jobsQuery = jobsQuery.where(gt(jobs.ingestedAt, profile.lastSearchAt)) as any;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    jobsQuery = (jobsQuery as any).where(and(isNotNull(jobs.classifiedAt), gt(jobs.ingestedAt, profile.lastSearchAt)));
   }
 
   const allJobs = (await jobsQuery).filter(job => {
-    // Only exclude jobs that have no classified fields AND no title — pure junk rows
-    const hasClassifiedField = job.sphere_of_expertise !== null ||
-      job.key_skills !== null ||
-      job.industry !== null ||
-      job.seniority_level !== null ||
-      job.title !== null;  // null title = true junk; null criteria = benefit of doubt
-    if (!hasClassifiedField) return false;
 
     // Apply preference pre-filters
     // Work mode
@@ -258,22 +255,30 @@ export async function findMatches(profileId: string, options?: { delta?: boolean
     })
     .slice(0, 50);
 
-  const results: MatchedJob[] = filteredJobs.map(item => ({
-    job_id: item.job.id,
-    title: item.job.title,
-    company: item.job.company,
-    location: item.job.location,
-    url: item.job.url,
-    posted_at: item.job.posted_at,
-    match_score: item.score,
-    matched_criteria: item.matched,
-    unmatched_criteria: item.unmatched,
-    salary_min: item.job.salary_min,
-    salary_max: item.job.salary_max,
-    salary_currency: item.job.salary_currency,
-    employment_type: item.job.employment_type,
-    is_remote: item.job.is_remote,
-  }));
+  const results: MatchedJob[] = filteredJobs.map(item => {
+    // Build a clean 350-char description snippet, stripping HTML tags
+    const raw = item.job.description_raw ?? '';
+    const stripped = raw.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    const snippet = stripped.length > 350 ? stripped.slice(0, 347) + '…' : (stripped || null);
+
+    return {
+      job_id: item.job.id,
+      title: item.job.title,
+      company: item.job.company,
+      location: item.job.location,
+      url: item.job.url,
+      posted_at: item.job.posted_at,
+      match_score: item.score,
+      matched_criteria: item.matched,
+      unmatched_criteria: item.unmatched,
+      salary_min: item.job.salary_min,
+      salary_max: item.job.salary_max,
+      salary_currency: item.job.salary_currency,
+      employment_type: item.job.employment_type,
+      is_remote: item.job.is_remote,
+      description_snippet: snippet,
+    };
+  });
 
   // Create searches record
   const searchRecord = await db.insert(searches).values({

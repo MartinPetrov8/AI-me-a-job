@@ -22,7 +22,19 @@ interface MatchedJob {
   salary_currency: string | null;
   employment_type: string | null;
   is_remote: boolean | null;
+  description_snippet: string | null;
 }
+
+const CRITERIA_LABELS: Record<string, string> = {
+  years_experience: 'Experience level',
+  education_level: 'Education',
+  field_of_study: 'Field of study',
+  sphere_of_expertise: 'Expertise area',
+  seniority_level: 'Seniority',
+  languages: 'Languages',
+  industry: 'Industry',
+  key_skills: 'Key skills',
+};
 
 interface SearchResponse {
   data: { results: MatchedJob[]; total: number; search_id: string };
@@ -122,17 +134,36 @@ function JobCard({ job, index }: { job: MatchedJob; index: number }) {
       </div>
 
       {expanded && (
-        <div className="mt-4 pt-4 border-t border-gray-100 grid grid-cols-2 gap-4">
+        <div className="mt-4 pt-4 border-t border-gray-100 space-y-4">
+          {/* Job description snippet */}
           <div>
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">✅ Matched</p>
-            <div className="space-y-1">{job.matched_criteria.map(c => <div key={c} className="text-sm text-emerald-700 font-medium">{formatLabel(c)}</div>)}</div>
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">About this role</p>
+            {job.description_snippet
+              ? <p className="text-sm text-gray-600 leading-relaxed">{job.description_snippet}</p>
+              : <p className="text-sm text-gray-400 italic">No preview available</p>
+            }
           </div>
-          {job.unmatched_criteria.length > 0 && (
+          {/* Match breakdown with human-readable labels */}
+          <div className="grid grid-cols-2 gap-3">
             <div>
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">❌ Unmatched</p>
-              <div className="space-y-1">{job.unmatched_criteria.map(c => <div key={c} className="text-sm text-gray-500">{formatLabel(c)}</div>)}</div>
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">✅ Matched</p>
+              <div className="space-y-1">
+                {job.matched_criteria.map(c => (
+                  <div key={c} className="text-sm text-emerald-700 font-medium">{CRITERIA_LABELS[c] ?? c}</div>
+                ))}
+              </div>
             </div>
-          )}
+            {job.unmatched_criteria.length > 0 && (
+              <div>
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">❌ Not matched</p>
+                <div className="space-y-1">
+                  {job.unmatched_criteria.map(c => (
+                    <div key={c} className="text-sm text-gray-500">{CRITERIA_LABELS[c] ?? c}</div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       )}
 
