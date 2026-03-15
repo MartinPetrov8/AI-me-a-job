@@ -1,14 +1,6 @@
-# Business-level checks for AI Job Matcher pipeline automation
-# Format: <check_type> <arguments>
+# Business gate checks — Sprint F: Results Page Filters
+# Format: <type> <path/expression>
+# Types: file_exists, file_nonempty, cmd_exit0, http_ok
 
-# S-02: /api/pipeline route must exist
-file_exists src/app/api/pipeline/route.ts
-
-# S-03: Vercel cron configuration must exist
-file_exists vercel.json
-
-# S-01: classify-job.ts should import Anthropic SDK directly
-cmd_exit0 grep -q "@anthropic-ai/sdk" src/lib/llm/classify-job.ts
-
-# S-04: languages field extraction fix — test should pass
-cmd_exit0 npm run test -- tests/lib/extract-cv.test.ts --reporter=verbose 2>&1 | grep -q "✓"
+file_exists src/app/results/page.tsx
+cmd_exit0 npx tsc --noEmit

@@ -1,6 +1,4 @@
-# Required deliverables for sprint-c pipeline automation
+# Required deliverables — Sprint F: Results Page Filters
 
-src/lib/llm/classify-job.ts
-src/app/api/pipeline/route.ts
-vercel.json
-src/lib/llm/extract-cv.ts
+src/app/results/page.tsx
+architecture_notes.txt
