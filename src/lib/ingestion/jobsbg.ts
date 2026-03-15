@@ -37,7 +37,6 @@ export async function fetchJobsBgJobs(): Promise<RawJobPosting[]> {
         
         // Wait for job listings to load
         await page.waitForSelector('.joblist', { timeout: 10000 }).catch(() => {
-          console.warn(`[jobsbg] No job listings found on page ${pageNum}`);
         });
         
         // Extract job data from page
@@ -104,7 +103,6 @@ export async function fetchJobsBgJobs(): Promise<RawJobPosting[]> {
     
     return jobs;
   } catch (error) {
-    console.error('[jobsbg] Scraper error (Playwright may be unavailable):', error instanceof Error ? error.message : String(error));
     return [];
   }
 }

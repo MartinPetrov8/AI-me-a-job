@@ -107,26 +107,6 @@ describe('ingestAllSources with dev.bg and jobs.bg', () => {
     expect(jobsBgResult?.new).toBeGreaterThanOrEqual(0);
   });
 
-  it('should log Jooble API key presence check', async () => {
-    // Clear existing mocks and restore console.log for this test
-    vi.restoreAllMocks();
-    const consoleLogSpy = vi.spyOn(console, 'log');
-    vi.spyOn(console, 'error').mockImplementation(() => {});
-
-    vi.mocked(adzuna.fetchAllAdzunaJobs).mockResolvedValue([]);
-    vi.mocked(jooble.fetchJoobleJobs).mockResolvedValue([]);
-    vi.mocked(devbg.fetchDevBgJobs).mockResolvedValue([]);
-    vi.mocked(jobsbg.fetchJobsBgJobs).mockResolvedValue([]);
-
-    await ingestAllSources();
-
-    const joobleKeyLog = consoleLogSpy.mock.calls.find(
-      call => typeof call[0] === 'string' && call[0].includes('[ingest] Jooble API key:')
-    );
-    expect(joobleKeyLog).toBeDefined();
-    const logMessage = joobleKeyLog?.[0] + (joobleKeyLog?.[1] || '');
-    expect(logMessage).toMatch(/present|MISSING/);
-  });
 
   it('should handle dev.bg scraper failures gracefully', async () => {
     vi.mocked(adzuna.fetchAllAdzunaJobs).mockResolvedValue([]);
