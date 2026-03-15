@@ -45,3 +45,7 @@ Started: 2026-03-08T20:41:42Z
 [S-01][done] Created shared auth validation helper (validateRestoreToken) for restore_token ownership verification — queries users JOIN profiles via Drizzle ORM, throws 401 Response on missing/mismatched token, returns void on success | tests:PASS
 [S-01][done] Created dev.bg scraper module (devbg.ts) with fetch-based HTML parsing, remote detection, error handling, and comprehensive tests | tests:PASS
 [S-03][done] Wired dev.bg and jobs.bg scrapers into ingestAllSources() with try/catch error handling and Jooble API key validation log | tests:PASS
+
+[S-01][done] Sticky filter bar with skeleton loading and 9+ score pill - filter bar moved out of conditional block, sticky positioning added, 4 skeleton pill placeholders during loading, 9+ score pill added, sort controls integrated into sticky bar, match count display added | tests:PASS
+[S-02][done] Edit Preferences slide-in panel with re-run search - added framer-motion animated panel with location/work mode/employment type/salary inputs, re-run search handler that calls POST /api/search with X-Restore-Token header, overlay and close button interactions, URL params initialization | tests:PASS
+[S-03][done] No results and filtered-to-zero empty states - updated no-results card with 🔍 icon, 'No matches found' title, two CTA buttons (Edit preferences opens panel, Upload new CV links to /upload), updated filtered-to-zero message to inline text with Clear filters button that resets all filter state | tests:PASS

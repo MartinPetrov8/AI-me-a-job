@@ -3,7 +3,8 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { SkeletonCard } from '@/components/ui/skeleton';
+import { AnimatePresence, motion } from 'framer-motion';
+import { SkeletonCard, Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 
 interface MatchedJob {
@@ -105,7 +106,6 @@ function JobCard({ job, index }: { job: MatchedJob; index: number }) {
         </div>
       </div>
 
-      {/* Inline criteria dots — always visible */}
       <div className="mt-3 flex flex-wrap gap-1.5">
         {job.matched_criteria.map(c => (
           <span key={c} className="inline-flex items-center gap-1 text-xs bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full">
@@ -163,15 +163,42 @@ function ResultsContent() {
   const [meta, setMeta] = useState<SearchResponse['meta'] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // Story 2 — Filter state
   const [filterRemote, setFilterRemote] = useState<boolean | null>(null);
   const [filterMinScore, setFilterMinScore] = useState<number>(5);
   const [filterEmploymentType, setFilterEmploymentType] = useState<string>('');
 
-  // Story 3 — Sort state
   const [sortBy, setSortBy] = useState<'score' | 'date' | 'company'>('score');
 
+  const [panelOpen, setPanelOpen] = useState(false);
+  const [panelLocation, setPanelLocation] = useState<string>('');
+  const [panelWorkMode, setPanelWorkMode] = useState<'remote' | 'hybrid' | 'onsite' | null>(null);
+  const [panelEmploymentType, setPanelEmploymentType] = useState<'full-time' | 'part-time' | 'contract' | null>(null);
+  const [panelSalaryMin, setPanelSalaryMin] = useState<number | null>(null);
+  const [panelError, setPanelError] = useState<string | null>(null);
+  const [panelLoading, setPanelLoading] = useState(false);
+
   useEffect(() => { if (profileId) performSearch(false); }, [profileId]);
+
+  useEffect(() => {
+    if (panelOpen && !panelLocation) {
+      const locationParam = searchParams.get('location');
+      const workModeParam = searchParams.get('work_mode');
+      const employmentTypeParam = searchParams.get('employment_type');
+      const salaryMinParam = searchParams.get('salary_min');
+
+      if (locationParam) setPanelLocation(locationParam);
+      if (workModeParam && ['remote', 'hybrid', 'onsite'].includes(workModeParam.toLowerCase())) {
+        setPanelWorkMode(workModeParam.toLowerCase() as 'remote' | 'hybrid' | 'onsite');
+      }
+      if (employmentTypeParam && ['full-time', 'part-time', 'contract'].includes(employmentTypeParam.toLowerCase())) {
+        setPanelEmploymentType(employmentTypeParam.toLowerCase() as 'full-time' | 'part-time' | 'contract');
+      }
+      if (salaryMinParam) {
+        const num = parseInt(salaryMinParam, 10);
+        if (!isNaN(num)) setPanelSalaryMin(num);
+      }
+    }
+  }, [panelOpen, panelLocation, searchParams]);
 
   const performSearch = async (delta: boolean) => {
     if (!profileId) return;
@@ -199,6 +226,48 @@ function ResultsContent() {
     }
   };
 
+  const handleRerunSearch = async () => {
+    if (!profileId) return;
+    setPanelLoading(true);
+    setPanelError(null);
+
+    try {
+      const restoreToken = localStorage.getItem('restore_token');
+      if (!restoreToken) {
+        window.location.href = '/restore';
+        return;
+      }
+
+      const body: Record<string, unknown> = { profile_id: profileId };
+      if (panelLocation) body.location = panelLocation;
+      if (panelWorkMode) body.work_mode = panelWorkMode;
+      if (panelEmploymentType) body.employment_type = panelEmploymentType;
+      if (panelSalaryMin !== null) body.salary_min = panelSalaryMin;
+
+      const response = await fetch('/api/search', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Restore-Token': restoreToken,
+        },
+        body: JSON.stringify(body),
+      });
+
+      if (!response.ok) {
+        throw new Error('Re-run search failed');
+      }
+
+      const data: SearchResponse = await response.json();
+      setResults(data.data.results);
+      setMeta(data.meta);
+      setPanelOpen(false);
+    } catch {
+      setPanelError('Failed to re-run search. Please try again.');
+    } finally {
+      setPanelLoading(false);
+    }
+  };
+
   if (!profileId) return (
     <div className="max-w-2xl mx-auto p-6 text-center py-20">
       <div className="text-5xl mb-4">🔍</div>
@@ -207,9 +276,24 @@ function ResultsContent() {
     </div>
   );
 
+  const filteredResults = results
+    .filter(j => filterRemote === null || j.is_remote === filterRemote)
+    .filter(j => j.match_score >= filterMinScore)
+    .filter(j => filterEmploymentType === '' || j.employment_type === filterEmploymentType);
+
+  const sortedFilteredResults = [...filteredResults].sort((a, b) => {
+    if (sortBy === 'score') return b.match_score - a.match_score;
+    if (sortBy === 'date') return (b.posted_at ? new Date(b.posted_at).getTime() : 0) - (a.posted_at ? new Date(a.posted_at).getTime() : 0);
+    if (sortBy === 'company') return (a.company || '').localeCompare(b.company || '');
+    return 0;
+  });
+
+  const employmentTypes = Array.from(new Set(results.map(j => j.employment_type).filter(Boolean))) as string[];
+  const hasFilters = filterRemote !== null || filterMinScore > 5 || filterEmploymentType !== '';
+
   return (
     <div className="min-h-screen bg-[#F7F7F5]">
-      <nav className="bg-white border-b border-gray-100 sticky top-0 z-10">
+      <nav className="bg-white border-b border-gray-100 sticky top-0 z-20">
         <div className="max-w-3xl mx-auto px-6 py-4 flex items-center justify-between">
           <Link href="/" className="text-xl font-bold text-indigo-600">aimeajob</Link>
           <button onClick={() => performSearch(true)} disabled={loading}
@@ -223,7 +307,6 @@ function ResultsContent() {
       </nav>
 
       <div className="max-w-3xl mx-auto px-6 py-8">
-        {/* Step indicator */}
         <div className="flex items-center justify-center gap-2 mb-6">
           {['Upload', 'Profile', 'Preferences', 'Results'].map((step, i) => (
             <div key={step} className="flex items-center gap-2">
@@ -236,7 +319,6 @@ function ResultsContent() {
           ))}
         </div>
 
-        {/* Refine links */}
         {userId && profileId && (
           <div className="flex gap-4 text-xs text-gray-400 mb-5">
             <Link href={`/profile?user_id=${userId}&profile_id=${profileId}&token=${token}`}
@@ -254,99 +336,82 @@ function ResultsContent() {
           <h1 className="text-2xl font-bold text-gray-900">
             {loading ? 'Finding your matches…' : results.length > 0 ? `${results.length} Matches` : 'Job Matches'}
           </h1>
-          {meta && <span className="text-sm text-gray-400">Min score {meta.threshold}/{meta.max_score}</span>}
+          <button
+            onClick={() => setPanelOpen(true)}
+            aria-label="Edit search filters"
+            className="text-sm text-indigo-600 hover:text-indigo-700 font-medium"
+          >
+            🎛 Edit filters
+          </button>
         </div>
 
-        {/* Story 2 — Filter bar */}
-        {!loading && results.length > 0 && (() => {
-          const filteredResults = results
-            .filter(j => filterRemote === null || j.is_remote === filterRemote)
-            .filter(j => j.match_score >= filterMinScore)
-            .filter(j => filterEmploymentType === '' || j.employment_type === filterEmploymentType);
-
-          const employmentTypes = Array.from(new Set(results.map(j => j.employment_type).filter(Boolean))) as string[];
-          const hasFilters = filterRemote !== null || filterMinScore > 5 || filterEmploymentType !== '';
-
-          // Story 3 — Sort
-          const sortedFilteredResults = [...filteredResults].sort((a, b) => {
-            if (sortBy === 'score') return b.match_score - a.match_score;
-            if (sortBy === 'date') return (b.posted_at ? new Date(b.posted_at).getTime() : 0) - (a.posted_at ? new Date(a.posted_at).getTime() : 0);
-            if (sortBy === 'company') return (a.company || '').localeCompare(b.company || '');
-            return 0;
-          });
-
-          return (
-            <>
-              {/* Filter pills */}
-              <div className="flex flex-wrap items-center gap-2 mb-4">
-                {/* Remote toggle */}
-                <button
-                  onClick={() => setFilterRemote(filterRemote === true ? null : true)}
-                  className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${filterRemote === true ? 'bg-indigo-600 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:border-indigo-300'}`}
-                >
-                  🌍 Remote only
-                </button>
-
-                {/* Score pills */}
-                {[6, 7, 8].map(s => (
-                  <button key={s}
-                    onClick={() => setFilterMinScore(filterMinScore === s ? 5 : s)}
-                    className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${filterMinScore === s ? 'bg-indigo-600 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:border-indigo-300'}`}
-                  >
-                    {s}+ score
-                  </button>
-                ))}
-
-                {/* Employment type pills */}
-                {employmentTypes.map(type => (
-                  <button key={type}
-                    onClick={() => setFilterEmploymentType(filterEmploymentType === type ? '' : type)}
-                    className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${filterEmploymentType === type ? 'bg-indigo-600 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:border-indigo-300'}`}
-                  >
-                    {type}
-                  </button>
-                ))}
-
-                {/* Clear */}
-                {hasFilters && (
-                  <button
-                    onClick={() => { setFilterRemote(null); setFilterMinScore(5); setFilterEmploymentType(''); }}
-                    className="px-3 py-1.5 rounded-full text-sm font-medium bg-red-50 text-red-600 border border-red-100 hover:bg-red-100 transition-colors"
-                  >
-                    ✕ Clear
-                  </button>
-                )}
-
-                <span className="ml-auto text-sm text-gray-400">{sortedFilteredResults.length} of {results.length}</span>
-              </div>
-
-              {/* Story 3 — Sort controls */}
-              <div className="flex gap-2 mb-6">
-                {([['score', '🎯 Best match'], ['date', '🕐 Newest'], ['company', '🏢 Company']] as const).map(([val, label]) => (
-                  <button key={val}
-                    onClick={() => setSortBy(val)}
-                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${sortBy === val ? 'bg-gray-900 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:border-gray-300'}`}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-
-              {sortedFilteredResults.length === 0 ? (
-                <div className="bg-white rounded-2xl border border-gray-100 p-10 text-center">
-                  <div className="text-4xl mb-3">🔎</div>
-                  <p className="text-gray-500 text-sm">No jobs match your current filters.</p>
-                  <button onClick={() => { setFilterRemote(null); setFilterMinScore(5); setFilterEmploymentType(''); }}
-                    className="mt-4 text-indigo-600 text-sm font-medium hover:underline">Clear filters</button>
-                </div>
+        <div className="sticky top-0 z-10 bg-white/95 backdrop-blur-sm border-b border-gray-100 px-4 py-3 -mx-4 mb-4">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex flex-wrap items-center gap-2">
+              {loading ? (
+                <>
+                  <Skeleton className="h-8 w-20 rounded-full" />
+                  <Skeleton className="h-8 w-20 rounded-full" />
+                  <Skeleton className="h-8 w-20 rounded-full" />
+                  <Skeleton className="h-8 w-20 rounded-full" />
+                </>
               ) : (
-                <div className="space-y-4">
-                  {sortedFilteredResults.map((job, i) => <JobCard key={job.job_id} job={job} index={i} />)}
-                </div>
+                <>
+                  <button
+                    onClick={() => setFilterRemote(filterRemote === true ? null : true)}
+                    className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${filterRemote === true ? 'bg-indigo-600 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:border-indigo-300'}`}
+                  >
+                    🌍 Remote only
+                  </button>
+
+                  {[6, 7, 8, 9].map(s => (
+                    <button key={s}
+                      onClick={() => setFilterMinScore(filterMinScore === s ? 5 : s)}
+                      className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${filterMinScore === s ? 'bg-indigo-600 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:border-indigo-300'}`}
+                    >
+                      {s}+ score
+                    </button>
+                  ))}
+
+                  {employmentTypes.map(type => (
+                    <button key={type}
+                      onClick={() => setFilterEmploymentType(filterEmploymentType === type ? '' : type)}
+                      className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${filterEmploymentType === type ? 'bg-indigo-600 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:border-indigo-300'}`}
+                    >
+                      {type}
+                    </button>
+                  ))}
+
+                  {hasFilters && (
+                    <button
+                      onClick={() => { setFilterRemote(null); setFilterMinScore(5); setFilterEmploymentType(''); }}
+                      className="px-3 py-1.5 rounded-full text-sm font-medium bg-red-50 text-red-600 border border-red-100 hover:bg-red-100 transition-colors"
+                    >
+                      ✕ Clear
+                    </button>
+                  )}
+                </>
               )}
-            </>
-          );
-        })()}
+            </div>
+
+            {!loading && results.length > 0 && (
+              <div className="flex items-center gap-3">
+                <span className="text-sm text-gray-400 whitespace-nowrap">{sortedFilteredResults.length} of {results.length}</span>
+                <div className="flex gap-2">
+                  {([['score', '🎯'], ['date', '🕐'], ['company', '🏢']] as const).map(([val, icon]) => (
+                    <button key={val}
+                      onClick={() => setSortBy(val)}
+                      className={`px-2 py-1.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${sortBy === val ? 'bg-gray-900 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:border-gray-300'}`}
+                      title={val === 'score' ? 'Best match' : val === 'date' ? 'Newest' : 'Company'}
+                    >
+                      {icon}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
 
         {loading && <div className="space-y-4"><SkeletonCard /><SkeletonCard /><SkeletonCard /></div>}
 
@@ -361,14 +426,153 @@ function ResultsContent() {
         {!loading && !error && results.length === 0 && (
           <div className="bg-white rounded-2xl border border-gray-100 p-12 text-center">
             <div className="text-5xl mb-4">🔍</div>
-            <h3 className="font-semibold text-gray-900 text-lg mb-2">No matches yet</h3>
-            <p className="text-gray-500 text-sm mb-6 max-w-sm mx-auto">Try broadening your profile criteria, or check back as new jobs are added daily.</p>
-            <Link href="/" className="inline-flex items-center gap-2 bg-indigo-600 text-white px-6 py-3 rounded-xl font-semibold hover:bg-indigo-700 transition-colors text-sm">Start a new search</Link>
+            <h3 className="font-semibold text-gray-900 text-lg mb-2">No matches found</h3>
+            <p className="text-gray-500 text-sm mb-6">Try adjusting your preferences or uploading an updated CV.</p>
+            <div className="flex gap-3 justify-center">
+              <button
+                onClick={() => setPanelOpen(true)}
+                aria-label="Edit search filters"
+                className="bg-indigo-600 text-white px-6 py-3 rounded-xl font-semibold hover:bg-indigo-700 transition-colors"
+              >
+                Edit filters
+              </button>
+              <Link
+                href="/upload"
+                className="bg-indigo-600 text-white px-6 py-3 rounded-xl font-semibold hover:bg-indigo-700 transition-colors"
+              >
+                Upload new CV
+              </Link>
+            </div>
+          </div>
+        )}
+
+        {!loading && !error && results.length > 0 && sortedFilteredResults.length === 0 && (
+          <p className="text-gray-500 text-sm">
+            No matches with current filters —{' '}
+            <button
+              onClick={() => { setFilterRemote(null); setFilterMinScore(5); setFilterEmploymentType(''); }}
+              className="text-indigo-600 font-medium hover:underline"
+            >
+              Clear filters
+            </button>
+          </p>
+        )}
+
+        {!loading && !error && sortedFilteredResults.length > 0 && (
+          <div className="space-y-4">
+            {sortedFilteredResults.map((job, i) => <JobCard key={job.job_id} job={job} index={i} />)}
           </div>
         )}
 
         {profileId && <div className="mt-8"><SaveProfileCard profileId={profileId} /></div>}
       </div>
+
+      <AnimatePresence>
+        {panelOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setPanelOpen(false)}
+              className="fixed inset-0 bg-black/30 z-40"
+            />
+            <motion.div
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+              className="fixed inset-y-0 right-0 w-80 bg-white shadow-xl z-50 p-6 overflow-y-auto"
+            >
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-lg font-bold text-gray-900">Edit Preferences</h2>
+                <button
+                  onClick={() => setPanelOpen(false)}
+                  className="text-gray-400 hover:text-gray-600 text-xl font-bold"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="space-y-5">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Location</label>
+                  <input
+                    type="text"
+                    value={panelLocation}
+                    onChange={(e) => setPanelLocation(e.target.value)}
+                    placeholder="e.g., Berlin, Remote"
+                    className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Work Mode</label>
+                  <div className="flex gap-2">
+                    {(['remote', 'hybrid', 'onsite'] as const).map(mode => (
+                      <button
+                        key={mode}
+                        onClick={() => setPanelWorkMode(panelWorkMode === mode ? null : mode)}
+                        className={`flex-1 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+                          panelWorkMode === mode
+                            ? 'bg-indigo-600 text-white'
+                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }`}
+                      >
+                        {mode.charAt(0).toUpperCase() + mode.slice(1)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Employment Type</label>
+                  <div className="flex flex-col gap-2">
+                    {(['full-time', 'part-time', 'contract'] as const).map(type => (
+                      <button
+                        key={type}
+                        onClick={() => setPanelEmploymentType(panelEmploymentType === type ? null : type)}
+                        className={`py-2.5 rounded-xl text-sm font-medium transition-colors ${
+                          panelEmploymentType === type
+                            ? 'bg-indigo-600 text-white'
+                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }`}
+                      >
+                        {type.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join('-')}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Minimum Salary (optional)</label>
+                  <input
+                    type="number"
+                    value={panelSalaryMin ?? ''}
+                    onChange={(e) => setPanelSalaryMin(e.target.value ? parseInt(e.target.value, 10) : null)}
+                    placeholder="e.g., 50000"
+                    className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
+
+                {panelError && (
+                  <div className="bg-red-50 border border-red-100 rounded-xl p-3 text-sm text-red-700">
+                    {panelError}
+                  </div>
+                )}
+
+                <button
+                  onClick={handleRerunSearch}
+                  disabled={panelLoading}
+                  className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-xl text-sm transition-colors disabled:opacity-50"
+                >
+                  {panelLoading ? 'Re-running search...' : 'Re-run search'}
+                </button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
