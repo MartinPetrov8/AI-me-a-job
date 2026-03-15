@@ -3,6 +3,7 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { AnimatePresence, motion } from 'framer-motion';
 import { SkeletonCard, Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 
@@ -168,7 +169,36 @@ function ResultsContent() {
 
   const [sortBy, setSortBy] = useState<'score' | 'date' | 'company'>('score');
 
+  const [panelOpen, setPanelOpen] = useState(false);
+  const [panelLocation, setPanelLocation] = useState<string>('');
+  const [panelWorkMode, setPanelWorkMode] = useState<'remote' | 'hybrid' | 'onsite' | null>(null);
+  const [panelEmploymentType, setPanelEmploymentType] = useState<'full-time' | 'part-time' | 'contract' | null>(null);
+  const [panelSalaryMin, setPanelSalaryMin] = useState<number | null>(null);
+  const [panelError, setPanelError] = useState<string | null>(null);
+  const [panelLoading, setPanelLoading] = useState(false);
+
   useEffect(() => { if (profileId) performSearch(false); }, [profileId]);
+
+  useEffect(() => {
+    if (panelOpen && !panelLocation) {
+      const locationParam = searchParams.get('location');
+      const workModeParam = searchParams.get('work_mode');
+      const employmentTypeParam = searchParams.get('employment_type');
+      const salaryMinParam = searchParams.get('salary_min');
+
+      if (locationParam) setPanelLocation(locationParam);
+      if (workModeParam && ['remote', 'hybrid', 'onsite'].includes(workModeParam.toLowerCase())) {
+        setPanelWorkMode(workModeParam.toLowerCase() as 'remote' | 'hybrid' | 'onsite');
+      }
+      if (employmentTypeParam && ['full-time', 'part-time', 'contract'].includes(employmentTypeParam.toLowerCase())) {
+        setPanelEmploymentType(employmentTypeParam.toLowerCase() as 'full-time' | 'part-time' | 'contract');
+      }
+      if (salaryMinParam) {
+        const num = parseInt(salaryMinParam, 10);
+        if (!isNaN(num)) setPanelSalaryMin(num);
+      }
+    }
+  }, [panelOpen, panelLocation, searchParams]);
 
   const performSearch = async (delta: boolean) => {
     if (!profileId) return;
@@ -193,6 +223,48 @@ function ResultsContent() {
       setError('Failed to load results. Please try again.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleRerunSearch = async () => {
+    if (!profileId) return;
+    setPanelLoading(true);
+    setPanelError(null);
+
+    try {
+      const restoreToken = localStorage.getItem('restore_token');
+      if (!restoreToken) {
+        window.location.href = '/restore';
+        return;
+      }
+
+      const body: Record<string, unknown> = { profile_id: profileId };
+      if (panelLocation) body.location = panelLocation;
+      if (panelWorkMode) body.work_mode = panelWorkMode;
+      if (panelEmploymentType) body.employment_type = panelEmploymentType;
+      if (panelSalaryMin !== null) body.salary_min = panelSalaryMin;
+
+      const response = await fetch('/api/search', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Restore-Token': restoreToken,
+        },
+        body: JSON.stringify(body),
+      });
+
+      if (!response.ok) {
+        throw new Error('Re-run search failed');
+      }
+
+      const data: SearchResponse = await response.json();
+      setResults(data.data.results);
+      setMeta(data.meta);
+      setPanelOpen(false);
+    } catch {
+      setPanelError('Failed to re-run search. Please try again.');
+    } finally {
+      setPanelLoading(false);
     }
   };
 
@@ -264,7 +336,12 @@ function ResultsContent() {
           <h1 className="text-2xl font-bold text-gray-900">
             {loading ? 'Finding your matches…' : results.length > 0 ? `${results.length} Matches` : 'Job Matches'}
           </h1>
-          {meta && <span className="text-sm text-gray-400">Min score {meta.threshold}/{meta.max_score}</span>}
+          <button
+            onClick={() => setPanelOpen(true)}
+            className="text-sm text-indigo-600 hover:text-indigo-700 font-medium"
+          >
+            ✏️ Edit preferences
+          </button>
         </div>
 
         <div className="sticky top-0 z-10 bg-white/95 backdrop-blur-sm border-b border-gray-100 px-4 py-3 -mx-4 mb-4">
@@ -371,6 +448,113 @@ function ResultsContent() {
 
         {profileId && <div className="mt-8"><SaveProfileCard profileId={profileId} /></div>}
       </div>
+
+      <AnimatePresence>
+        {panelOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setPanelOpen(false)}
+              className="fixed inset-0 bg-black/30 z-40"
+            />
+            <motion.div
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+              className="fixed inset-y-0 right-0 w-80 bg-white shadow-xl z-50 p-6 overflow-y-auto"
+            >
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-lg font-bold text-gray-900">Edit Preferences</h2>
+                <button
+                  onClick={() => setPanelOpen(false)}
+                  className="text-gray-400 hover:text-gray-600 text-xl font-bold"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="space-y-5">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Location</label>
+                  <input
+                    type="text"
+                    value={panelLocation}
+                    onChange={(e) => setPanelLocation(e.target.value)}
+                    placeholder="e.g., Berlin, Remote"
+                    className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Work Mode</label>
+                  <div className="flex gap-2">
+                    {(['remote', 'hybrid', 'onsite'] as const).map(mode => (
+                      <button
+                        key={mode}
+                        onClick={() => setPanelWorkMode(panelWorkMode === mode ? null : mode)}
+                        className={`flex-1 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+                          panelWorkMode === mode
+                            ? 'bg-indigo-600 text-white'
+                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }`}
+                      >
+                        {mode.charAt(0).toUpperCase() + mode.slice(1)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Employment Type</label>
+                  <div className="flex flex-col gap-2">
+                    {(['full-time', 'part-time', 'contract'] as const).map(type => (
+                      <button
+                        key={type}
+                        onClick={() => setPanelEmploymentType(panelEmploymentType === type ? null : type)}
+                        className={`py-2.5 rounded-xl text-sm font-medium transition-colors ${
+                          panelEmploymentType === type
+                            ? 'bg-indigo-600 text-white'
+                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }`}
+                      >
+                        {type.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join('-')}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Minimum Salary (optional)</label>
+                  <input
+                    type="number"
+                    value={panelSalaryMin ?? ''}
+                    onChange={(e) => setPanelSalaryMin(e.target.value ? parseInt(e.target.value, 10) : null)}
+                    placeholder="e.g., 50000"
+                    className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
+
+                {panelError && (
+                  <div className="bg-red-50 border border-red-100 rounded-xl p-3 text-sm text-red-700">
+                    {panelError}
+                  </div>
+                )}
+
+                <button
+                  onClick={handleRerunSearch}
+                  disabled={panelLoading}
+                  className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-xl text-sm transition-colors disabled:opacity-50"
+                >
+                  {panelLoading ? 'Re-running search...' : 'Re-run search'}
+                </button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

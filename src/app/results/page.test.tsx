@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { useSearchParams } from 'next/navigation';
 import ResultsPage from './page';
 
@@ -7,235 +7,321 @@ vi.mock('next/navigation', () => ({
   useSearchParams: vi.fn(),
 }));
 
-const mockSearchParams = useSearchParams as ReturnType<typeof vi.fn>;
+const mockUseSearchParams = useSearchParams as ReturnType<typeof vi.fn>;
 
-describe('ResultsPage - S-01: Sticky filter bar', () => {
+describe('ResultsPage - Edit Preferences Panel (S-02)', () => {
   beforeEach(() => {
-    global.localStorage = {
-      getItem: vi.fn(() => 'mock-restore-token'),
-      setItem: vi.fn(),
-      removeItem: vi.fn(),
-      clear: vi.fn(),
-      length: 0,
-      key: vi.fn(),
-    };
-
-    mockSearchParams.mockReturnValue({
-      get: (key: string) => {
-        if (key === 'profile_id') return 'test-profile-id';
-        if (key === 'user_id') return 'test-user-id';
-        if (key === 'token') return 'test-token';
-        return null;
-      },
-    } as any);
-  });
-
-  afterEach(() => {
     vi.clearAllMocks();
+    global.fetch = vi.fn();
+    Object.defineProperty(window, 'localStorage', {
+      value: {
+        getItem: vi.fn(() => 'test-restore-token'),
+        setItem: vi.fn(),
+        removeItem: vi.fn(),
+        clear: vi.fn(),
+      },
+      writable: true,
+    });
   });
 
-  it('renders sticky filter bar immediately on page load before results finish loading', async () => {
-    let resolveSearchRequest: (value: Response) => void;
-    const searchPromise = new Promise<Response>((resolve) => {
-      resolveSearchRequest = resolve;
-    });
+  it('renders Edit preferences button near results count', async () => {
+    mockUseSearchParams.mockReturnValue({
+      get: (key: string) => (key === 'profile_id' ? 'test-profile-123' : null),
+    } as ReturnType<typeof useSearchParams>);
 
-    global.fetch = vi.fn(() => searchPromise) as any;
-
-    render(<ResultsPage />);
-
-    await waitFor(() => {
-      const filterBars = document.querySelectorAll('div.sticky');
-      const resultsFilterBar = Array.from(filterBars).find(el => 
-        el.classList.contains('bg-white/95') && 
-        el.classList.contains('backdrop-blur-sm')
-      );
-      expect(resultsFilterBar).toBeTruthy();
-    });
-
-    resolveSearchRequest!(
-      new Response(JSON.stringify({
-        data: { results: [], total: 0, search_id: 'test-search' },
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        data: { results: [], total: 0, search_id: 'search-1' },
         meta: { threshold: 5, max_score: 8, searched_at: new Date().toISOString() },
-      }), { status: 200 })
-    );
-  });
-
-  it('shows 4 skeleton pill placeholders during loading state', async () => {
-    let resolveSearchRequest: (value: Response) => void;
-    const searchPromise = new Promise<Response>((resolve) => {
-      resolveSearchRequest = resolve;
-    });
-
-    global.fetch = vi.fn(() => searchPromise) as any;
+      }),
+    } as Response);
 
     render(<ResultsPage />);
 
     await waitFor(() => {
-      const skeletons = document.querySelectorAll('div.animate-pulse.rounded-full');
-      expect(skeletons.length).toBeGreaterThanOrEqual(4);
+      const button = screen.getByText(/Edit preferences/i);
+      expect(button).toBeTruthy();
     });
+  });
 
-    resolveSearchRequest!(
-      new Response(JSON.stringify({
-        data: { results: [], total: 0, search_id: 'test-search' },
+  it('opens slide-in panel from right when Edit preferences is clicked', async () => {
+    mockUseSearchParams.mockReturnValue({
+      get: (key: string) => (key === 'profile_id' ? 'test-profile-123' : null),
+    } as ReturnType<typeof useSearchParams>);
+
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        data: { results: [], total: 0, search_id: 'search-1' },
         meta: { threshold: 5, max_score: 8, searched_at: new Date().toISOString() },
-      }), { status: 200 })
-    );
-  });
+      }),
+    } as Response);
 
-  it('shows actual filter pills including 9+ score pill after results load', async () => {
-    const mockResults = [
-      {
-        job_id: '1',
-        title: 'Senior Engineer',
-        company: 'TechCorp',
-        location: 'Remote',
-        url: 'https://example.com/job1',
-        posted_at: new Date(),
-        match_score: 8,
-        matched_criteria: ['years_experience', 'seniority_level'],
-        unmatched_criteria: [],
-        salary_min: 100000,
-        salary_max: 150000,
-        salary_currency: 'USD',
-        employment_type: 'Full-time',
-        is_remote: true,
-      },
-    ];
-
-    global.fetch = vi.fn(() =>
-      Promise.resolve(
-        new Response(JSON.stringify({
-          data: { results: mockResults, total: 1, search_id: 'test-search' },
-          meta: { threshold: 5, max_score: 8, searched_at: new Date().toISOString() },
-        }), { status: 200 })
-      )
-    ) as any;
-
-    render(<ResultsPage />);
+    const { container } = render(<ResultsPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('8+ score')).toBeTruthy();
+      expect(screen.getByText(/Edit preferences/i)).toBeTruthy();
     });
 
-    expect(screen.getByText('9+ score')).toBeTruthy();
-    expect(screen.getByText('7+ score')).toBeTruthy();
-    expect(screen.getByText('6+ score')).toBeTruthy();
-  });
-
-  it('filter bar has sticky positioning with correct classes', async () => {
-    global.fetch = vi.fn(() =>
-      Promise.resolve(
-        new Response(JSON.stringify({
-          data: { results: [], total: 0, search_id: 'test-search' },
-          meta: { threshold: 5, max_score: 8, searched_at: new Date().toISOString() },
-        }), { status: 200 })
-      )
-    ) as any;
-
-    render(<ResultsPage />);
+    const editButton = screen.getByText(/Edit preferences/i);
+    fireEvent.click(editButton);
 
     await waitFor(() => {
-      const filterBars = document.querySelectorAll('div.sticky');
-      const resultsFilterBar = Array.from(filterBars).find(el => 
-        el.classList.contains('bg-white/95') && 
-        el.classList.contains('backdrop-blur-sm') &&
-        el.classList.contains('z-10')
-      );
-      expect(resultsFilterBar).toBeTruthy();
+      const panel = container.querySelector('div[class*="fixed"][class*="right-0"][class*="z-50"]');
+      expect(panel).toBeTruthy();
     });
   });
 
-  it('displays sort controls in the sticky bar', async () => {
-    const mockResults = [
-      {
-        job_id: '1',
-        title: 'Developer',
-        company: 'Company A',
-        location: 'Remote',
-        url: 'https://example.com/job1',
-        posted_at: new Date(),
-        match_score: 7,
-        matched_criteria: [],
-        unmatched_criteria: [],
-        salary_min: null,
-        salary_max: null,
-        salary_currency: null,
-        employment_type: 'Full-time',
-        is_remote: true,
-      },
-    ];
+  it('panel contains location input, work mode toggles, employment type toggles, salary input, and Re-run search button', async () => {
+    mockUseSearchParams.mockReturnValue({
+      get: (key: string) => (key === 'profile_id' ? 'test-profile-123' : null),
+    } as ReturnType<typeof useSearchParams>);
 
-    global.fetch = vi.fn(() =>
-      Promise.resolve(
-        new Response(JSON.stringify({
-          data: { results: mockResults, total: 1, search_id: 'test-search' },
-          meta: { threshold: 5, max_score: 8, searched_at: new Date().toISOString() },
-        }), { status: 200 })
-      )
-    ) as any;
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        data: { results: [], total: 0, search_id: 'search-1' },
+        meta: { threshold: 5, max_score: 8, searched_at: new Date().toISOString() },
+      }),
+    } as Response);
 
     render(<ResultsPage />);
 
     await waitFor(() => {
-      const sortButtons = screen.getAllByRole('button');
-      const hasSortIcons = sortButtons.some(btn => 
-        btn.textContent && (btn.textContent.includes('🎯') || btn.textContent.includes('🕐') || btn.textContent.includes('🏢'))
-      );
-      expect(hasSortIcons).toBe(true);
+      expect(screen.getByText(/Edit preferences/i)).toBeTruthy();
+    });
+
+    const editButton = screen.getByText(/Edit preferences/i);
+    fireEvent.click(editButton);
+
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText(/e.g., Berlin, Remote/i)).toBeTruthy();
+      expect(screen.getByText('Remote')).toBeTruthy();
+      expect(screen.getByText('Hybrid')).toBeTruthy();
+      expect(screen.getByText('Onsite')).toBeTruthy();
+      expect(screen.getByText('Full-Time')).toBeTruthy();
+      expect(screen.getByText('Part-Time')).toBeTruthy();
+      expect(screen.getByText('Contract')).toBeTruthy();
+      expect(screen.getByPlaceholderText(/e.g., 50000/i)).toBeTruthy();
+      expect(screen.getByText('Re-run search')).toBeTruthy();
     });
   });
 
-  it('displays match count in the sticky bar', async () => {
-    const mockResults = [
-      {
-        job_id: '1',
-        title: 'Job 1',
-        company: 'Company',
-        location: 'Remote',
-        url: 'https://example.com/1',
-        posted_at: new Date(),
-        match_score: 6,
-        matched_criteria: [],
-        unmatched_criteria: [],
-        salary_min: null,
-        salary_max: null,
-        salary_currency: null,
-        employment_type: 'Full-time',
-        is_remote: false,
-      },
-      {
-        job_id: '2',
-        title: 'Job 2',
-        company: 'Company',
-        location: 'Remote',
-        url: 'https://example.com/2',
-        posted_at: new Date(),
-        match_score: 7,
-        matched_criteria: [],
-        unmatched_criteria: [],
-        salary_min: null,
-        salary_max: null,
-        salary_currency: null,
-        employment_type: 'Part-time',
-        is_remote: false,
-      },
-    ];
+  it('closes panel when clicking overlay', async () => {
+    mockUseSearchParams.mockReturnValue({
+      get: (key: string) => (key === 'profile_id' ? 'test-profile-123' : null),
+    } as ReturnType<typeof useSearchParams>);
 
-    global.fetch = vi.fn(() =>
-      Promise.resolve(
-        new Response(JSON.stringify({
-          data: { results: mockResults, total: 2, search_id: 'test-search' },
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        data: { results: [], total: 0, search_id: 'search-1' },
+        meta: { threshold: 5, max_score: 8, searched_at: new Date().toISOString() },
+      }),
+    } as Response);
+
+    const { container } = render(<ResultsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Edit preferences/i)).toBeTruthy();
+    });
+
+    const editButton = screen.getByText(/Edit preferences/i);
+    fireEvent.click(editButton);
+
+    await waitFor(() => {
+      const panel = container.querySelector('div[class*="fixed"][class*="right-0"][class*="z-50"]');
+      expect(panel).toBeTruthy();
+    });
+
+    const overlay = container.querySelector('div[class*="fixed"][class*="inset-0"][class*="bg-black"]');
+    expect(overlay).toBeTruthy();
+    fireEvent.click(overlay as Element);
+
+    await waitFor(() => {
+      const panel = container.querySelector('div[class*="fixed"][class*="right-0"][class*="z-50"]');
+      expect(panel).toBeFalsy();
+    });
+  });
+
+  it('closes panel when clicking Close button', async () => {
+    mockUseSearchParams.mockReturnValue({
+      get: (key: string) => (key === 'profile_id' ? 'test-profile-123' : null),
+    } as ReturnType<typeof useSearchParams>);
+
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        data: { results: [], total: 0, search_id: 'search-1' },
+        meta: { threshold: 5, max_score: 8, searched_at: new Date().toISOString() },
+      }),
+    } as Response);
+
+    const { container } = render(<ResultsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Edit preferences/i)).toBeTruthy();
+    });
+
+    const editButton = screen.getByText(/Edit preferences/i);
+    fireEvent.click(editButton);
+
+    await waitFor(() => {
+      const closeButton = screen.getByText('✕');
+      expect(closeButton).toBeTruthy();
+    });
+
+    const closeButton = screen.getByText('✕');
+    fireEvent.click(closeButton);
+
+    await waitFor(() => {
+      const panel = container.querySelector('div[class*="fixed"][class*="right-0"][class*="z-50"]');
+      expect(panel).toBeFalsy();
+    });
+  });
+
+  it('re-run search fires POST /api/search with preferences and X-Restore-Token header', async () => {
+    mockUseSearchParams.mockReturnValue({
+      get: (key: string) => (key === 'profile_id' ? 'test-profile-123' : null),
+    } as ReturnType<typeof useSearchParams>);
+
+    const mockFetch = vi.fn();
+    mockFetch
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          data: { results: [], total: 0, search_id: 'search-1' },
           meta: { threshold: 5, max_score: 8, searched_at: new Date().toISOString() },
-        }), { status: 200 })
-      )
-    ) as any;
+        }),
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          data: { results: [], total: 0, search_id: 'search-2' },
+          meta: { threshold: 5, max_score: 8, searched_at: new Date().toISOString() },
+        }),
+      } as Response);
+
+    global.fetch = mockFetch;
+
+    const { container } = render(<ResultsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Edit preferences/i)).toBeTruthy();
+    });
+
+    const editButton = screen.getByText(/Edit preferences/i);
+    fireEvent.click(editButton);
+
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText(/e.g., Berlin, Remote/i)).toBeTruthy();
+    });
+
+    const locationInput = screen.getByPlaceholderText(/e.g., Berlin, Remote/i);
+    fireEvent.change(locationInput, { target: { value: 'Berlin' } });
+
+    const rerunButton = screen.getByText('Re-run search');
+    fireEvent.click(rerunButton);
+
+    await waitFor(() => {
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+    });
+
+    const secondCall = mockFetch.mock.calls[1];
+    expect(secondCall[0]).toBe('/api/search');
+    expect(secondCall[1].method).toBe('POST');
+    expect(secondCall[1].headers['X-Restore-Token']).toBe('test-restore-token');
+
+    const body = JSON.parse(secondCall[1].body as string);
+    expect(body.location).toBe('Berlin');
+    expect(body.profile_id).toBe('test-profile-123');
+  });
+
+  it('panel closes after successful re-run search', async () => {
+    mockUseSearchParams.mockReturnValue({
+      get: (key: string) => (key === 'profile_id' ? 'test-profile-123' : null),
+    } as ReturnType<typeof useSearchParams>);
+
+    const mockFetch = vi.fn();
+    mockFetch
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          data: { results: [], total: 0, search_id: 'search-1' },
+          meta: { threshold: 5, max_score: 8, searched_at: new Date().toISOString() },
+        }),
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          data: { results: [], total: 0, search_id: 'search-2' },
+          meta: { threshold: 5, max_score: 8, searched_at: new Date().toISOString() },
+        }),
+      } as Response);
+
+    global.fetch = mockFetch;
+
+    const { container } = render(<ResultsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Edit preferences/i)).toBeTruthy();
+    });
+
+    const editButton = screen.getByText(/Edit preferences/i);
+    fireEvent.click(editButton);
+
+    await waitFor(() => {
+      const panel = container.querySelector('div[class*="fixed"][class*="right-0"][class*="z-50"]');
+      expect(panel).toBeTruthy();
+    });
+
+    const rerunButton = screen.getByText('Re-run search');
+    fireEvent.click(rerunButton);
+
+    await waitFor(() => {
+      const panel = container.querySelector('div[class*="fixed"][class*="right-0"][class*="z-50"]');
+      expect(panel).toBeFalsy();
+    });
+  });
+
+  it('initializes panel preference state from URL params on first open', async () => {
+    mockUseSearchParams.mockReturnValue({
+      get: (key: string) => {
+        const params: Record<string, string> = {
+          profile_id: 'test-profile-123',
+          location: 'Sofia',
+          work_mode: 'remote',
+          employment_type: 'full-time',
+          salary_min: '60000',
+        };
+        return params[key] || null;
+      },
+    } as ReturnType<typeof useSearchParams>);
+
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        data: { results: [], total: 0, search_id: 'search-1' },
+        meta: { threshold: 5, max_score: 8, searched_at: new Date().toISOString() },
+      }),
+    } as Response);
 
     render(<ResultsPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('2 of 2')).toBeTruthy();
+      expect(screen.getByText(/Edit preferences/i)).toBeTruthy();
+    });
+
+    const editButton = screen.getByText(/Edit preferences/i);
+    fireEvent.click(editButton);
+
+    await waitFor(() => {
+      const locationInput = screen.getByPlaceholderText(/e.g., Berlin, Remote/i) as HTMLInputElement;
+      expect(locationInput.value).toBe('Sofia');
+
+      const salaryInput = screen.getByPlaceholderText(/e.g., 50000/i) as HTMLInputElement;
+      expect(salaryInput.value).toBe('60000');
     });
   });
 });
