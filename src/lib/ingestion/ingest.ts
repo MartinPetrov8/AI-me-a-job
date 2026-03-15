@@ -3,6 +3,8 @@ import { jobs } from '../db/schema';
 import { and, lt, ne, or, isNull } from 'drizzle-orm';
 import { fetchAllAdzunaJobs } from './adzuna';
 import { fetchJoobleJobs } from './jooble';
+import { fetchDevBgJobs } from './devbg';
+import { fetchJobsBgJobs } from './jobsbg';
 import { normalizeUrl, computeContentHash } from './dedup';
 import { RawJobPosting, IngestionResult } from './types';
 
@@ -150,6 +152,36 @@ export async function ingestAllSources(): Promise<IngestionResult[]> {
   });
 
   console.log(`[ingest] Jooble: ${allJoobleJobs.length} fetched, ${joobleUpsert.newCount} upserted, ${joobleUpsert.errorCount} errors`);
+
+  // dev.bg
+  try {
+    const devBgJobs = await fetchDevBgJobs();
+    const devBgUpsert = await upsertJobs(devBgJobs);
+    results.push({
+      source: 'dev_bg',
+      fetched: devBgJobs.length,
+      new: devBgUpsert.newCount,
+      errors: devBgUpsert.errorCount,
+      deleted: 0,
+    });
+  } catch (err) {
+    results.push({ source: 'dev_bg', fetched: 0, new: 0, errors: 1, deleted: 0 });
+  }
+
+  // jobs.bg
+  try {
+    const jobsBgJobs = await fetchJobsBgJobs();
+    const jobsBgUpsert = await upsertJobs(jobsBgJobs);
+    results.push({
+      source: 'jobs_bg',
+      fetched: jobsBgJobs.length,
+      new: jobsBgUpsert.newCount,
+      errors: jobsBgUpsert.errorCount,
+      deleted: 0,
+    });
+  } catch (err) {
+    results.push({ source: 'jobs_bg', fetched: 0, new: 0, errors: 1, deleted: 0 });
+  }
 
   // Cleanup runs ONCE after all sources are ingested (ISSUE-4 fix — prevents race condition)
   console.log('[ingest] Running post-ingestion cleanup...');

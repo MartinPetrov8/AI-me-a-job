@@ -1,0 +1,158 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { ingestAllSources } from './ingest';
+import * as adzuna from './adzuna';
+import * as jooble from './jooble';
+import * as devbg from './devbg';
+import * as jobsbg from './jobsbg';
+import type { RawJobPosting } from './types';
+
+// Mock all source modules
+vi.mock('./adzuna');
+vi.mock('./jooble');
+vi.mock('./devbg');
+vi.mock('./jobsbg');
+vi.mock('../db', () => ({
+  db: {
+    insert: vi.fn(() => ({
+      values: vi.fn(() => ({
+        onConflictDoUpdate: vi.fn(() => Promise.resolve()),
+      })),
+    })),
+    delete: vi.fn(() => ({
+      where: vi.fn(() => ({
+        returning: vi.fn(() => Promise.resolve([])),
+      })),
+    })),
+    update: vi.fn(() => ({
+      set: vi.fn(() => ({
+        where: vi.fn(() => ({
+          returning: vi.fn(() => Promise.resolve([])),
+        })),
+      })),
+    })),
+  },
+}));
+
+describe('ingestAllSources with dev.bg and jobs.bg', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    // Suppress console.log during tests
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+  });
+
+  it('should ingest dev.bg jobs and include in results', async () => {
+    const mockDevBgJobs: RawJobPosting[] = [
+      {
+        external_id: 'devbg-123',
+        source: 'dev_bg',
+        title: 'Senior Developer',
+        company: 'TechCo',
+        location: 'Sofia',
+        country: 'bg',
+        url: 'https://dev.bg/jobs/123',
+        description_raw: 'Great job',
+        salary_min: null,
+        salary_max: null,
+        salary_currency: null,
+        employment_type: null,
+        is_remote: false,
+        posted_at: new Date('2026-03-15'),
+      },
+    ];
+
+    vi.mocked(adzuna.fetchAllAdzunaJobs).mockResolvedValue([]);
+    vi.mocked(jooble.fetchJoobleJobs).mockResolvedValue([]);
+    vi.mocked(devbg.fetchDevBgJobs).mockResolvedValue(mockDevBgJobs);
+    vi.mocked(jobsbg.fetchJobsBgJobs).mockResolvedValue([]);
+
+    const results = await ingestAllSources();
+
+    const devBgResult = results.find(r => r.source === 'dev_bg');
+    expect(devBgResult).toBeDefined();
+    expect(devBgResult?.fetched).toBe(1);
+    expect(devBgResult?.new).toBeGreaterThanOrEqual(0);
+  });
+
+  it('should ingest jobs.bg jobs and include in results', async () => {
+    const mockJobsBgJobs: RawJobPosting[] = [
+      {
+        external_id: 'jobsbg-456',
+        source: 'jobs_bg',
+        title: 'Data Scientist',
+        company: 'DataCorp',
+        location: 'Plovdiv',
+        country: 'bg',
+        url: 'https://www.jobs.bg/job/456',
+        description_raw: 'ML role',
+        salary_min: null,
+        salary_max: null,
+        salary_currency: null,
+        employment_type: null,
+        is_remote: true,
+        posted_at: new Date('2026-03-14'),
+      },
+    ];
+
+    vi.mocked(adzuna.fetchAllAdzunaJobs).mockResolvedValue([]);
+    vi.mocked(jooble.fetchJoobleJobs).mockResolvedValue([]);
+    vi.mocked(devbg.fetchDevBgJobs).mockResolvedValue([]);
+    vi.mocked(jobsbg.fetchJobsBgJobs).mockResolvedValue(mockJobsBgJobs);
+
+    const results = await ingestAllSources();
+
+    const jobsBgResult = results.find(r => r.source === 'jobs_bg');
+    expect(jobsBgResult).toBeDefined();
+    expect(jobsBgResult?.fetched).toBe(1);
+    expect(jobsBgResult?.new).toBeGreaterThanOrEqual(0);
+  });
+
+  it('should log Jooble API key presence check', async () => {
+    // Clear existing mocks and restore console.log for this test
+    vi.restoreAllMocks();
+    const consoleLogSpy = vi.spyOn(console, 'log');
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    vi.mocked(adzuna.fetchAllAdzunaJobs).mockResolvedValue([]);
+    vi.mocked(jooble.fetchJoobleJobs).mockResolvedValue([]);
+    vi.mocked(devbg.fetchDevBgJobs).mockResolvedValue([]);
+    vi.mocked(jobsbg.fetchJobsBgJobs).mockResolvedValue([]);
+
+    await ingestAllSources();
+
+    const joobleKeyLog = consoleLogSpy.mock.calls.find(
+      call => typeof call[0] === 'string' && call[0].includes('[ingest] Jooble API key:')
+    );
+    expect(joobleKeyLog).toBeDefined();
+    const logMessage = joobleKeyLog?.[0] + (joobleKeyLog?.[1] || '');
+    expect(logMessage).toMatch(/present|MISSING/);
+  });
+
+  it('should handle dev.bg scraper failures gracefully', async () => {
+    vi.mocked(adzuna.fetchAllAdzunaJobs).mockResolvedValue([]);
+    vi.mocked(jooble.fetchJoobleJobs).mockResolvedValue([]);
+    vi.mocked(devbg.fetchDevBgJobs).mockRejectedValue(new Error('Network error'));
+    vi.mocked(jobsbg.fetchJobsBgJobs).mockResolvedValue([]);
+
+    const results = await ingestAllSources();
+
+    const devBgResult = results.find(r => r.source === 'dev_bg');
+    expect(devBgResult).toBeDefined();
+    expect(devBgResult?.errors).toBe(1);
+    expect(devBgResult?.fetched).toBe(0);
+  });
+
+  it('should handle jobs.bg scraper failures gracefully', async () => {
+    vi.mocked(adzuna.fetchAllAdzunaJobs).mockResolvedValue([]);
+    vi.mocked(jooble.fetchJoobleJobs).mockResolvedValue([]);
+    vi.mocked(devbg.fetchDevBgJobs).mockResolvedValue([]);
+    vi.mocked(jobsbg.fetchJobsBgJobs).mockRejectedValue(new Error('Cloudflare block'));
+
+    const results = await ingestAllSources();
+
+    const jobsBgResult = results.find(r => r.source === 'jobs_bg');
+    expect(jobsBgResult).toBeDefined();
+    expect(jobsBgResult?.errors).toBe(1);
+    expect(jobsBgResult?.fetched).toBe(0);
+  });
+});
