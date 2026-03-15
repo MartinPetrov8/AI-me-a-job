@@ -7,8 +7,11 @@ import crypto from 'crypto';
  */
 export async function fetchJobsBgJobs(): Promise<RawJobPosting[]> {
   try {
-    // Dynamic import to avoid serverless bundling issues
-    const { chromium } = await import('playwright');
+    // Dynamic import — fails gracefully in serverless (Playwright not available)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const playwright = await import('playwright' as any).catch(() => null);
+    if (!playwright) return [];
+    const { chromium } = playwright;
     
     const jobs: RawJobPosting[] = [];
     
