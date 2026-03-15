@@ -20,7 +20,6 @@ export async function fetchDevBgJobs(): Promise<RawJobPosting[]> {
       });
 
       if (!response.ok) {
-        console.warn(`[devbg] Failed to fetch page ${page}: ${response.status}`);
         continue;
       }
 
@@ -83,7 +82,6 @@ export async function fetchDevBgJobs(): Promise<RawJobPosting[]> {
     
     return jobs;
   } catch (error) {
-    console.error('[devbg] Scraper error:', error instanceof Error ? error.message : String(error));
     return [];
   }
 }

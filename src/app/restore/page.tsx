@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { PageHeader } from '@/components/page-header';
 
 export default function RestorePage() {
   const router = useRouter();
@@ -26,13 +27,16 @@ export default function RestorePage() {
       const data = await res.json();
 
       if (res.ok) {
-        // Store restore_token in localStorage for subsequent authenticated requests
         if (data.data.restore_token) {
           localStorage.setItem('restore_token', data.data.restore_token);
         }
         router.push(`/results?profile_id=${data.data.profile_id}`);
+      } else if (res.status === 404) {
+        setError('We could not find a profile with that email and restore code.');
+      } else if (res.status === 401) {
+        setError('Invalid restore code. Please check and try again.');
       } else {
-        setError('Profile not found. Check your email and restore code.');
+        setError('Something went wrong. Please try again.');
       }
     } catch {
       setError('Something went wrong. Please try again.');
@@ -43,10 +47,7 @@ export default function RestorePage() {
 
   return (
     <main className="min-h-screen bg-[#F7F7F5] flex flex-col items-center justify-center px-4">
-      {/* Logo */}
-      <div className="mb-8">
-        <span className="text-2xl font-bold text-indigo-600">aimeajob</span>
-      </div>
+      <PageHeader />
 
       {/* Card */}
       <div className="w-full max-w-md bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
