@@ -1,4 +1,4 @@
-# Repo Map — generated 2026-03-15T09:33:34Z
+# Repo Map — generated 2026-03-15T11:26:41Z
 # Architecture snapshot: class/function signatures, routes, exports
 # Use this to find the right file/function without reading full source.
 
@@ -132,7 +132,7 @@ src/lib/ingestion/devbg.ts:
   8:export async function fetchDevBgJobs(): Promise<RawJobPosting[]> {
 
 src/lib/ingestion/ingest.ts:
-  115:export async function ingestAllSources(): Promise<IngestionResult[]> {
+  117:export async function ingestAllSources(): Promise<IngestionResult[]> {
 
 src/lib/ingestion/jobsbg.ts:
   8:export async function fetchJobsBgJobs(): Promise<RawJobPosting[]> {
@@ -219,7 +219,6 @@ node_modules/flatted/golang/pkg/flatted/flatted.go:
   .next/images-manifest.json
   .next/next-minimal-server.js.nft.json
   .next/next-server.js.nft.json
-  .next/node_modules
   .next/package.json
   .next/prerender-manifest.json
   .next/required-server-files.js
