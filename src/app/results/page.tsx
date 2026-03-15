@@ -338,9 +338,10 @@ function ResultsContent() {
           </h1>
           <button
             onClick={() => setPanelOpen(true)}
+            aria-label="Edit search filters"
             className="text-sm text-indigo-600 hover:text-indigo-700 font-medium"
           >
-            ✏️ Edit preferences
+            🎛 Edit filters
           </button>
         </div>
 
@@ -430,9 +431,10 @@ function ResultsContent() {
             <div className="flex gap-3 justify-center">
               <button
                 onClick={() => setPanelOpen(true)}
+                aria-label="Edit search filters"
                 className="bg-indigo-600 text-white px-6 py-3 rounded-xl font-semibold hover:bg-indigo-700 transition-colors"
               >
-                Edit preferences
+                Edit filters
               </button>
               <Link
                 href="/upload"

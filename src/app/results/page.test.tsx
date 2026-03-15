@@ -24,7 +24,7 @@ describe('ResultsPage - Edit Preferences Panel (S-02)', () => {
     });
   });
 
-  it('renders Edit preferences button near results count', async () => {
+  it('renders Edit filters button near results count', async () => {
     mockUseSearchParams.mockReturnValue({
       get: (key: string) => (key === 'profile_id' ? 'test-profile-123' : null),
     } as ReturnType<typeof useSearchParams>);
@@ -40,12 +40,12 @@ describe('ResultsPage - Edit Preferences Panel (S-02)', () => {
     render(<ResultsPage />);
 
     await waitFor(() => {
-      const button = screen.getByText(/Edit preferences/i);
+      const button = screen.getByText(/Edit filters/i);
       expect(button).toBeTruthy();
     });
   });
 
-  it('opens slide-in panel from right when Edit preferences is clicked', async () => {
+  it('opens slide-in panel from right when Edit filters is clicked', async () => {
     mockUseSearchParams.mockReturnValue({
       get: (key: string) => (key === 'profile_id' ? 'test-profile-123' : null),
     } as ReturnType<typeof useSearchParams>);
@@ -61,10 +61,10 @@ describe('ResultsPage - Edit Preferences Panel (S-02)', () => {
     const { container } = render(<ResultsPage />);
 
     await waitFor(() => {
-      expect(screen.getByText(/Edit preferences/i)).toBeTruthy();
+      expect(screen.getByText(/Edit filters/i)).toBeTruthy();
     });
 
-    const editButton = screen.getByText(/Edit preferences/i);
+    const editButton = screen.getByText(/Edit filters/i);
     fireEvent.click(editButton);
 
     await waitFor(() => {
@@ -89,10 +89,10 @@ describe('ResultsPage - Edit Preferences Panel (S-02)', () => {
     render(<ResultsPage />);
 
     await waitFor(() => {
-      expect(screen.getByText(/Edit preferences/i)).toBeTruthy();
+      expect(screen.getByText(/Edit filters/i)).toBeTruthy();
     });
 
-    const editButton = screen.getByText(/Edit preferences/i);
+    const editButton = screen.getByText(/Edit filters/i);
     fireEvent.click(editButton);
 
     await waitFor(() => {
@@ -124,10 +124,10 @@ describe('ResultsPage - Edit Preferences Panel (S-02)', () => {
     const { container } = render(<ResultsPage />);
 
     await waitFor(() => {
-      expect(screen.getByText(/Edit preferences/i)).toBeTruthy();
+      expect(screen.getByText(/Edit filters/i)).toBeTruthy();
     });
 
-    const editButton = screen.getByText(/Edit preferences/i);
+    const editButton = screen.getByText(/Edit filters/i);
     fireEvent.click(editButton);
 
     await waitFor(() => {
@@ -161,10 +161,10 @@ describe('ResultsPage - Edit Preferences Panel (S-02)', () => {
     const { container } = render(<ResultsPage />);
 
     await waitFor(() => {
-      expect(screen.getByText(/Edit preferences/i)).toBeTruthy();
+      expect(screen.getByText(/Edit filters/i)).toBeTruthy();
     });
 
-    const editButton = screen.getByText(/Edit preferences/i);
+    const editButton = screen.getByText(/Edit filters/i);
     fireEvent.click(editButton);
 
     await waitFor(() => {
@@ -208,10 +208,10 @@ describe('ResultsPage - Edit Preferences Panel (S-02)', () => {
     const { container } = render(<ResultsPage />);
 
     await waitFor(() => {
-      expect(screen.getByText(/Edit preferences/i)).toBeTruthy();
+      expect(screen.getByText(/Edit filters/i)).toBeTruthy();
     });
 
-    const editButton = screen.getByText(/Edit preferences/i);
+    const editButton = screen.getByText(/Edit filters/i);
     fireEvent.click(editButton);
 
     await waitFor(() => {
@@ -265,10 +265,10 @@ describe('ResultsPage - Edit Preferences Panel (S-02)', () => {
     const { container } = render(<ResultsPage />);
 
     await waitFor(() => {
-      expect(screen.getByText(/Edit preferences/i)).toBeTruthy();
+      expect(screen.getByText(/Edit filters/i)).toBeTruthy();
     });
 
-    const editButton = screen.getByText(/Edit preferences/i);
+    const editButton = screen.getByText(/Edit filters/i);
     fireEvent.click(editButton);
 
     await waitFor(() => {
@@ -310,10 +310,10 @@ describe('ResultsPage - Edit Preferences Panel (S-02)', () => {
     render(<ResultsPage />);
 
     await waitFor(() => {
-      expect(screen.getByText(/Edit preferences/i)).toBeTruthy();
+      expect(screen.getByText(/Edit filters/i)).toBeTruthy();
     });
 
-    const editButton = screen.getByText(/Edit preferences/i);
+    const editButton = screen.getByText(/Edit filters/i);
     fireEvent.click(editButton);
 
     await waitFor(() => {
@@ -341,7 +341,7 @@ describe('ResultsPage - Empty States (S-03)', () => {
     });
   });
 
-  it('renders no results empty state with Edit preferences and Upload new CV buttons when API returns zero matches', async () => {
+  it('renders no results empty state with Edit filters and Upload new CV buttons when API returns zero matches', async () => {
     mockUseSearchParams.mockReturnValue({
       get: (key: string) => (key === 'profile_id' ? 'test-profile-123' : null),
     } as ReturnType<typeof useSearchParams>);
@@ -362,7 +362,7 @@ describe('ResultsPage - Empty States (S-03)', () => {
 
     expect(screen.getByText(/Try adjusting your preferences or uploading an updated CV/i)).toBeTruthy();
 
-    const editPrefsButton = screen.getByText('Edit preferences');
+    const editPrefsButton = screen.getByText('Edit filters');
     expect(editPrefsButton).toBeTruthy();
 
     const uploadButton = screen.getByText('Upload new CV');
