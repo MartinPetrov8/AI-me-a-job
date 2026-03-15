@@ -39,10 +39,9 @@ export async function fetchJoobleJobs(
   keywords: string,
   location: string
 ): Promise<RawJobPosting[]> {
-  const apiKey = process.env.JOOBLE_API_KEY;
+  const apiKey = process.env.JOOBLE_API_KEY?.trim();
 
   if (!apiKey) {
-    console.error('[jooble] Missing JOOBLE_API_KEY');
     return [];
   }
 
