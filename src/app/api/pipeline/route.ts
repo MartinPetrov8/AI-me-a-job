@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { ingestAllSources } from '@/lib/ingestion/ingest';
+import { ingestAllSources, ingestSource } from '@/lib/ingestion/ingest';
 import { classifyUnclassifiedJobs } from '@/lib/llm/batch-classify';
 
 export const runtime = 'nodejs';
 export const maxDuration = 300;
 
 export async function POST(request: NextRequest) {
-  // Protect with CRON_SECRET header
   const cronSecret = process.env.CRON_SECRET;
   const incomingSecret = request.headers.get('x-cron-secret');
 
@@ -14,14 +13,25 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  // Optional ?source= param to run a single source (chunked mode)
+  const source = request.nextUrl.searchParams.get('source');
+  // Optional ?classify=true to run classification only
+  const classifyOnly = request.nextUrl.searchParams.get('classify') === 'true';
+
   try {
-    console.log('[pipeline] Starting ingestion...');
+    if (classifyOnly) {
+      const classified = await classifyUnclassifiedJobs(100);
+      return NextResponse.json({ classified });
+    }
+
+    if (source) {
+      const ingested = await ingestSource(source);
+      return NextResponse.json({ ingested });
+    }
+
+    // Full pipeline (original behaviour)
     const ingested = await ingestAllSources();
-    console.log('[pipeline] Ingestion complete. Starting classification...');
-
     const classified = await classifyUnclassifiedJobs(100);
-    console.log('[pipeline] Classification complete.');
-
     return NextResponse.json({ ingested, classified });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);

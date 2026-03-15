@@ -196,3 +196,45 @@ export async function ingestAllSources(): Promise<IngestionResult[]> {
 
   return results;
 }
+
+/**
+ * Ingest a single named source. Used by /api/pipeline?source=X for chunked runs.
+ * Supported: "adzuna" | "jooble" | "devbg" | "jobsbg"
+ */
+export async function ingestSource(source: string): Promise<IngestionResult[]> {
+  const results: IngestionResult[] = [];
+
+  if (source === 'adzuna') {
+    const jobs = await fetchAllAdzunaJobs();
+    const r = await upsertJobs(jobs);
+    results.push({ source: 'adzuna', fetched: jobs.length, new: r.newCount, errors: r.errorCount, deleted: 0 });
+  } else if (source === 'jooble') {
+    const JOOBLE_LOCATIONS = ['Bulgaria', 'Romania', 'Poland', 'Czech Republic', 'Slovakia', 'Hungary', 'Ukraine'];
+    const JOOBLE_KEYWORDS = ['software developer', 'data scientist', 'product manager', 'devops engineer', 'data engineer'];
+    let total = 0;
+    let newTotal = 0;
+    let errorTotal = 0;
+    for (const location of JOOBLE_LOCATIONS) {
+      for (const keywords of JOOBLE_KEYWORDS) {
+        const jobsBatch = await fetchJoobleJobs(keywords, location);
+        const r = await upsertJobs(jobsBatch);
+        total += jobsBatch.length;
+        newTotal += r.newCount;
+        errorTotal += r.errorCount;
+      }
+    }
+    results.push({ source: 'jooble', fetched: total, new: newTotal, errors: errorTotal, deleted: 0 });
+  } else if (source === 'devbg') {
+    const jobs = await fetchDevBgJobs();
+    const r = await upsertJobs(jobs);
+    results.push({ source: 'dev_bg', fetched: jobs.length, new: r.newCount, errors: r.errorCount, deleted: 0 });
+  } else if (source === 'jobsbg') {
+    const jobs = await fetchJobsBgJobs();
+    const r = await upsertJobs(jobs);
+    results.push({ source: 'jobs_bg', fetched: jobs.length, new: r.newCount, errors: r.errorCount, deleted: 0 });
+  } else {
+    throw new Error(`Unknown source: ${source}. Valid: adzuna | jooble | devbg | jobsbg`);
+  }
+
+  return results;
+}
