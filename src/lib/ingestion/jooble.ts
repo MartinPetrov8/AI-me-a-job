@@ -35,7 +35,7 @@ function inferCountry(location: string): string | null {
   return null;
 }
 
-const JOOBLE_MAX_PAGES = 5; // 30 jobs/page × 5 pages = 150 per query
+const JOOBLE_MAX_PAGES = 36; // hard cap — page 37+ returns 0 results regardless of query
 
 export async function fetchJoobleJobs(
   keywords: string,

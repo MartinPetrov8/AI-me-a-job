@@ -42,18 +42,19 @@ const ADZUNA_QUERIES = [
 export async function fetchAdzunaJobs(
   country: string,
   page: number = 1,
-  query: string = ''
+  query: string = '',
+  maxDaysOld?: number   // when set, fetches only jobs newer than N days (incremental mode)
 ): Promise<RawJobPosting[]> {
   const appId = process.env.ADZUNA_APP_ID;
   const appKey = process.env.ADZUNA_APP_KEY;
 
   if (!appId || !appKey) {
-    console.error('[adzuna] Missing ADZUNA_APP_ID or ADZUNA_APP_KEY');
     return [];
   }
 
   const queryParam = query ? `&what=${encodeURIComponent(query)}` : '';
-  const url = `https://api.adzuna.com/v1/api/jobs/${encodeURIComponent(country)}/search/${page}?app_id=${encodeURIComponent(appId)}&app_key=${encodeURIComponent(appKey)}&results_per_page=50${queryParam}`;
+  const freshnessParam = maxDaysOld ? `&max_days_old=${maxDaysOld}&sort_by=date` : '';
+  const url = `https://api.adzuna.com/v1/api/jobs/${encodeURIComponent(country)}/search/${page}?app_id=${encodeURIComponent(appId)}&app_key=${encodeURIComponent(appKey)}&results_per_page=50${queryParam}${freshnessParam}`;
 
   try {
     const controller = new AbortController();
@@ -104,19 +105,24 @@ export async function fetchAdzunaJobs(
 
 export { ADZUNA_COUNTRIES, ADZUNA_QUERIES };
 
-export async function fetchAllAdzunaJobs(): Promise<RawJobPosting[]> {
+// Countries covered for all Adzuna runs
+const ACTIVE_COUNTRIES = ['gb', 'us', 'de', 'fr', 'nl', 'pl'] as const;
+
+/**
+ * DAILY INCREMENTAL: fetch only jobs posted in the last 2 days.
+ * ~1-3 API calls per country/query combo (most will return 0-1 pages of new results).
+ * Typical daily budget: ~50-100 calls total across all countries + queries.
+ */
+export async function fetchIncrementalAdzunaJobs(): Promise<RawJobPosting[]> {
   const all: RawJobPosting[] = [];
   const seen = new Set<string>();
 
-  // Expanded to 7 countries (GB, US, DE, FR, NL, BG, PL) covering Western + Eastern Europe
-  const countries: typeof ADZUNA_COUNTRIES[number][] = ['gb', 'us', 'de', 'fr', 'nl', 'bg', 'pl'];
-
-  for (const country of countries) {
+  for (const country of ACTIVE_COUNTRIES) {
     for (const query of ADZUNA_QUERIES) {
-      console.log(`[adzuna] Fetching "${query}" in ${country}...`);
-      const jobs = await fetchAdzunaJobs(country, 1, query);
-      // Deduplicate by external_id
-      for (const job of jobs) {
+      // Fetch page 1 only — if there are >50 new jobs for one query in one country in a day,
+      // that's extremely unlikely; page 2 would just waste calls.
+      const batch = await fetchAdzunaJobs(country, 1, query, 2);
+      for (const job of batch) {
         if (!seen.has(job.external_id)) {
           seen.add(job.external_id);
           all.push(job);
@@ -125,6 +131,33 @@ export async function fetchAllAdzunaJobs(): Promise<RawJobPosting[]> {
     }
   }
 
-  console.log(`[adzuna] Total unique jobs fetched: ${all.length}`);
+  return all;
+}
+
+/**
+ * WEEKLY FULL BACKFILL: fetch all jobs (no date filter), multiple pages per query.
+ * Used for initial load and weekly re-sync to catch anything missed incrementally.
+ * ~168 calls (6 countries × 14 queries × 2 pages = 168). Runs once per week.
+ */
+export async function fetchAllAdzunaJobs(): Promise<RawJobPosting[]> {
+  const all: RawJobPosting[] = [];
+  const seen = new Set<string>();
+
+  for (const country of ACTIVE_COUNTRIES) {
+    for (const query of ADZUNA_QUERIES) {
+      // Fetch 2 pages (100 jobs) per country/query — good depth without burning quota
+      for (const page of [1, 2]) {
+        const batch = await fetchAdzunaJobs(country, page, query);
+        if (batch.length === 0) break; // no more results for this query/country
+        for (const job of batch) {
+          if (!seen.has(job.external_id)) {
+            seen.add(job.external_id);
+            all.push(job);
+          }
+        }
+      }
+    }
+  }
+
   return all;
 }

@@ -1,7 +1,7 @@
 import { db } from '../db';
 import { jobs } from '../db/schema';
 import { and, lt, ne, or, isNull } from 'drizzle-orm';
-import { fetchAllAdzunaJobs } from './adzuna';
+import { fetchAllAdzunaJobs, fetchIncrementalAdzunaJobs } from './adzuna';
 import { fetchJoobleJobs } from './jooble';
 import { fetchDevBgJobs } from './devbg';
 import { fetchJobsBgJobs } from './jobsbg';
@@ -204,34 +204,41 @@ export async function ingestAllSources(): Promise<IngestionResult[]> {
 export async function ingestSource(source: string): Promise<IngestionResult[]> {
   const results: IngestionResult[] = [];
 
-  if (source === 'adzuna') {
+  if (source === 'adzuna-incremental') {
+    // Daily: only jobs posted in last 2 days — ~50-100 API calls
+    const jobsBatch = await fetchIncrementalAdzunaJobs();
+    const r = await upsertJobs(jobsBatch);
+    const deleted = await cleanupOldJobs();
+    results.push({ source: 'adzuna', fetched: jobsBatch.length, new: r.newCount, errors: r.errorCount, deleted });
+  } else if (source === 'adzuna') {
+    // Weekly full backfill: 2 pages per country/query
     const jobs = await fetchAllAdzunaJobs();
     const r = await upsertJobs(jobs);
     results.push({ source: 'adzuna', fetched: jobs.length, new: r.newCount, errors: r.errorCount, deleted: 0 });
   } else if (source === 'jooble') {
-    // Broad keyword matrix across EE + remote — 5 pages × 30 jobs per query = up to 150 each
-    const JOOBLE_QUERIES: Array<{ keywords: string; location: string }> = [
-      { keywords: 'software engineer', location: '' },
-      { keywords: 'data scientist', location: '' },
-      { keywords: 'product manager', location: '' },
-      { keywords: 'devops engineer', location: '' },
-      { keywords: 'data engineer', location: '' },
-      { keywords: 'software developer', location: 'Bulgaria' },
-      { keywords: 'data analyst', location: 'Bulgaria' },
-      { keywords: 'software engineer', location: 'Bulgaria' },
-      { keywords: 'software developer', location: 'Poland' },
-      { keywords: 'software engineer', location: 'Poland' },
-      { keywords: 'data scientist', location: 'Poland' },
-      { keywords: 'software developer', location: 'Romania' },
-      { keywords: 'software engineer', location: 'Romania' },
-      { keywords: 'software engineer', location: 'Czech Republic' },
-      { keywords: 'software developer', location: 'Czech Republic' },
+    // Weekly maximum harvest: 11 broad single-word keywords × up to 36 pages × 30 jobs = ~11,880 raw
+    // Each keyword hits the full Jooble depth limit (page 36 = hard cap).
+    // Keyword diversity maximises unique job coverage across the ~56K Jooble universe.
+    // Budget: 11 keywords × 36 pages = ~396 API calls — use once per week.
+    const JOOBLE_WEEKLY_KEYWORDS = [
+      'engineer',
+      'developer',
+      'analyst',
+      'manager',
+      'scientist',
+      'consultant',
+      'designer',
+      'architect',
+      'specialist',
+      'coordinator',
+      'director',
     ];
     let total = 0;
     let newTotal = 0;
     let errorTotal = 0;
-    for (const { keywords, location } of JOOBLE_QUERIES) {
-      const jobsBatch = await fetchJoobleJobs(keywords, location);
+    for (const keywords of JOOBLE_WEEKLY_KEYWORDS) {
+      // fetchJoobleJobs now paginates up to JOOBLE_MAX_PAGES (36) automatically
+      const jobsBatch = await fetchJoobleJobs(keywords, '');
       const r = await upsertJobs(jobsBatch);
       total += jobsBatch.length;
       newTotal += r.newCount;

@@ -14,6 +14,7 @@ export async function POST(request: NextRequest) {
   }
 
   // Optional ?source= param to run a single source (chunked mode)
+  // Sources: adzuna-incremental (daily, new jobs only) | adzuna (weekly full) | jooble (weekly max) | devbg | jobsbg
   const source = request.nextUrl.searchParams.get('source');
   // Optional ?classify=true to run classification only
   const classifyOnly = request.nextUrl.searchParams.get('classify') === 'true';
