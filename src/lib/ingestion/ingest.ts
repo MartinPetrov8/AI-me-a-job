@@ -209,19 +209,33 @@ export async function ingestSource(source: string): Promise<IngestionResult[]> {
     const r = await upsertJobs(jobs);
     results.push({ source: 'adzuna', fetched: jobs.length, new: r.newCount, errors: r.errorCount, deleted: 0 });
   } else if (source === 'jooble') {
-    const JOOBLE_LOCATIONS = ['Bulgaria', 'Romania', 'Poland', 'Czech Republic', 'Slovakia', 'Hungary', 'Ukraine'];
-    const JOOBLE_KEYWORDS = ['software developer', 'data scientist', 'product manager', 'devops engineer', 'data engineer'];
+    // Broad keyword matrix across EE + remote — 5 pages × 30 jobs per query = up to 150 each
+    const JOOBLE_QUERIES: Array<{ keywords: string; location: string }> = [
+      { keywords: 'software engineer', location: '' },
+      { keywords: 'data scientist', location: '' },
+      { keywords: 'product manager', location: '' },
+      { keywords: 'devops engineer', location: '' },
+      { keywords: 'data engineer', location: '' },
+      { keywords: 'software developer', location: 'Bulgaria' },
+      { keywords: 'data analyst', location: 'Bulgaria' },
+      { keywords: 'software engineer', location: 'Bulgaria' },
+      { keywords: 'software developer', location: 'Poland' },
+      { keywords: 'software engineer', location: 'Poland' },
+      { keywords: 'data scientist', location: 'Poland' },
+      { keywords: 'software developer', location: 'Romania' },
+      { keywords: 'software engineer', location: 'Romania' },
+      { keywords: 'software engineer', location: 'Czech Republic' },
+      { keywords: 'software developer', location: 'Czech Republic' },
+    ];
     let total = 0;
     let newTotal = 0;
     let errorTotal = 0;
-    for (const location of JOOBLE_LOCATIONS) {
-      for (const keywords of JOOBLE_KEYWORDS) {
-        const jobsBatch = await fetchJoobleJobs(keywords, location);
-        const r = await upsertJobs(jobsBatch);
-        total += jobsBatch.length;
-        newTotal += r.newCount;
-        errorTotal += r.errorCount;
-      }
+    for (const { keywords, location } of JOOBLE_QUERIES) {
+      const jobsBatch = await fetchJoobleJobs(keywords, location);
+      const r = await upsertJobs(jobsBatch);
+      total += jobsBatch.length;
+      newTotal += r.newCount;
+      errorTotal += r.errorCount;
     }
     results.push({ source: 'jooble', fetched: total, new: newTotal, errors: errorTotal, deleted: 0 });
   } else if (source === 'devbg') {

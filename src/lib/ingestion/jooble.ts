@@ -35,6 +35,8 @@ function inferCountry(location: string): string | null {
   return null;
 }
 
+const JOOBLE_MAX_PAGES = 5; // 30 jobs/page × 5 pages = 150 per query
+
 export async function fetchJoobleJobs(
   keywords: string,
   location: string
@@ -46,48 +48,58 @@ export async function fetchJoobleJobs(
   }
 
   const url = `https://jooble.org/api/${encodeURIComponent(apiKey)}`;
+  const inferredCountry = inferCountry(location);
+  const results: RawJobPosting[] = [];
+  const seen = new Set<string>();
 
-  try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 30_000);
+  for (let page = 1; page <= JOOBLE_MAX_PAGES; page++) {
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 30_000);
 
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ keywords, location, page: 1 }),
-      signal: controller.signal,
-    });
-    clearTimeout(timeout);
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ keywords, location, page }),
+        signal: controller.signal,
+      });
+      clearTimeout(timeout);
 
-    if (!res.ok) {
-      console.error(`[jooble] HTTP ${res.status}`);
-      return [];
+      if (!res.ok) {
+        break;
+      }
+
+      const data = (await res.json()) as JoobleResponse;
+      const pageJobs = data.jobs ?? [];
+      if (pageJobs.length === 0) break;
+
+      for (const job of pageJobs) {
+        const id = job.id || `jooble-${Buffer.from(job.link).toString('base64').slice(0, 32)}`;
+        if (seen.has(id)) continue;
+        seen.add(id);
+        results.push({
+          external_id: id,
+          source: 'jooble',
+          title: job.title,
+          company: job.company || null,
+          location: job.location || null,
+          country: inferredCountry,
+          url: job.link,
+          description_raw: job.snippet,
+          salary_min: parseSalaryMin(job.salary),
+          salary_max: parseSalaryMax(job.salary),
+          salary_currency: null,
+          employment_type: job.type || null,
+          is_remote: job.title?.toLowerCase().includes('remote') || job.snippet?.toLowerCase().includes('remote') ? true : null,
+          posted_at: job.updated ? new Date(job.updated) : null,
+        });
+      }
+    } catch {
+      break;
     }
-
-    const data = (await res.json()) as JoobleResponse;
-
-    const inferredCountry = inferCountry(location);
-
-    return (data.jobs ?? []).map((job): RawJobPosting => ({
-      external_id: job.id || `jooble-${Buffer.from(job.link).toString('base64').slice(0, 32)}`,
-      source: 'jooble',
-      title: job.title,
-      company: job.company || null,
-      location: job.location || null,
-      country: inferredCountry,
-      url: job.link,
-      description_raw: job.snippet,
-      salary_min: parseSalaryMin(job.salary),
-      salary_max: parseSalaryMax(job.salary),
-      salary_currency: null,
-      employment_type: job.type || null,
-      is_remote: job.title?.toLowerCase().includes('remote') || job.snippet?.toLowerCase().includes('remote') ? true : null,
-      posted_at: job.updated ? new Date(job.updated) : null,
-    }));
-  } catch (err) {
-    console.error(`[jooble] ${err instanceof Error ? err.message : String(err)}`);
-    return [];
   }
+
+  return results;
 }
 
 function parseSalaryMin(salary: string | undefined): number | null {
