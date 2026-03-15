@@ -1,147 +1,56 @@
-# Architecture Notes — Sprint F: Results Page Filters + Edit Preferences UX
+# Codebase Architecture Notes — Sprint G
 
-Generated: 2026-03-15T14:42:00Z
-Repo: /tmp/antfarm-workspaces/2834abb4-0ec6-4965-b756-bc8af7f65a45
+## Directory Structure
+- **src/app/**: Next.js 15 App Router pages (restore/, upload/, results/, etc.)
+- **src/components/**: Shared React components (tag-input, ui/*)
+- **src/lib/**: Business logic, DB, auth, LLM integration
+  - auth/: validateRestoreToken helper (used across API routes)
+  - db/: Drizzle ORM schema + connection
+  - llm/: Claude/OpenRouter client wrappers
+  - matching/: Job matching engine
+  - ingestion/: Job scrapers (Adzuna, Jooble, DevBG, JobsBG)
+- **src/app/api/**: API routes (upload, restore, search, save, preferences, etc.)
 
-## Stack
-- Next.js 15 App Router, TypeScript strict mode
-- Tailwind CSS (no inline styles permitted)
-- React 19 with hooks (client-side state management)
-- Vitest for tests, tsc --noEmit for type checking
-- Database: PostgreSQL via Drizzle ORM (read-only for this sprint)
-- Existing dependencies: framer-motion (available for animations)
+## Error Handling Patterns
+- API routes return { error: string, details?: any } on failure
+- Client-side components show error state with red text (text-red-600)
+- HTTP status codes: 200 OK, 400 validation error, 401 unauthorized, 404 not found, 500 server error
+- Errors are logged to console with context (e.g., `[pipeline] Ingestion failed`)
 
-## Folder Structure
-- src/app/ — Next.js App Router pages and API routes
-- src/app/api/ — API route handlers (DO NOT modify per sprint constraints)
-- src/components/ui/ — Reusable UI components (Badge, Skeleton)
-- src/lib/ — Business logic, DB, matching engine, validation
-- tests/ — Vitest test files
+## Authentication Flow
+- Users upload CV → receive restore_token (long-lived, never expires)
+- restore_token stored in localStorage and sent via X-Restore-Token header
+- validateRestoreToken() checks DB for matching users.restoreToken
+- No password auth — token-based only
 
-## Key Files for Sprint F
-PRIMARY FILE TO MODIFY:
-- src/app/results/page.tsx — Results page with filters, sort, empty states
+## Testing Patterns
+- Vitest + React Testing Library
+- API route tests: mock fetch, validate response shapes
+- Component tests: render, fireEvent, expect screen.getBy*
+- Failing tests: mostly test infrastructure issues (multiple "Edit filters" buttons, missing DB_URL in test env)
 
-REFERENCED FILES (read-only):
-- src/components/ui/badge.tsx — Badge component (existing, reuse)
-- src/components/ui/skeleton.tsx — Skeleton component (existing, reuse for loading state)
-- src/app/api/search/route.ts — POST /api/search endpoint (restore token auth)
-- src/lib/auth/validate-restore-token.ts — Token validation logic
+## Design System
+- Tailwind CSS utility classes
+- Primary brand: indigo-600 (buttons, links, active states)
+- Background: bg-[#F7F7F5] (off-white)
+- Cards: bg-white rounded-2xl shadow-sm border border-gray-100 p-8
+- Inputs: border-gray-200 rounded-xl focus:ring-indigo-500
+- Typography: text-gray-900 (headings), text-gray-500 (body/subtext)
 
-## Current Results Page State (baseline)
-1. Filter state (client-side React):
-   - filterRemote: boolean | null
-   - filterMinScore: number (default 5)
-   - filterEmploymentType: string
-   
-2. Sort state (client-side React):
-   - sortBy: 'score' | 'date' | 'company'
+## Naming Conventions
+- React components: PascalCase (RestorePage, TagInput)
+- Files: kebab-case (restore/page.tsx, validate-restore-token.ts)
+- API routes: route.ts (REST conventions)
+- DB tables: snake_case (users, profiles, jobs, matches)
 
-3. Filter UI issues (to fix in this sprint):
-   - Filter bar renders INSIDE `!loading && results.length > 0` conditional
-   - No sticky positioning — disappears on scroll
-   - No skeleton state during loading
-   - Score filter max is 8+ (need to add 9+)
-   - No "Edit preferences" panel
-   - No empty state handling
+## Utility Functions to Reuse
+- `validateRestoreToken(token)` → returns user or throws
+- `extractCV(fileBuffer)` → parses PDF/DOCX into structured data
+- `matchJobs(profile, jobs)` → scoring algorithm
+- `classifyJob(job)` → LLM-based job categorization
 
-## Patterns to Follow
-
-### 1. Component Structure
-- Use `'use client'` directive for client-side React components
-- Wrap searchParams consumers in <Suspense> (see ResultsPage default export)
-- Separate content from suspense boundary for cleaner code
-
-### 2. State Management
-- All filter/sort state is local React state (useState)
-- No global state, no context providers
-- localStorage for restore_token persistence only
-- URL params read-only (profile_id, user_id, token)
-
-### 3. Styling Conventions
-- ALWAYS use Tailwind classes — NEVER inline style objects
-- Design system colors:
-  - Background: bg-[#F7F7F5]
-  - Cards: bg-white rounded-2xl border border-gray-100 shadow-sm
-  - Brand: indigo-600 (buttons, links, accents)
-  - Text: gray-900 (headings), gray-600 (body), gray-400 (muted)
-- Spacing: px-4, py-3, gap-2, space-y-4 (consistent rhythm)
-- Interactive states: hover:, disabled:, transition-colors
-
-### 4. API Calls
-- /api/search endpoint:
-  - Method: POST (NOT GET — critical for S-02)
-  - Headers: Content-Type: application/json, X-Restore-Token: <token from localStorage>
-  - Body: { profile_id: string }
-  - Response: { data: { results, total, search_id }, meta: { threshold, max_score, searched_at } }
-- Token validation: validateRestoreToken(profile_id, token) on server
-- Error handling: 401 redirect to /restore, 404 show error, 500 generic error
-
-### 5. Error Handling Pattern
-```typescript
-try {
-  const response = await fetch('/api/search', { ... });
-  if (!response.ok) throw new Error('Search failed');
-  const data = await response.json();
-  // process data
-} catch {
-  setError('User-friendly message');
-} finally {
-  setLoading(false);
-}
-```
-
-### 6. Existing Components to Reuse
-- Badge (src/components/ui/badge.tsx):
-  - Props: variant (gray|green|indigo|purple|...), children, className
-  - Usage: <Badge variant="green">{salary}</Badge>
-
-- Skeleton (src/components/ui/skeleton.tsx):
-  - <Skeleton /> — single skeleton bar
-  - <SkeletonCard /> — full card skeleton for loading state
-
-### 7. TypeScript Strict Mode
-- All variables must be typed (explicit or inferred)
-- Null checks required (e.g., job.company ? ... : null)
-- Array operations must handle empty arrays
-- tsc --noEmit must exit 0 before any commit
-
-### 8. Testing Baseline
-- Build passes: npm run build (exit 0)
-- Tests: npm run test (3 failures in tests/api/preferences.test.ts — pre-existing, unrelated to this sprint)
-- Lint: npx tsc --noEmit (exit 0)
-
-## Story S-02 Integration Point (CRITICAL)
-The "Edit Preferences" panel re-runs search WITHOUT persisting to DB.
-- Current /api/search endpoint is POST-only
-- Body must contain { profile_id: string }
-- Additional preferences (location, workMode, employmentType, salaryMin) are NOT currently supported by /api/search
-- MITIGATION: S-02 panel will call POST /api/search with ONLY profile_id (no extra params)
-  → This means "re-run" is effectively a simple re-fetch, NOT a preference override
-  → If user wants to change preferences permanently, they use /preferences page
-  → Panel is for "what-if" exploration without persistence
-
-## Constraints (DO NOT VIOLATE)
-1. DO NOT modify any files in src/app/api/
-2. DO NOT modify src/lib/db/schema.ts
-3. DO NOT install new npm packages
-4. DO NOT use inline style objects — Tailwind classes only
-5. DO NOT change the /api/search signature or behavior
-6. All changes confined to src/app/results/page.tsx
-
-## Development Workflow
-1. Read current src/app/results/page.tsx state
-2. Implement story S-01: sticky filter bar with skeleton loading
-3. Implement story S-02: Edit Preferences panel (slide-in, local state only)
-4. Implement story S-03: empty states (no results, filtered to zero)
-5. Run npx tsc --noEmit after each story
-6. Commit with format: "feat: S-0X - <description>"
-7. Final verification: npm run build && npx tsc --noEmit
-
-## Notes for Developer Agent
-- This is a frontend-only UX refactor — no DB changes, no API changes
-- Focus on user experience: sticky bar, smooth animations, helpful empty states
-- framer-motion is available for slide-in panel animation (optional)
-- The existing filter/sort logic is solid — just needs better UI placement
-- Skeleton state prevents layout shift during load
-- Clear separation between permanent preferences (/preferences page) and local what-if exploration (Edit Preferences panel)
+## Key Constraints for This Sprint
+- NO changes to API routes (client-side UI only)
+- NO new npm packages
+- NO DB schema changes
+- Preserve existing restore flow logic (localStorage + X-Restore-Token)

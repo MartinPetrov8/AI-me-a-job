@@ -1,6 +1,1 @@
-# Business gate checks — Sprint F: Results Page Filters
-# Format: <type> <path/expression>
-# Types: file_exists, file_nonempty, cmd_exit0, http_ok
-
-file_exists src/app/results/page.tsx
-cmd_exit0 npx tsc --noEmit
+# Business validation gates (none for this UI-only sprint)

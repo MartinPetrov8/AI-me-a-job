@@ -2,19 +2,16 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-echo "=== CI: TypeScript Lint ==="
+# --- CI: Build ---
+echo "CI: Running build..."
+npm run build 2>&1
+
+# --- CI: Type Check ---
+echo "CI: Running type check..."
 npx tsc --noEmit 2>&1
-echo "✓ TypeScript lint passed"
 
-echo ""
-echo "=== CI: Build ==="
-npm run build 2>&1 | tail -20
-echo "✓ Build passed"
+# --- CI: Tests ---
+echo "CI: Running tests..."
+npm run test 2>&1
 
-echo ""
-echo "=== CI: Tests ==="
-npm run test 2>&1 | tail -30
-echo "✓ Tests completed (3 pre-existing failures in preferences.test.ts are acceptable)"
-
-echo ""
-echo "✅ CI PASSED"
+echo "CI PASSED"

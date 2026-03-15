@@ -1,4 +1,4 @@
-# Repo Map — generated 2026-03-15T15:28:19Z
+# Repo Map — generated 2026-03-15T16:16:35Z
 # Architecture snapshot: class/function signatures, routes, exports
 # Use this to find the right file/function without reading full source.
 
@@ -66,7 +66,7 @@ src/app/restore/page.tsx:
   7:export default function RestorePage() {
 
 src/app/results/page.tsx:
-  619:export default function ResultsPage() {
+  621:export default function ResultsPage() {
 
 src/app/upload/page.tsx:
   7:export default function UploadPage() {
@@ -271,6 +271,5 @@ node_modules/flatted/golang/pkg/flatted/flatted.go:
   tests/fixtures
   tests/lib
   tsconfig.json
-  tsconfig.tsbuildinfo
   vercel.json
   vitest.config.ts

@@ -1,4 +1,3 @@
-# Required deliverables — Sprint F: Results Page Filters
-
-src/app/results/page.tsx
-architecture_notes.txt
+# Required deliverables
+file_exists:src/app/restore/page.tsx
+file_exists:src/components/page-header.tsx
