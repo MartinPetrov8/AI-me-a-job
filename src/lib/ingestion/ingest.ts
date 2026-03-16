@@ -1,7 +1,7 @@
 import { db } from '../db';
 import { jobs } from '../db/schema';
 import { and, lt, ne, or, isNull } from 'drizzle-orm';
-import { fetchAllAdzunaJobs, fetchIncrementalAdzunaJobs } from './adzuna';
+import { fetchAllAdzunaJobs } from './adzuna';
 import { fetchJoobleJobs } from './jooble';
 import { fetchDevBgJobs } from './devbg';
 import { fetchJobsBgJobs } from './jobsbg';
@@ -34,7 +34,7 @@ async function upsertJobs(postings: RawJobPosting[]): Promise<UpsertResult> {
         posting.posted_at,
       );
 
-      await db
+      const returned = await db
         .insert(jobs)
         .values({
           externalId: posting.external_id,
@@ -75,8 +75,7 @@ async function upsertJobs(postings: RawJobPosting[]): Promise<UpsertResult> {
         .returning({ id: jobs.id, classifiedAt: jobs.classifiedAt });
 
       newCount++;
-      // Queue unclassified jobs for immediate classification
-      for (const row of returned) {
+      for (const row of returned ?? []) {
         if (row.classifiedAt === null) insertedIds.push(row.id);
       }
     } catch (err) {

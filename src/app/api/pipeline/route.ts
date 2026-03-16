@@ -13,24 +13,18 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  // Optional ?classify=true to run classification only (backlog clearing)
+  // Optional ?classify=true to run classification only (backlog clearing — up to 500/call)
   const classifyOnly = request.nextUrl.searchParams.get('classify') === 'true';
 
   try {
     if (classifyOnly) {
-      console.log('[pipeline] Classify-only mode (batch=100)...');
-      const classified = await classifyUnclassifiedJobs(100);
+      const classified = await classifyUnclassifiedJobs(500);
       return NextResponse.json({ classified });
     }
 
-    console.log('[pipeline] Starting ingestion...');
+    // Full pipeline: ingest all sources (each source classifies its own new jobs immediately)
     const ingested = await ingestAllSources();
-    console.log('[pipeline] Ingestion complete. Starting classification...');
-
-    const classified = await classifyUnclassifiedJobs(100);
-    console.log('[pipeline] Classification complete.');
-
-    return NextResponse.json({ ingested, classified });
+    return NextResponse.json({ ingested });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error('[pipeline] Error:', message);
