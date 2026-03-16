@@ -175,6 +175,7 @@ function ResultsContent() {
   const [panelEmploymentType, setPanelEmploymentType] = useState<'full-time' | 'part-time' | 'contract' | null>(null);
   const [panelSalaryMin, setPanelSalaryMin] = useState<number | null>(null);
   const [panelSalaryMax, setPanelSalaryMax] = useState<number | null>(null);
+  const [panelPostedWithin, setPanelPostedWithin] = useState<number | null>(null);
   const [panelError, setPanelError] = useState<string | null>(null);
   const [panelLoading, setPanelLoading] = useState(false);
 
@@ -189,6 +190,7 @@ function ResultsContent() {
       const employmentTypeParam = searchParams.get('employment_type');
       const salaryMinParam = searchParams.get('salary_min');
       const salaryMaxParam = searchParams.get('salary_max');
+      const postedWithinParam = searchParams.get('posted_within');
 
       if (locationParam) setPanelLocation(locationParam);
       if (workModeParam && ['remote', 'hybrid', 'onsite'].includes(workModeParam.toLowerCase())) {
@@ -204,6 +206,10 @@ function ResultsContent() {
       if (salaryMaxParam) {
         const num = parseInt(salaryMaxParam, 10);
         if (!isNaN(num)) setPanelSalaryMax(num);
+      }
+      if (postedWithinParam) {
+        const num = parseInt(postedWithinParam, 10);
+        if (!isNaN(num) && [7, 30].includes(num)) setPanelPostedWithin(num);
       }
     }
   }, [panelOpen, panelLocation, searchParams]);
@@ -253,6 +259,7 @@ function ResultsContent() {
       if (panelEmploymentType) body.employment_type = panelEmploymentType;
       if (panelSalaryMin !== null) body.salary_min = panelSalaryMin;
       if (panelSalaryMax !== null) body.salary_max = panelSalaryMax;
+      if (panelPostedWithin !== null) body.posted_within = panelPostedWithin;
 
       const response = await fetch('/api/search', {
         method: 'POST',
@@ -570,6 +577,19 @@ function ResultsContent() {
                     placeholder="e.g., 100000"
                     className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Date posted</label>
+                  <select
+                    value={panelPostedWithin ?? ''}
+                    onChange={(e) => setPanelPostedWithin(e.target.value ? parseInt(e.target.value, 10) : null)}
+                    className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  >
+                    <option value="">Any</option>
+                    <option value="7">Last 7 days</option>
+                    <option value="30">Last 30 days</option>
+                  </select>
                 </div>
 
                 {panelError && (

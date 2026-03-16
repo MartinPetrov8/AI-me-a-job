@@ -912,4 +912,213 @@ describe('ResultsPage - Salary Range Filter (S-03)', () => {
       );
     });
   });
+
+  it('renders Date posted dropdown in Edit Preferences panel', async () => {
+    mockUseSearchParams.mockReturnValue({
+      get: (key: string) => (key === 'profile_id' ? 'test-profile-123' : null),
+    } as ReturnType<typeof useSearchParams>);
+
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        data: { results: [], total: 0, search_id: 'search-1' },
+        meta: { threshold: 5, max_score: 8, searched_at: new Date().toISOString() },
+      }),
+    } as Response);
+
+    render(<ResultsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Edit filters/i)).toBeTruthy();
+    });
+
+    const editButton = screen.getByText(/Edit filters/i);
+    fireEvent.click(editButton);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Date posted/i)).toBeTruthy();
+    });
+
+    const datePostedLabel = screen.getByText(/Date posted/i);
+    const selectElement = datePostedLabel.parentElement?.querySelector('select');
+    expect(selectElement).toBeTruthy();
+
+    const options = Array.from(selectElement!.options).map((opt) => opt.text);
+    expect(options).toEqual(['Any', 'Last 7 days', 'Last 30 days']);
+  });
+
+  it('selecting Last 7 days and clicking Apply triggers re-fetch with posted_within=7', async () => {
+    mockUseSearchParams.mockReturnValue({
+      get: (key: string) => (key === 'profile_id' ? 'test-profile-123' : null),
+    } as ReturnType<typeof useSearchParams>);
+
+    const fetchMock = vi.fn();
+    (global.fetch as unknown) = fetchMock;
+
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        data: { results: [], total: 0, search_id: 'search-1' },
+        meta: { threshold: 5, max_score: 8, searched_at: new Date().toISOString() },
+      }),
+    } as Response);
+
+    render(<ResultsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Edit filters/i)).toBeTruthy();
+    });
+
+    const editButton = screen.getByText(/Edit filters/i);
+    fireEvent.click(editButton);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Date posted/i)).toBeTruthy();
+    });
+
+    const datePostedLabel = screen.getByText(/Date posted/i);
+    const selectElement = datePostedLabel.parentElement?.querySelector('select') as HTMLSelectElement;
+
+    fireEvent.change(selectElement, { target: { value: '7' } });
+
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        data: { results: [], total: 0, search_id: 'search-2' },
+        meta: { threshold: 5, max_score: 8, searched_at: new Date().toISOString() },
+      }),
+    } as Response);
+
+    const rerunButton = screen.getByText(/Re-run search/i);
+    fireEvent.click(rerunButton);
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/search',
+        expect.objectContaining({
+          method: 'POST',
+          headers: expect.objectContaining({
+            'Content-Type': 'application/json',
+            'X-Restore-Token': 'test-restore-token',
+          }),
+          body: JSON.stringify({ profile_id: 'test-profile-123', posted_within: 7 }),
+        })
+      );
+    });
+  });
+
+  it('selecting Last 30 days and clicking Apply triggers re-fetch with posted_within=30', async () => {
+    mockUseSearchParams.mockReturnValue({
+      get: (key: string) => (key === 'profile_id' ? 'test-profile-123' : null),
+    } as ReturnType<typeof useSearchParams>);
+
+    const fetchMock = vi.fn();
+    (global.fetch as unknown) = fetchMock;
+
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        data: { results: [], total: 0, search_id: 'search-1' },
+        meta: { threshold: 5, max_score: 8, searched_at: new Date().toISOString() },
+      }),
+    } as Response);
+
+    render(<ResultsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Edit filters/i)).toBeTruthy();
+    });
+
+    const editButton = screen.getByText(/Edit filters/i);
+    fireEvent.click(editButton);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Date posted/i)).toBeTruthy();
+    });
+
+    const datePostedLabel = screen.getByText(/Date posted/i);
+    const selectElement = datePostedLabel.parentElement?.querySelector('select') as HTMLSelectElement;
+
+    fireEvent.change(selectElement, { target: { value: '30' } });
+
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        data: { results: [], total: 0, search_id: 'search-2' },
+        meta: { threshold: 5, max_score: 8, searched_at: new Date().toISOString() },
+      }),
+    } as Response);
+
+    const rerunButton = screen.getByText(/Re-run search/i);
+    fireEvent.click(rerunButton);
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/search',
+        expect.objectContaining({
+          method: 'POST',
+          headers: expect.objectContaining({
+            'Content-Type': 'application/json',
+            'X-Restore-Token': 'test-restore-token',
+          }),
+          body: JSON.stringify({ profile_id: 'test-profile-123', posted_within: 30 }),
+        })
+      );
+    });
+  });
+
+  it('selecting Any sends no posted_within param', async () => {
+    mockUseSearchParams.mockReturnValue({
+      get: (key: string) => (key === 'profile_id' ? 'test-profile-123' : null),
+    } as ReturnType<typeof useSearchParams>);
+
+    const fetchMock = vi.fn();
+    (global.fetch as unknown) = fetchMock;
+
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        data: { results: [], total: 0, search_id: 'search-1' },
+        meta: { threshold: 5, max_score: 8, searched_at: new Date().toISOString() },
+      }),
+    } as Response);
+
+    render(<ResultsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Edit filters/i)).toBeTruthy();
+    });
+
+    const editButton = screen.getByText(/Edit filters/i);
+    fireEvent.click(editButton);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Date posted/i)).toBeTruthy();
+    });
+
+    const datePostedLabel = screen.getByText(/Date posted/i);
+    const selectElement = datePostedLabel.parentElement?.querySelector('select') as HTMLSelectElement;
+
+    fireEvent.change(selectElement, { target: { value: '7' } });
+    fireEvent.change(selectElement, { target: { value: '' } });
+
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        data: { results: [], total: 0, search_id: 'search-2' },
+        meta: { threshold: 5, max_score: 8, searched_at: new Date().toISOString() },
+      }),
+    } as Response);
+
+    const rerunButton = screen.getByText(/Re-run search/i);
+    fireEvent.click(rerunButton);
+
+    await waitFor(() => {
+      const lastCall = fetchMock.mock.calls[fetchMock.mock.calls.length - 1];
+      const bodyStr = lastCall[1].body;
+      const bodyObj = JSON.parse(bodyStr);
+      expect(bodyObj).toEqual({ profile_id: 'test-profile-123' });
+      expect(bodyObj.posted_within).toBeUndefined();
+    });
+  });
 });
