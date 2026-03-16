@@ -1,56 +1,87 @@
-# Codebase Architecture Notes — Sprint G
+# Architecture Notes for AI Job Matcher
 
-## Directory Structure
-- **src/app/**: Next.js 15 App Router pages (restore/, upload/, results/, etc.)
-- **src/components/**: Shared React components (tag-input, ui/*)
-- **src/lib/**: Business logic, DB, auth, LLM integration
-  - auth/: validateRestoreToken helper (used across API routes)
-  - db/: Drizzle ORM schema + connection
-  - llm/: Claude/OpenRouter client wrappers
-  - matching/: Job matching engine
-  - ingestion/: Job scrapers (Adzuna, Jooble, DevBG, JobsBG)
-- **src/app/api/**: API routes (upload, restore, search, save, preferences, etc.)
+## Route Structure
+- All API routes in `src/app/api/*/route.ts` follow Next.js 16 App Router pattern
+- Routes use `NextRequest` and `NextResponse` from 'next/server'
+- Authentication via X-Restore-Token header, validated with `validateRestoreToken(profileId, token)`
+- Routes export `runtime = 'nodejs'` for serverless compatibility
 
-## Error Handling Patterns
-- API routes return { error: string, details?: any } on failure
-- Client-side components show error state with red text (text-red-600)
-- HTTP status codes: 200 OK, 400 validation error, 401 unauthorized, 404 not found, 500 server error
-- Errors are logged to console with context (e.g., `[pipeline] Ingestion failed`)
+## Error Handling Pattern
+Standard try-catch with typed responses:
+```typescript
+try {
+  // logic
+  return NextResponse.json({ data: ... });
+} catch (error: unknown) {
+  if (error instanceof Response) return error;
+  if (error instanceof Error && error.message === 'Profile not found') {
+    return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
+  }
+  return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+}
+```
 
-## Authentication Flow
-- Users upload CV → receive restore_token (long-lived, never expires)
-- restore_token stored in localStorage and sent via X-Restore-Token header
-- validateRestoreToken() checks DB for matching users.restoreToken
-- No password auth — token-based only
+## Database Access
+- Uses Drizzle ORM with PostgreSQL
+- DB client imported from `@/lib/db/index`
+- Schema in `@/lib/db/schema` (PROTECTED — DO NOT MODIFY)
+- Queries use `eq`, `gt`, `desc`, `sql` from 'drizzle-orm'
+- Tables: profiles, jobs, searches, searchResults
 
-## Testing Patterns
-- Vitest + React Testing Library
-- API route tests: mock fetch, validate response shapes
-- Component tests: render, fireEvent, expect screen.getBy*
-- Failing tests: mostly test infrastructure issues (multiple "Edit filters" buttons, missing DB_URL in test env)
+## Matching Engine (src/lib/matching/engine.ts)
+- `findMatches(profileId, options?)` returns `MatchResult`
+- Scoring: 8 criteria (years_experience, education_level, field_of_study, sphere_of_expertise, seniority_level, languages, industry, key_skills)
+- Filter threshold: score >= 5
+- Default sort: score DESC, then posted_at DESC NULLS LAST
+- Returns top 50 results
+- Creates searches and searchResults records in DB
 
-## Design System
-- Tailwind CSS utility classes
-- Primary brand: indigo-600 (buttons, links, active states)
-- Background: bg-[#F7F7F5] (off-white)
-- Cards: bg-white rounded-2xl shadow-sm border border-gray-100 p-8
-- Inputs: border-gray-200 rounded-xl focus:ring-indigo-500
-- Typography: text-gray-900 (headings), text-gray-500 (body/subtext)
+## Test Organization
+- Tests use Vitest with @testing-library/react for components
+- Test files co-located with source: `*.test.ts` or `*.test.tsx`
+- API route tests in `tests/api/`
+- Lib tests in `tests/lib/` and `src/lib/*/`
+- Component tests in `src/app/*/page.test.tsx` or `tests/components/`
+- Baseline: 140 tests passing
+
+## Utility Functions
+- `formatLabel(key: string)`: converts snake_case to Title Case
+- `formatSalary(min, max, currency)`: formats salary ranges (e.g., "USD 50k–80k")
+- `getAvatarColor(name)`: deterministic color hash for company avatars
+- Date formatting: uses `toLocaleDateString()` for display
 
 ## Naming Conventions
-- React components: PascalCase (RestorePage, TagInput)
-- Files: kebab-case (restore/page.tsx, validate-restore-token.ts)
-- API routes: route.ts (REST conventions)
-- DB tables: snake_case (users, profiles, jobs, matches)
+- React components: PascalCase (e.g., `JobCard`, `ResultsContent`)
+- Files: kebab-case (e.g., `extract-text.ts`, `batch-classify.ts`)
+- Functions: camelCase (e.g., `findMatches`, `calculateMatch`)
+- Database fields: snake_case (e.g., `salary_min`, `posted_at`)
+- Component props: camelCase
+- CSS classes: Tailwind utility classes
 
-## Utility Functions to Reuse
-- `validateRestoreToken(token)` → returns user or throws
-- `extractCV(fileBuffer)` → parses PDF/DOCX into structured data
-- `matchJobs(profile, jobs)` → scoring algorithm
-- `classifyJob(job)` → LLM-based job categorization
+## Frontend Patterns
+- All pages in `src/app/` are 'use client' React Server Components become Client Components
+- State management: useState + useEffect for data fetching
+- URL params: useSearchParams() from 'next/navigation'
+- Loading states: skeleton components from '@/components/ui/skeleton'
+- Animations: framer-motion with AnimatePresence
+- Styling: Tailwind CSS v4 with utility-first approach
 
-## Key Constraints for This Sprint
-- NO changes to API routes (client-side UI only)
-- NO new npm packages
-- NO DB schema changes
-- Preserve existing restore flow logic (localStorage + X-Restore-Token)
+## Environment
+- Required: DATABASE_URL, LLM_PROVIDER, LLM_MODEL, OPENROUTER_API_KEY
+- .env file created with placeholders for build (actual DB not required for type checking)
+
+## Import Paths
+- Use '@/' alias for absolute imports from `src/` (e.g., '@/lib/db/schema')
+- External deps: npm packages from package.json
+- No relative imports crossing major boundaries (prefer '@/' alias)
+
+## Protected Files (DO NOT MODIFY)
+- src/lib/ingestion/ingest.ts
+- src/lib/db/schema.ts
+- .env, .env.*, .env.secrets
+
+## Build/Test Commands
+- Build: `npm run build` (next build)
+- Test: `npm run test` (vitest run)
+- Typecheck: `tsc --noEmit`
+- Dev: `npm run dev`

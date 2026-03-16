@@ -1,1 +1,5 @@
-# Business validation gates (none for this UI-only sprint)
+file_nonempty:src/app/results/page.tsx
+file_nonempty:src/app/api/search/route.ts
+file_exists:src/lib/matching/engine.ts
+cmd_exit0:npm run build
+cmd_exit0:npm run test

@@ -1,4 +1,4 @@
-# Repo Map — generated 2026-03-15T16:16:35Z
+# Repo Map — generated 2026-03-16T12:22:59Z
 # Architecture snapshot: class/function signatures, routes, exports
 # Use this to find the right file/function without reading full source.
 
@@ -66,7 +66,7 @@ src/app/restore/page.tsx:
   7:export default function RestorePage() {
 
 src/app/results/page.tsx:
-  621:export default function ResultsPage() {
+  623:export default function ResultsPage() {
 
 src/app/upload/page.tsx:
   7:export default function UploadPage() {
@@ -132,7 +132,7 @@ src/lib/ingestion/devbg.ts:
   8:export async function fetchDevBgJobs(): Promise<RawJobPosting[]> {
 
 src/lib/ingestion/ingest.ts:
-  117:export async function ingestAllSources(): Promise<IngestionResult[]> {
+  124:export async function ingestAllSources(): Promise<IngestionResult[]> {
 
 src/lib/ingestion/jobsbg.ts:
   8:export async function fetchJobsBgJobs(): Promise<RawJobPosting[]> {
@@ -147,12 +147,13 @@ src/lib/ingestion/types.ts:
 
 src/lib/llm/batch-classify.ts:
   6:export interface BatchResult {
-  13:export async function classifyUnclassifiedJobs(batchSize: number = 50): Promise<BatchResult> {
+  17:export async function classifyJobsById(ids: string[]): Promise<BatchResult> {
+  49:export async function classifyUnclassifiedJobs(batchSize: number = 500): Promise<BatchResult> {
 
 src/lib/llm/classify-job.ts:
-  18:export interface ClassifiedCriteria {
-  29:export class JobClassificationError extends Error {
-  49:export async function classifyJob(title: string, description: string): Promise<ClassifiedCriteria> {
+  17:export interface ClassifiedCriteria {
+  28:export class JobClassificationError extends Error {
+  117:export async function classifyJob(title: string, description: string): Promise<ClassifiedCriteria> {
 
 src/lib/llm/client.ts:
   16:export const LLM_PROVIDER = process.env.LLM_PROVIDER ?? 'openrouter';
