@@ -1,87 +1,123 @@
-# Architecture Notes for AI Job Matcher
+# Architecture Notes — AI-me-a-job
 
-## Route Structure
-- All API routes in `src/app/api/*/route.ts` follow Next.js 16 App Router pattern
-- Routes use `NextRequest` and `NextResponse` from 'next/server'
-- Authentication via X-Restore-Token header, validated with `validateRestoreToken(profileId, token)`
-- Routes export `runtime = 'nodejs'` for serverless compatibility
+## Tech Stack
+- **Framework**: Next.js 16.1.6 (App Router with Turbopack)
+- **Language**: TypeScript
+- **Database**: PostgreSQL via Drizzle ORM
+- **Testing**: Vitest + Testing Library
+- **LLM**: Anthropic Claude via @anthropic-ai/sdk (configurable via env)
+- **Styling**: Tailwind CSS 4.2.1
+- **Animation**: Framer Motion
 
-## Error Handling Pattern
-Standard try-catch with typed responses:
-```typescript
-try {
-  // logic
-  return NextResponse.json({ data: ... });
-} catch (error: unknown) {
-  if (error instanceof Response) return error;
-  if (error instanceof Error && error.message === 'Profile not found') {
-    return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
-  }
-  return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
-}
+## Project Structure
+```
+src/
+  app/                    # Next.js App Router pages + API routes
+    api/                  # API endpoints (all use runtime='nodejs')
+      pipeline/           # Job ingestion pipeline (maxDuration=300)
+      search/             # Job matching engine
+      upload/             # CV upload + parsing (maxDuration=60)
+      preferences/        # User preferences CRUD
+      profile/            # User profile CRUD
+      save/               # Save session state
+      restore/            # Restore session by token
+    results/              # Job results UI
+    preferences/          # Preferences form
+    profile/              # Profile form
+    upload/               # CV upload UI
+  lib/                    # Business logic (framework-agnostic)
+    matching/             # Core matching algorithm
+    llm/                  # LLM integration (CV parsing, job classification)
+    ingestion/            # Job scraping (Adzuna, Jooble, devbg, jobsbg)
+    db/                   # Database schema + client
+    auth/                 # Token-based ownership verification
+    cv-parser/            # CV text extraction (PDF, DOCX)
+  components/             # React UI components
+    ui/                   # Reusable primitives (Badge, Skeleton)
+tests/                    # Vitest tests (mirror src/ structure)
 ```
 
-## Database Access
-- Uses Drizzle ORM with PostgreSQL
-- DB client imported from `@/lib/db/index`
-- Schema in `@/lib/db/schema` (PROTECTED — DO NOT MODIFY)
-- Queries use `eq`, `gt`, `desc`, `sql` from 'drizzle-orm'
-- Tables: profiles, jobs, searches, searchResults
+## Key Patterns
 
-## Matching Engine (src/lib/matching/engine.ts)
-- `findMatches(profileId, options?)` returns `MatchResult`
-- Scoring: 8 criteria (years_experience, education_level, field_of_study, sphere_of_expertise, seniority_level, languages, industry, key_skills)
-- Filter threshold: score >= 5
-- Default sort: score DESC, then posted_at DESC NULLS LAST
-- Returns top 50 results
-- Creates searches and searchResults records in DB
+### 1. API Routes
+- **ALL** routes export `export const runtime = 'nodejs'` (not Edge runtime)
+- Long-running routes set `maxDuration` (pipeline=300s, upload=60s)
+- Error handling: try/catch → NextResponse.json({ error }, { status })
+- Auth: validate restore token via `validateRestoreToken(profileId, token)`
 
-## Test Organization
-- Tests use Vitest with @testing-library/react for components
-- Test files co-located with source: `*.test.ts` or `*.test.tsx`
-- API route tests in `tests/api/`
-- Lib tests in `tests/lib/` and `src/lib/*/`
-- Component tests in `src/app/*/page.test.tsx` or `tests/components/`
-- Baseline: 140 tests passing
+### 2. Matching Engine (src/lib/matching/engine.ts)
+- **Location**: `matchLocation()` function checks if user pref appears in job location string
+- **Scoring**: `calculateMatch()` scores 8 criteria (0-8 scale), filter >= 5
+- **Benefit of doubt**: null job fields auto-match (except when profile also null)
+- **Pre-filters**: Apply user preferences BEFORE scoring (work mode, employment type, location, salary)
+- **Sort options**: score (default), posted_at, salary_max — all DESC NULLS LAST
+- **Database**: Uses Drizzle ORM with type-safe queries
 
-## Utility Functions
-- `formatLabel(key: string)`: converts snake_case to Title Case
-- `formatSalary(min, max, currency)`: formats salary ranges (e.g., "USD 50k–80k")
-- `getAvatarColor(name)`: deterministic color hash for company avatars
-- Date formatting: uses `toLocaleDateString()` for display
+### 3. Testing
+- **Runner**: Vitest (npm run test)
+- **Mocking**: vi.mock() for db, external APIs
+- **Pattern**: Mock db.select/insert/update, return chained .from().where().limit()
+- **Coverage**: 162 tests across API routes, lib functions, components
+- **Location**: Tests mirror src/ paths (tests/lib/matching/engine.test.ts)
 
-## Naming Conventions
-- React components: PascalCase (e.g., `JobCard`, `ResultsContent`)
-- Files: kebab-case (e.g., `extract-text.ts`, `batch-classify.ts`)
-- Functions: camelCase (e.g., `findMatches`, `calculateMatch`)
-- Database fields: snake_case (e.g., `salary_min`, `posted_at`)
-- Component props: camelCase
-- CSS classes: Tailwind utility classes
+### 4. Error Handling
+- **LLM calls**: Always wrap in try/catch, return fallback on error
+- **CV parsing**: Return null on parse failure, log error
+- **API routes**: Catch all errors, return 500 with generic message (don't leak internals)
+- **Validation**: Zod schemas for all API inputs (src/lib/validation.ts)
 
-## Frontend Patterns
-- All pages in `src/app/` are 'use client' React Server Components become Client Components
-- State management: useState + useEffect for data fetching
-- URL params: useSearchParams() from 'next/navigation'
-- Loading states: skeleton components from '@/components/ui/skeleton'
-- Animations: framer-motion with AnimatePresence
-- Styling: Tailwind CSS v4 with utility-first approach
+### 5. Database Schema (PROTECTED: src/lib/db/schema.ts)
+- **Tables**: profiles, jobs, searches, searchResults
+- **ORM**: Drizzle with postgres.js driver
+- **Migrations**: drizzle-kit generate/push
+- **Types**: Auto-generated from schema
 
-## Environment
-- Required: DATABASE_URL, LLM_PROVIDER, LLM_MODEL, OPENROUTER_API_KEY
-- .env file created with placeholders for build (actual DB not required for type checking)
+### 6. LLM Integration
+- **Provider**: Configurable via LLM_PROVIDER env (openrouter | anthropic)
+- **Client**: src/lib/llm/client.ts exports `llm()` function
+- **Prompts**: All prompts in src/lib/llm/prompts.ts (system + user templates)
+- **CV Parsing**: src/lib/llm/extract-cv.ts — extracts structured profile from text
+- **Job Classification**: src/lib/llm/classify-job.ts — tags jobs with criteria
 
-## Import Paths
-- Use '@/' alias for absolute imports from `src/` (e.g., '@/lib/db/schema')
-- External deps: npm packages from package.json
-- No relative imports crossing major boundaries (prefer '@/' alias)
+### 7. UI Components
+- **Styling**: Tailwind utility classes, no CSS modules
+- **Color system**: Consistent gray scale (bg-[#F7F7F5] body, border-gray-100)
+- **Animations**: Framer Motion for page transitions, job card reveals
+- **Icons**: No icon library — use Unicode symbols or SVG inline
+- **Forms**: Controlled inputs, useState for local state
+
+### 8. Naming Conventions
+- **Files**: kebab-case (matching-engine.ts, tag-input.tsx)
+- **Components**: PascalCase (JobCard, ScoreRing, CompanyAvatar)
+- **Functions**: camelCase (findMatches, calculateMatch, matchLocation)
+- **Types**: PascalCase (MatchedJob, SearchResponse)
+- **Constants**: UPPER_SNAKE_CASE (YEARS_EXPERIENCE, EDUCATION_LEVELS)
+
+### 9. Ingestion (PROTECTED: src/lib/ingestion/*)
+- **Sources**: Adzuna API, Jooble API, devbg scraper, jobsbg scraper
+- **Deduplication**: Hash-based (title+company+location)
+- **Classification**: Batch classify via LLM after ingestion
+- **Protected**: Do not modify ingestion logic without explicit approval
+
+## Build Notes
+- **Build command**: npm run build (Next.js production build)
+- **Test command**: npm run test (Vitest run mode)
+- **Typecheck**: tsc --noEmit (NEVER use "next lint" — Next.js 16 flat config incompatible)
+- **Dev server**: npm run dev (Next.js dev with Turbopack)
+- **Database**: npm run db:generate / db:push (Drizzle migrations)
+
+## Environment Variables
+- DATABASE_URL (required for build)
+- LLM_PROVIDER, LLM_MODEL (required for CV parsing / job classification)
+- OPENROUTER_API_KEY or ANTHROPIC_API_KEY (depending on provider)
+- ADZUNA_APP_ID, ADZUNA_APP_KEY, JOOBLE_API_KEY (optional for ingestion)
 
 ## Protected Files (DO NOT MODIFY)
-- src/lib/ingestion/ingest.ts
 - src/lib/db/schema.ts
-- .env, .env.*, .env.secrets
+- src/lib/ingestion/* (all files)
+- .env* (credentials)
 
-## Build/Test Commands
-- Build: `npm run build` (next build)
-- Test: `npm run test` (vitest run)
-- Typecheck: `tsc --noEmit`
-- Dev: `npm run dev`
+## Sprint Objective Context
+- **Location scoring bug #37**: matchLocation() returns boolean, needs to return 0|1|2 score
+- **Mobile layout issues**: Filter bar overflow, safe area padding, keyboard handling
+- **Max score**: Currently 8, will be 9 after location becomes scored criterion
