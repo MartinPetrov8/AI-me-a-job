@@ -67,7 +67,7 @@ describe('Search API', () => {
     expect(data.data.total).toBe(1);
     expect(data.data.search_id).toBe('search-123');
     expect(data.meta.threshold).toBe(5);
-    expect(data.meta.max_score).toBe(8);
+    expect(data.meta.max_score).toBe(9);
     expect(data.meta.searched_at).toBeDefined();
   });
 

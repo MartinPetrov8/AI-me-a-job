@@ -1,3 +1,8 @@
-src/app/results/page.tsx
+# Deliverables checklist for Sprint I
+# Format: one file path per line
+
+src/lib/matching/engine.ts
 src/app/api/search/route.ts
-src/app/results/page.test.tsx
+src/app/results/page.tsx
+src/app/layout.tsx
+src/app/preferences/page.tsx

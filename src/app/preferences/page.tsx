@@ -174,9 +174,11 @@ function PreferencesForm() {
                   {['EUR', 'GBP', 'USD'].map(c => <option key={c}>{c}</option>)}
                 </select>
                 <input type="number" value={salaryMin} onChange={e => setSalaryMin(e.target.value)} placeholder="Min" min="0"
+                  onFocus={(e) => setTimeout(() => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300)}
                   className="flex-1 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
                 <span className="text-gray-400">–</span>
                 <input type="number" value={salaryMax} onChange={e => setSalaryMax(e.target.value)} placeholder="Max" min="0"
+                  onFocus={(e) => setTimeout(() => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300)}
                   className="flex-1 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
               </div>
             </div>

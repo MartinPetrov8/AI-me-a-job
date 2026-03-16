@@ -86,7 +86,7 @@ function JobCard({ job, index }: { job: MatchedJob; index: number }) {
   const salary = formatSalary(job.salary_min, job.salary_max, job.salary_currency);
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all duration-200 p-6">
+    <div className="isolate bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all duration-200 p-6">
       <div className="flex items-start gap-3">
         <ScoreRing score={job.match_score} />
         <div className="flex items-start gap-3 flex-1 min-w-0">
@@ -316,7 +316,7 @@ function ResultsContent() {
 
   return (
     <div className="min-h-screen bg-[#F7F7F5]">
-      <nav className="bg-white border-b border-gray-100 sticky top-0 z-20">
+      <nav className="bg-white border-b border-gray-100 sticky top-0 z-20 pt-[env(safe-area-inset-top)]">
         <div className="max-w-3xl mx-auto px-6 py-4 flex items-center justify-between">
           <Link href="/" className="text-xl font-bold text-indigo-600">aimeajob</Link>
           <button onClick={() => performSearch(true)} disabled={loading}
@@ -370,69 +370,69 @@ function ResultsContent() {
           )}
         </div>
 
-        <div className="sticky top-0 z-10 bg-white/95 backdrop-blur-sm border-b border-gray-100 px-4 py-3 -mx-4 mb-4">
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex flex-wrap items-center gap-2">
-              {loading ? (
-                <>
-                  <Skeleton className="h-8 w-20 rounded-full" />
-                  <Skeleton className="h-8 w-20 rounded-full" />
-                  <Skeleton className="h-8 w-20 rounded-full" />
-                  <Skeleton className="h-8 w-20 rounded-full" />
-                </>
-              ) : (
-                <>
-                  <button
-                    onClick={() => setFilterRemote(filterRemote === true ? null : true)}
-                    className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${filterRemote === true ? 'bg-indigo-600 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:border-indigo-300'}`}
+        {/* Filter bar — 2-row responsive layout (Issue #38/#40 fix) */}
+        <div className="sticky top-0 z-10 bg-white/95 backdrop-blur-sm border-b border-gray-100 px-4 py-2 -mx-4 mb-4">
+          {/* Row 1: Sort controls + result count */}
+          {!loading && results.length > 0 && (
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm text-gray-400 whitespace-nowrap">{sortedFilteredResults.length} of {results.length}</span>
+              <div className="flex gap-1.5">
+                {([['score', 'Score'], ['posted_at', 'Date'], ['salary_max', 'Salary']] as const).map(([val, label]) => (
+                  <button key={val}
+                    onClick={() => setSortBy(val)}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${sortBy === val ? 'bg-gray-900 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:border-gray-300'}`}
                   >
-                    🌍 Remote only
+                    {label}
                   </button>
-
-                  {[6, 7, 8, 9].map(s => (
-                    <button key={s}
-                      onClick={() => setFilterMinScore(filterMinScore === s ? 5 : s)}
-                      className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${filterMinScore === s ? 'bg-indigo-600 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:border-indigo-300'}`}
-                    >
-                      {s}+ score
-                    </button>
-                  ))}
-
-                  {employmentTypes.map(type => (
-                    <button key={type}
-                      onClick={() => setFilterEmploymentType(filterEmploymentType === type ? '' : type)}
-                      className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${filterEmploymentType === type ? 'bg-indigo-600 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:border-indigo-300'}`}
-                    >
-                      {type}
-                    </button>
-                  ))}
-
-                  {hasFilters && (
-                    <button
-                      onClick={() => { setFilterRemote(null); setFilterMinScore(5); setFilterEmploymentType(''); }}
-                      className="px-3 py-1.5 rounded-full text-sm font-medium bg-red-50 text-red-600 border border-red-100 hover:bg-red-100 transition-colors"
-                    >
-                      ✕ Clear
-                    </button>
-                  )}
-                </>
-              )}
-            </div>
-
-            {!loading && results.length > 0 && (
-              <div className="flex items-center gap-3">
-                <span className="text-sm text-gray-400 whitespace-nowrap">{sortedFilteredResults.length} of {results.length}</span>
-                <div className="flex gap-2">
-                  {([['score', 'Score'], ['posted_at', 'Date posted'], ['salary_max', 'Salary']] as const).map(([val, label]) => (
-                    <button key={val}
-                      onClick={() => setSortBy(val)}
-                      className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${sortBy === val ? 'bg-gray-900 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:border-gray-300'}`}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
+                ))}
               </div>
+            </div>
+          )}
+          {/* Row 2: Filter pills — horizontally scrollable, no wrap (Issue #38 fix) */}
+          <div className="flex overflow-x-auto gap-2 pb-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+            {loading ? (
+              <>
+                <Skeleton className="h-8 w-20 rounded-full flex-shrink-0" />
+                <Skeleton className="h-8 w-20 rounded-full flex-shrink-0" />
+                <Skeleton className="h-8 w-20 rounded-full flex-shrink-0" />
+                <Skeleton className="h-8 w-20 rounded-full flex-shrink-0" />
+              </>
+            ) : (
+              <>
+                <button
+                  onClick={() => setFilterRemote(filterRemote === true ? null : true)}
+                  className={`flex-shrink-0 px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${filterRemote === true ? 'bg-indigo-600 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:border-indigo-300'}`}
+                >
+                  🌍 Remote
+                </button>
+
+                {[6, 7, 8].map(s => (
+                  <button key={s}
+                    onClick={() => setFilterMinScore(filterMinScore === s ? 5 : s)}
+                    className={`flex-shrink-0 px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${filterMinScore === s ? 'bg-indigo-600 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:border-indigo-300'}`}
+                  >
+                    {s}+
+                  </button>
+                ))}
+
+                {employmentTypes.map(type => (
+                  <button key={type}
+                    onClick={() => setFilterEmploymentType(filterEmploymentType === type ? '' : type)}
+                    className={`flex-shrink-0 px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${filterEmploymentType === type ? 'bg-indigo-600 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:border-indigo-300'}`}
+                  >
+                    {type}
+                  </button>
+                ))}
+
+                {hasFilters && (
+                  <button
+                    onClick={() => { setFilterRemote(null); setFilterMinScore(5); setFilterEmploymentType(''); }}
+                    className="flex-shrink-0 px-3 py-1.5 rounded-full text-sm font-medium bg-red-50 text-red-600 border border-red-100 hover:bg-red-100 transition-colors"
+                  >
+                    ✕ Clear
+                  </button>
+                )}
+              </>
             )}
           </div>
         </div>

@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
       },
       meta: {
         threshold: 5,
-        max_score: 8,
+        max_score: 9,  // location is now criterion #9 when prefLocation is set
         searched_at: searchedAt,
       },
     });
