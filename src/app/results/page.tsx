@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -179,9 +179,20 @@ function ResultsContent() {
   const [panelError, setPanelError] = useState<string | null>(null);
   const [panelLoading, setPanelLoading] = useState(false);
 
-  useEffect(() => { if (profileId) performSearch(false); }, [profileId]);
+  const initialLoadDone = useRef(false);
+  useEffect(() => {
+    if (profileId) {
+      initialLoadDone.current = false;
+      performSearch(false).then(() => { initialLoadDone.current = true; });
+    }
+  }, [profileId]);
 
-  useEffect(() => { if (profileId && sortBy !== 'score') performSearch(false); }, [sortBy]);
+  // Re-fetch when sort changes, but only after initial load completes to avoid race condition
+  useEffect(() => {
+    if (profileId && sortBy !== 'score' && initialLoadDone.current) {
+      performSearch(false);
+    }
+  }, [sortBy]);
 
   useEffect(() => {
     if (panelOpen && !panelLocation) {

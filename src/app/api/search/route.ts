@@ -19,16 +19,30 @@ export async function POST(request: NextRequest) {
     const token = request.headers.get('x-restore-token');
     await validateRestoreToken(profile_id, token);
 
-    // Parse query parameters for sorting and filtering
+    // Parse sort + filter params from BOTH query string (sort) and request body (filters)
+    // Sort comes via query param (?sort=posted_at) since UI appends it to the URL
+    // Salary/date filters come from the Edit Filters panel via request body
     const { searchParams } = new URL(request.url);
-    const sort = searchParams.get('sort') || undefined;
-    const salaryMinParam = searchParams.get('salary_min');
-    const salaryMaxParam = searchParams.get('salary_max');
-    const postedWithinParam = searchParams.get('posted_within');
 
-    const salaryMin = salaryMinParam ? parseInt(salaryMinParam, 10) : undefined;
-    const salaryMax = salaryMaxParam ? parseInt(salaryMaxParam, 10) : undefined;
-    const postedWithin = postedWithinParam ? parseInt(postedWithinParam, 10) : undefined;
+    const VALID_SORT = ['score', 'posted_at', 'salary_max'] as const;
+    type SortOption = typeof VALID_SORT[number];
+    const sortParam = searchParams.get('sort');
+    const sort: SortOption | undefined = VALID_SORT.includes(sortParam as SortOption)
+      ? (sortParam as SortOption)
+      : undefined;
+
+    // Salary and date filters come from body (set by Edit Filters panel)
+    const salaryMinRaw = body.salary_min;
+    const salaryMaxRaw = body.salary_max;
+    const postedWithinRaw = body.posted_within;
+
+    const salaryMin = typeof salaryMinRaw === 'number' && !isNaN(salaryMinRaw) && salaryMinRaw > 0
+      ? salaryMinRaw : undefined;
+    const salaryMax = typeof salaryMaxRaw === 'number' && !isNaN(salaryMaxRaw) && salaryMaxRaw > 0
+      ? salaryMaxRaw : undefined;
+    const VALID_POSTED_WITHIN = [7, 30];
+    const postedWithin = typeof postedWithinRaw === 'number' && VALID_POSTED_WITHIN.includes(postedWithinRaw)
+      ? postedWithinRaw : undefined;
 
     const result = await findMatches(profile_id, {
       sort,
