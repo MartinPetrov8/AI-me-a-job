@@ -91,14 +91,23 @@ function matchKeySkills(profileSkills: string[] | null, jobSkills: string[] | nu
   return overlapCount >= 2;
 }
 
-function matchLocation(prefLocation: string | null, jobLocation: string | null, isRemote: boolean | null): boolean {
-  if (!prefLocation) return true; // no pref = any location
-  if (isRemote) return true;      // remote jobs match any location pref
-  if (!jobLocation) return true;  // unknown job location = benefit of doubt
+/**
+ * Score location match: 0 | 1 | 2
+ *   2 = prefLocation set AND city/country found in jobLocation string (explicit match)
+ *   1 = neutral: no prefLocation, OR isRemote=true, OR jobLocation=null
+ *   0 = prefLocation set but no city/country match (penalise, don't hard-exclude)
+ *
+ * Replaces the old boolean matchLocation() pre-filter (Issue #37).
+ * Location is now a scored criterion, not a binary gate.
+ */
+export function scoreLocation(prefLocation: string | null, jobLocation: string | null, isRemote: boolean | null): 0 | 1 | 2 {
+  if (!prefLocation) return 1;  // no preference = neutral
+  if (isRemote) return 1;       // remote = neutral (could work anywhere)
+  if (!jobLocation) return 1;   // unknown location = benefit of doubt
   const pref = prefLocation.toLowerCase().trim();
   const loc = jobLocation.toLowerCase();
-  // Check if pref appears anywhere in location string (city, region, country)
-  return loc.includes(pref) || pref.includes(loc.split(',')[0].trim());
+  if (loc.includes(pref) || pref.includes(loc.split(',')[0].trim())) return 2;
+  return 0;
 }
 
 function calculateMatch(profile: any, job: JobRow): { score: number; matched: string[]; unmatched: string[] } {
@@ -159,6 +168,19 @@ function calculateMatch(profile: any, job: JobRow): { score: number; matched: st
     matched.push('key_skills');
   } else {
     unmatched.push('key_skills');
+  }
+
+  // i) location — scored criterion (Issue #37 fix)
+  // Only applies when user has set a location preference.
+  // score=2 → matched, score=0 → unmatched, score=1 → neutral (not added to either list)
+  if (profile.prefLocation) {
+    const locScore = scoreLocation(profile.prefLocation, job.location, job.is_remote);
+    if (locScore === 2) {
+      matched.push('location');
+    } else if (locScore === 0) {
+      unmatched.push('location');
+    }
+    // locScore === 1 = neutral (remote/unknown) → no impact on score
   }
 
   return { score: matched.length, matched, unmatched };
@@ -230,10 +252,7 @@ export async function findMatches(
       if (!profile.prefEmploymentType.includes(job.employment_type)) return false;
     }
 
-    // Location
-    if (profile.prefLocation) {
-      if (!matchLocation(profile.prefLocation, job.location, job.is_remote)) return false;
-    }
+    // Location: now scored (not filtered) — removed pre-filter, see calculateMatch() (Issue #37)
 
     // Salary min — only filter when job has salary data
     if (profile.prefSalaryMin && job.salary_max !== null) {
