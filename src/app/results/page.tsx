@@ -336,13 +336,15 @@ function ResultsContent() {
           <h1 className="text-2xl font-bold text-gray-900">
             {loading ? 'Finding your matches…' : results.length > 0 ? `${results.length} Matches` : 'Job Matches'}
           </h1>
-          <button
-            onClick={() => setPanelOpen(true)}
-            aria-label="Edit search filters"
-            className="text-sm text-indigo-600 hover:text-indigo-700 font-medium"
-          >
-            🎛 Edit filters
-          </button>
+          {!loading && results.length > 0 && (
+            <button
+              onClick={() => setPanelOpen(true)}
+              aria-label="Edit search filters"
+              className="text-sm text-indigo-600 hover:text-indigo-700 font-medium"
+            >
+              🎛 Edit filters
+            </button>
+          )}
         </div>
 
         <div className="sticky top-0 z-10 bg-white/95 backdrop-blur-sm border-b border-gray-100 px-4 py-3 -mx-4 mb-4">
