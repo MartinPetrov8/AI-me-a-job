@@ -16,11 +16,26 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // TODO: Replace with NextAuth session-based auth for production
     const token = request.headers.get('x-restore-token');
     await validateRestoreToken(profile_id, token);
 
-    const result = await findMatches(profile_id);
+    // Parse query parameters for sorting and filtering
+    const { searchParams } = new URL(request.url);
+    const sort = searchParams.get('sort') || undefined;
+    const salaryMinParam = searchParams.get('salary_min');
+    const salaryMaxParam = searchParams.get('salary_max');
+    const postedWithinParam = searchParams.get('posted_within');
+
+    const salaryMin = salaryMinParam ? parseInt(salaryMinParam, 10) : undefined;
+    const salaryMax = salaryMaxParam ? parseInt(salaryMaxParam, 10) : undefined;
+    const postedWithin = postedWithinParam ? parseInt(postedWithinParam, 10) : undefined;
+
+    const result = await findMatches(profile_id, {
+      sort,
+      salaryMin,
+      salaryMax,
+      postedWithin,
+    });
     const searchedAt = new Date().toISOString();
 
     return NextResponse.json({

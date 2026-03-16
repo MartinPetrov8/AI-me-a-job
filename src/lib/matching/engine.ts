@@ -164,7 +164,16 @@ function calculateMatch(profile: any, job: JobRow): { score: number; matched: st
   return { score: matched.length, matched, unmatched };
 }
 
-export async function findMatches(profileId: string, options?: { delta?: boolean }): Promise<MatchResult> {
+export async function findMatches(
+  profileId: string,
+  options?: {
+    delta?: boolean;
+    sort?: string;
+    salaryMin?: number;
+    salaryMax?: number;
+    postedWithin?: number;
+  }
+): Promise<MatchResult> {
   // Fetch profile
   const profileResult = await db.select().from(profiles).where(eq(profiles.id, profileId)).limit(1);
   if (profileResult.length === 0) {
@@ -231,6 +240,21 @@ export async function findMatches(profileId: string, options?: { delta?: boolean
       if (job.salary_max < profile.prefSalaryMin) return false;
     }
 
+    // Apply API-level salary filters
+    if (options?.salaryMin !== undefined && job.salary_max !== null) {
+      if (job.salary_max < options.salaryMin) return false;
+    }
+    if (options?.salaryMax !== undefined && job.salary_min !== null) {
+      if (job.salary_min > options.salaryMax) return false;
+    }
+
+    // Apply date posted filter
+    if (options?.postedWithin !== undefined && job.posted_at !== null) {
+      const cutoffDate = new Date();
+      cutoffDate.setDate(cutoffDate.getDate() - options.postedWithin);
+      if (job.posted_at < cutoffDate) return false;
+    }
+
     return true;
   });
 
@@ -245,16 +269,31 @@ export async function findMatches(profileId: string, options?: { delta?: boolean
     };
   });
 
-  // Filter >= 5, sort by score DESC then posted_at DESC NULLS LAST, limit 50
+  // Filter >= 5, sort based on options, limit 50
   const filteredJobs = scoredJobs
     .filter(item => item.score >= 5)
     .sort((a, b) => {
-      if (a.score !== b.score) return b.score - a.score;
-      // Sort by posted_at DESC NULLS LAST
-      if (a.job.posted_at === null && b.job.posted_at === null) return 0;
-      if (a.job.posted_at === null) return 1;
-      if (b.job.posted_at === null) return -1;
-      return b.job.posted_at.getTime() - a.job.posted_at.getTime();
+      // Apply custom sort if specified
+      if (options?.sort === 'posted_at') {
+        // Sort by posted_at DESC NULLS LAST
+        if (a.job.posted_at === null && b.job.posted_at === null) return 0;
+        if (a.job.posted_at === null) return 1;
+        if (b.job.posted_at === null) return -1;
+        return b.job.posted_at.getTime() - a.job.posted_at.getTime();
+      } else if (options?.sort === 'salary_max') {
+        // Sort by salary_max DESC NULLS LAST
+        if (a.job.salary_max === null && b.job.salary_max === null) return 0;
+        if (a.job.salary_max === null) return 1;
+        if (b.job.salary_max === null) return -1;
+        return b.job.salary_max - a.job.salary_max;
+      } else {
+        // Default: sort by score DESC then posted_at DESC NULLS LAST
+        if (a.score !== b.score) return b.score - a.score;
+        if (a.job.posted_at === null && b.job.posted_at === null) return 0;
+        if (a.job.posted_at === null) return 1;
+        if (b.job.posted_at === null) return -1;
+        return b.job.posted_at.getTime() - a.job.posted_at.getTime();
+      }
     })
     .slice(0, 50);
 

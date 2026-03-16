@@ -1,4 +1,4 @@
-# Repo Map — generated 2026-03-16T12:22:59Z
+# Repo Map — generated 2026-03-16T12:36:14Z
 # Architecture snapshot: class/function signatures, routes, exports
 # Use this to find the right file/function without reading full source.
 
@@ -173,7 +173,7 @@ src/lib/llm/prompts.ts:
 src/lib/matching/engine.ts:
   6:export interface MatchedJob {
   23:export interface MatchResult {
-  167:export async function findMatches(profileId: string, options?: { delta?: boolean }): Promise<MatchResult> {
+  167:export async function findMatches(
 
 src/lib/validation.ts:
   13:export const profileInputSchema = z.object({
@@ -183,7 +183,7 @@ tailwind.config.ts:
   14:export default config
 
 vitest.config.ts:
-  4:export default defineConfig({
+  5:export default defineConfig(({ mode }) => {
 
 ## Go
 
@@ -272,5 +272,6 @@ node_modules/flatted/golang/pkg/flatted/flatted.go:
   tests/fixtures
   tests/lib
   tsconfig.json
+  tsconfig.tsbuildinfo
   vercel.json
   vitest.config.ts
