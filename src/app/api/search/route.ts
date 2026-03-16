@@ -31,16 +31,18 @@ export async function POST(request: NextRequest) {
       ? (sortParam as SortOption)
       : undefined;
 
-    // Salary and date filters come from body (set by Edit Filters panel)
-    const salaryMinRaw = body.salary_min;
-    const salaryMaxRaw = body.salary_max;
-    const postedWithinRaw = body.posted_within;
+    // Salary and date filters: accept from query string OR body (body takes precedence)
+    // Query string: used by tests and direct API calls
+    // Body: used by Edit Filters panel in UI
+    const salaryMinRaw = body.salary_min ?? (searchParams.get('salary_min') ? Number(searchParams.get('salary_min')) : undefined);
+    const salaryMaxRaw = body.salary_max ?? (searchParams.get('salary_max') ? Number(searchParams.get('salary_max')) : undefined);
+    const postedWithinRaw = body.posted_within ?? (searchParams.get('posted_within') ? Number(searchParams.get('posted_within')) : undefined);
 
     const salaryMin = typeof salaryMinRaw === 'number' && !isNaN(salaryMinRaw) && salaryMinRaw > 0
       ? salaryMinRaw : undefined;
     const salaryMax = typeof salaryMaxRaw === 'number' && !isNaN(salaryMaxRaw) && salaryMaxRaw > 0
       ? salaryMaxRaw : undefined;
-    const VALID_POSTED_WITHIN = [7, 30];
+    const VALID_POSTED_WITHIN = [7, 14, 30];
     const postedWithin = typeof postedWithinRaw === 'number' && VALID_POSTED_WITHIN.includes(postedWithinRaw)
       ? postedWithinRaw : undefined;
 
