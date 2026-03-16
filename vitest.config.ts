@@ -11,4 +11,11 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  // Treat playwright as external — not available in test/serverless env, dynamic import fails gracefully at runtime
+  optimizeDeps: {
+    exclude: ['playwright'],
+  },
+  ssr: {
+    external: ['playwright'],
+  },
 })

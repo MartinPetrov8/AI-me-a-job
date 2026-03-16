@@ -7,9 +7,11 @@ import crypto from 'crypto';
  */
 export async function fetchJobsBgJobs(): Promise<RawJobPosting[]> {
   try {
-    // Dynamic import — fails gracefully in serverless (Playwright not available)
+    // Dynamic import via variable — prevents vite/vitest static analysis from trying to resolve
+    // the module at build/test time. Fails gracefully when playwright is not installed.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const playwright = await import('playwright' as any).catch(() => null);
+    const pkg = 'playwright';
+    const playwright = await import(/* @vite-ignore */ pkg).catch(() => null);
     if (!playwright) return [];
     const { chromium } = playwright;
     

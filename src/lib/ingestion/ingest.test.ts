@@ -11,6 +11,8 @@ vi.mock('./adzuna');
 vi.mock('./jooble');
 vi.mock('./devbg');
 vi.mock('./jobsbg');
+// Mock playwright dynamic import — not available in test env
+vi.mock('playwright', () => ({ chromium: { launch: vi.fn() } }));
 vi.mock('../db', () => ({
   db: {
     insert: vi.fn(() => ({
