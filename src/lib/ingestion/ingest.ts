@@ -1,12 +1,13 @@
 import { db } from '../db';
 import { jobs } from '../db/schema';
 import { and, lt, ne, or, isNull } from 'drizzle-orm';
-import { fetchAllAdzunaJobs } from './adzuna';
+import { fetchAllAdzunaJobs, fetchIncrementalAdzunaJobs } from './adzuna';
 import { fetchJoobleJobs } from './jooble';
 import { fetchDevBgJobs } from './devbg';
 import { fetchJobsBgJobs } from './jobsbg';
 import { normalizeUrl, computeContentHash } from './dedup';
 import { RawJobPosting, IngestionResult } from './types';
+import { classifyJobsById, classifyUnclassifiedJobs } from '../llm/batch-classify';
 
 const JOOBLE_SEARCHES = [
   { keywords: 'software developer', location: '' },
@@ -16,9 +17,12 @@ const JOOBLE_SEARCHES = [
   { keywords: 'finance analyst', location: '' },
 ];
 
-async function upsertJobs(postings: RawJobPosting[]): Promise<{ newCount: number; errorCount: number }> {
+interface UpsertResult { newCount: number; errorCount: number; insertedIds: string[]; }
+
+async function upsertJobs(postings: RawJobPosting[]): Promise<UpsertResult> {
   let newCount = 0;
   let errorCount = 0;
+  const insertedIds: string[] = [];
 
   for (const posting of postings) {
     try {
@@ -67,16 +71,20 @@ async function upsertJobs(postings: RawJobPosting[]): Promise<{ newCount: number
             canonicalUrl,
             contentHash,
           },
-        });
+        })
+        .returning({ id: jobs.id, classifiedAt: jobs.classifiedAt });
 
       newCount++;
+      // Queue unclassified jobs for immediate classification
+      for (const row of returned) {
+        if (row.classifiedAt === null) insertedIds.push(row.id);
+      }
     } catch (err) {
       errorCount++;
-      console.error(`[ingest] upsert error for ${posting.source}/${posting.external_id}: ${err instanceof Error ? err.message : String(err)}`);
     }
   }
 
-  return { newCount, errorCount };
+  return { newCount, errorCount, insertedIds };
 }
 
 async function cleanupOldJobs(): Promise<number> {
@@ -118,52 +126,26 @@ export async function ingestAllSources(): Promise<IngestionResult[]> {
   const results: IngestionResult[] = [];
 
   // Adzuna
-  console.log('[ingest] Fetching Adzuna jobs...');
   const adzunaJobs = await fetchAllAdzunaJobs();
   const adzunaUpsert = await upsertJobs(adzunaJobs);
-
-  results.push({
-    source: 'adzuna',
-    fetched: adzunaJobs.length,
-    new: adzunaUpsert.newCount,
-    errors: adzunaUpsert.errorCount,
-    deleted: 0, // cleanup runs once at the end
-  });
-
-  console.log(`[ingest] Adzuna: ${adzunaJobs.length} fetched, ${adzunaUpsert.newCount} upserted, ${adzunaUpsert.errorCount} errors`);
+  if (adzunaUpsert.insertedIds.length > 0) await classifyJobsById(adzunaUpsert.insertedIds);
+  results.push({ source: 'adzuna', fetched: adzunaJobs.length, new: adzunaUpsert.newCount, errors: adzunaUpsert.errorCount, deleted: 0 });
 
   // Jooble
-  console.log('[ingest] Fetching Jooble jobs...');
   let allJoobleJobs: RawJobPosting[] = [];
-
   for (const search of JOOBLE_SEARCHES) {
-    const jobBatch = await fetchJoobleJobs(search.keywords, search.location);
-    allJoobleJobs.push(...jobBatch);
+    allJoobleJobs.push(...await fetchJoobleJobs(search.keywords, search.location));
   }
-
   const joobleUpsert = await upsertJobs(allJoobleJobs);
-
-  results.push({
-    source: 'jooble',
-    fetched: allJoobleJobs.length,
-    new: joobleUpsert.newCount,
-    errors: joobleUpsert.errorCount,
-    deleted: 0, // cleanup runs once at the end
-  });
-
-  console.log(`[ingest] Jooble: ${allJoobleJobs.length} fetched, ${joobleUpsert.newCount} upserted, ${joobleUpsert.errorCount} errors`);
+  if (joobleUpsert.insertedIds.length > 0) await classifyJobsById(joobleUpsert.insertedIds);
+  results.push({ source: 'jooble', fetched: allJoobleJobs.length, new: joobleUpsert.newCount, errors: joobleUpsert.errorCount, deleted: 0 });
 
   // dev.bg
   try {
     const devBgJobs = await fetchDevBgJobs();
     const devBgUpsert = await upsertJobs(devBgJobs);
-    results.push({
-      source: 'dev_bg',
-      fetched: devBgJobs.length,
-      new: devBgUpsert.newCount,
-      errors: devBgUpsert.errorCount,
-      deleted: 0,
-    });
+    if (devBgUpsert.insertedIds.length > 0) await classifyJobsById(devBgUpsert.insertedIds);
+    results.push({ source: 'dev_bg', fetched: devBgJobs.length, new: devBgUpsert.newCount, errors: devBgUpsert.errorCount, deleted: 0 });
   } catch (err) {
     results.push({ source: 'dev_bg', fetched: 0, new: 0, errors: 1, deleted: 0 });
   }
@@ -172,27 +154,18 @@ export async function ingestAllSources(): Promise<IngestionResult[]> {
   try {
     const jobsBgJobs = await fetchJobsBgJobs();
     const jobsBgUpsert = await upsertJobs(jobsBgJobs);
-    results.push({
-      source: 'jobs_bg',
-      fetched: jobsBgJobs.length,
-      new: jobsBgUpsert.newCount,
-      errors: jobsBgUpsert.errorCount,
-      deleted: 0,
-    });
+    if (jobsBgUpsert.insertedIds.length > 0) await classifyJobsById(jobsBgUpsert.insertedIds);
+    results.push({ source: 'jobs_bg', fetched: jobsBgJobs.length, new: jobsBgUpsert.newCount, errors: jobsBgUpsert.errorCount, deleted: 0 });
   } catch (err) {
     results.push({ source: 'jobs_bg', fetched: 0, new: 0, errors: 1, deleted: 0 });
   }
 
-  // Cleanup runs ONCE after all sources are ingested (ISSUE-4 fix — prevents race condition)
-  console.log('[ingest] Running post-ingestion cleanup...');
+  // Safety-net: catch any that slipped through
+  await classifyUnclassifiedJobs(500);
+
   const deleted = await cleanupOldJobs();
   const truncated = await truncateOldDescriptions();
-  console.log(`[ingest] Cleanup: ${deleted} jobs deleted (>30d), ${truncated} descriptions truncated (>7d)`);
-
-  // Attach cleanup totals to first result for reporting
-  if (results.length > 0) {
-    results[0].deleted = deleted;
-  }
-
+  if (results.length > 0) results[0].deleted = deleted;
+  void truncated;
   return results;
 }

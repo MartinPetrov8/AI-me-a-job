@@ -6,7 +6,6 @@ export const runtime = 'nodejs';
 export const maxDuration = 300;
 
 export async function POST(request: NextRequest) {
-  // Protect with CRON_SECRET header
   const cronSecret = process.env.CRON_SECRET;
   const incomingSecret = request.headers.get('x-cron-secret');
 
@@ -14,7 +13,16 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  // Optional ?classify=true to run classification only (backlog clearing)
+  const classifyOnly = request.nextUrl.searchParams.get('classify') === 'true';
+
   try {
+    if (classifyOnly) {
+      console.log('[pipeline] Classify-only mode (batch=100)...');
+      const classified = await classifyUnclassifiedJobs(100);
+      return NextResponse.json({ classified });
+    }
+
     console.log('[pipeline] Starting ingestion...');
     const ingested = await ingestAllSources();
     console.log('[pipeline] Ingestion complete. Starting classification...');
