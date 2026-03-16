@@ -174,6 +174,7 @@ function ResultsContent() {
   const [panelWorkMode, setPanelWorkMode] = useState<'remote' | 'hybrid' | 'onsite' | null>(null);
   const [panelEmploymentType, setPanelEmploymentType] = useState<'full-time' | 'part-time' | 'contract' | null>(null);
   const [panelSalaryMin, setPanelSalaryMin] = useState<number | null>(null);
+  const [panelSalaryMax, setPanelSalaryMax] = useState<number | null>(null);
   const [panelError, setPanelError] = useState<string | null>(null);
   const [panelLoading, setPanelLoading] = useState(false);
 
@@ -187,6 +188,7 @@ function ResultsContent() {
       const workModeParam = searchParams.get('work_mode');
       const employmentTypeParam = searchParams.get('employment_type');
       const salaryMinParam = searchParams.get('salary_min');
+      const salaryMaxParam = searchParams.get('salary_max');
 
       if (locationParam) setPanelLocation(locationParam);
       if (workModeParam && ['remote', 'hybrid', 'onsite'].includes(workModeParam.toLowerCase())) {
@@ -198,6 +200,10 @@ function ResultsContent() {
       if (salaryMinParam) {
         const num = parseInt(salaryMinParam, 10);
         if (!isNaN(num)) setPanelSalaryMin(num);
+      }
+      if (salaryMaxParam) {
+        const num = parseInt(salaryMaxParam, 10);
+        if (!isNaN(num)) setPanelSalaryMax(num);
       }
     }
   }, [panelOpen, panelLocation, searchParams]);
@@ -246,6 +252,7 @@ function ResultsContent() {
       if (panelWorkMode) body.work_mode = panelWorkMode;
       if (panelEmploymentType) body.employment_type = panelEmploymentType;
       if (panelSalaryMin !== null) body.salary_min = panelSalaryMin;
+      if (panelSalaryMax !== null) body.salary_max = panelSalaryMax;
 
       const response = await fetch('/api/search', {
         method: 'POST',
@@ -544,12 +551,23 @@ function ResultsContent() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Minimum Salary (optional)</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Min Salary (optional)</label>
                   <input
                     type="number"
                     value={panelSalaryMin ?? ''}
                     onChange={(e) => setPanelSalaryMin(e.target.value ? parseInt(e.target.value, 10) : null)}
                     placeholder="e.g., 50000"
+                    className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Max Salary (optional)</label>
+                  <input
+                    type="number"
+                    value={panelSalaryMax ?? ''}
+                    onChange={(e) => setPanelSalaryMax(e.target.value ? parseInt(e.target.value, 10) : null)}
+                    placeholder="e.g., 100000"
                     className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
                 </div>

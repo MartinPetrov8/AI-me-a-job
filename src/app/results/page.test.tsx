@@ -686,3 +686,230 @@ describe('ResultsPage - Sort Bar (S-02)', () => {
     });
   });
 });
+
+describe('ResultsPage - Salary Range Filter (S-03)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    global.fetch = vi.fn();
+    Object.defineProperty(window, 'localStorage', {
+      value: {
+        getItem: vi.fn(() => 'test-restore-token'),
+        setItem: vi.fn(),
+        removeItem: vi.fn(),
+        clear: vi.fn(),
+      },
+      writable: true,
+    });
+  });
+
+  it('renders Min Salary and Max Salary inputs in filters panel', async () => {
+    mockUseSearchParams.mockReturnValue({
+      get: (key: string) => (key === 'profile_id' ? 'test-profile-123' : null),
+    } as ReturnType<typeof useSearchParams>);
+
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        data: { results: [], total: 0, search_id: 'search-1' },
+        meta: { threshold: 5, max_score: 8, searched_at: new Date().toISOString() },
+      }),
+    } as Response);
+
+    render(<ResultsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Edit filters/i)).toBeTruthy();
+    });
+
+    const editButton = screen.getByText(/Edit filters/i);
+    fireEvent.click(editButton);
+
+    await waitFor(() => {
+      const minSalaryLabel = screen.getByText(/Min Salary/i);
+      const maxSalaryLabel = screen.getByText(/Max Salary/i);
+      expect(minSalaryLabel).toBeTruthy();
+      expect(maxSalaryLabel).toBeTruthy();
+    });
+  });
+
+  it('entering 50000 in Min Salary and clicking Apply triggers re-fetch with salary_min=50000', async () => {
+    mockUseSearchParams.mockReturnValue({
+      get: (key: string) => (key === 'profile_id' ? 'test-profile-123' : null),
+    } as ReturnType<typeof useSearchParams>);
+
+    const fetchMock = vi.fn();
+    (global.fetch as unknown) = fetchMock;
+
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        data: { results: [], total: 0, search_id: 'search-1' },
+        meta: { threshold: 5, max_score: 8, searched_at: new Date().toISOString() },
+      }),
+    } as Response);
+
+    const { container } = render(<ResultsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Edit filters/i)).toBeTruthy();
+    });
+
+    const editButton = screen.getByText(/Edit filters/i);
+    fireEvent.click(editButton);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Min Salary/i)).toBeTruthy();
+    });
+
+    const minSalaryInput = container.querySelector('input[placeholder="e.g., 50000"]') as HTMLInputElement;
+    expect(minSalaryInput).toBeTruthy();
+
+    fireEvent.change(minSalaryInput, { target: { value: '50000' } });
+
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        data: { results: [], total: 0, search_id: 'search-2' },
+        meta: { threshold: 5, max_score: 8, searched_at: new Date().toISOString() },
+      }),
+    } as Response);
+
+    const rerunButton = screen.getByText(/Re-run search/i);
+    fireEvent.click(rerunButton);
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/search',
+        expect.objectContaining({
+          method: 'POST',
+          headers: expect.objectContaining({
+            'Content-Type': 'application/json',
+            'X-Restore-Token': 'test-restore-token',
+          }),
+          body: JSON.stringify({ profile_id: 'test-profile-123', salary_min: 50000 }),
+        })
+      );
+    });
+  });
+
+  it('entering 100000 in Max Salary and clicking Apply triggers re-fetch with salary_max=100000', async () => {
+    mockUseSearchParams.mockReturnValue({
+      get: (key: string) => (key === 'profile_id' ? 'test-profile-123' : null),
+    } as ReturnType<typeof useSearchParams>);
+
+    const fetchMock = vi.fn();
+    (global.fetch as unknown) = fetchMock;
+
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        data: { results: [], total: 0, search_id: 'search-1' },
+        meta: { threshold: 5, max_score: 8, searched_at: new Date().toISOString() },
+      }),
+    } as Response);
+
+    const { container } = render(<ResultsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Edit filters/i)).toBeTruthy();
+    });
+
+    const editButton = screen.getByText(/Edit filters/i);
+    fireEvent.click(editButton);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Max Salary/i)).toBeTruthy();
+    });
+
+    const maxSalaryInput = container.querySelector('input[placeholder="e.g., 100000"]') as HTMLInputElement;
+    expect(maxSalaryInput).toBeTruthy();
+
+    fireEvent.change(maxSalaryInput, { target: { value: '100000' } });
+
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        data: { results: [], total: 0, search_id: 'search-2' },
+        meta: { threshold: 5, max_score: 8, searched_at: new Date().toISOString() },
+      }),
+    } as Response);
+
+    const rerunButton = screen.getByText(/Re-run search/i);
+    fireEvent.click(rerunButton);
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/search',
+        expect.objectContaining({
+          method: 'POST',
+          headers: expect.objectContaining({
+            'Content-Type': 'application/json',
+            'X-Restore-Token': 'test-restore-token',
+          }),
+          body: JSON.stringify({ profile_id: 'test-profile-123', salary_max: 100000 }),
+        })
+      );
+    });
+  });
+
+  it('both Min and Max Salary inputs can be used together', async () => {
+    mockUseSearchParams.mockReturnValue({
+      get: (key: string) => (key === 'profile_id' ? 'test-profile-123' : null),
+    } as ReturnType<typeof useSearchParams>);
+
+    const fetchMock = vi.fn();
+    (global.fetch as unknown) = fetchMock;
+
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        data: { results: [], total: 0, search_id: 'search-1' },
+        meta: { threshold: 5, max_score: 8, searched_at: new Date().toISOString() },
+      }),
+    } as Response);
+
+    const { container } = render(<ResultsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Edit filters/i)).toBeTruthy();
+    });
+
+    const editButton = screen.getByText(/Edit filters/i);
+    fireEvent.click(editButton);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Min Salary/i)).toBeTruthy();
+    });
+
+    const minSalaryInput = container.querySelector('input[placeholder="e.g., 50000"]') as HTMLInputElement;
+    const maxSalaryInput = container.querySelector('input[placeholder="e.g., 100000"]') as HTMLInputElement;
+
+    fireEvent.change(minSalaryInput, { target: { value: '50000' } });
+    fireEvent.change(maxSalaryInput, { target: { value: '100000' } });
+
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        data: { results: [], total: 0, search_id: 'search-2' },
+        meta: { threshold: 5, max_score: 8, searched_at: new Date().toISOString() },
+      }),
+    } as Response);
+
+    const rerunButton = screen.getByText(/Re-run search/i);
+    fireEvent.click(rerunButton);
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/search',
+        expect.objectContaining({
+          method: 'POST',
+          headers: expect.objectContaining({
+            'Content-Type': 'application/json',
+            'X-Restore-Token': 'test-restore-token',
+          }),
+          body: JSON.stringify({ profile_id: 'test-profile-123', salary_min: 50000, salary_max: 100000 }),
+        })
+      );
+    });
+  });
+});
