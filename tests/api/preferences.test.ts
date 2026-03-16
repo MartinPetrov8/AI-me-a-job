@@ -4,9 +4,13 @@ import { db } from '@/lib/db';
 import { profiles } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 
-// Mock auth — bypass ownership check in unit tests (ISSUE-1 fix applied)
+// Mock auth — bypass ownership check in unit tests
 vi.mock('@/lib/auth', () => ({
   verifyProfileOwnership: vi.fn().mockResolvedValue({ ok: true, userId: 'test-user-id' }),
+}));
+
+vi.mock('@/lib/auth/validate-restore-token', () => ({
+  validateRestoreToken: vi.fn().mockResolvedValue(undefined),
 }));
 
 // Mock the database

@@ -75,7 +75,7 @@ describe('classifyJob', () => {
 
     await expect(
       classifyJob('Test Job', 'Test description')
-    ).rejects.toThrow('ANTHROPIC_API_KEY environment variable is required');
+    ).rejects.toThrow('No LLM API key environment variable is set');
   });
 
   it('should handle JSON wrapped in markdown code fences', async () => {

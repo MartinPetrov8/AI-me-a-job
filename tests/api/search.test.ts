@@ -2,9 +2,16 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { POST } from '../../src/app/api/search/route';
 import { findMatches } from '../../src/lib/matching/engine';
 
+// Mock db to prevent DATABASE_URL module-level throw in test environment
+vi.mock('../../src/lib/db', () => ({ db: {} }));
+
 // Mock auth — bypass ownership check in unit tests (ISSUE-1 fix applied)
 vi.mock('../../src/lib/auth', () => ({
   verifyProfileOwnership: vi.fn().mockResolvedValue({ ok: true, userId: 'test-user-id' }),
+}));
+
+vi.mock('../../src/lib/auth/validate-restore-token', () => ({
+  validateRestoreToken: vi.fn().mockResolvedValue(undefined),
 }));
 
 // Mock the matching engine

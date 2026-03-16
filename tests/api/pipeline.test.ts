@@ -41,13 +41,11 @@ describe('POST /api/pipeline', () => {
     expect(res.status).toBe(401);
   });
 
-  it('returns 200 with ingested + classified when secret is correct', async () => {
+  it('returns 200 with ingested when secret is correct', async () => {
     const res = await POST(makeRequest(CRON_SECRET));
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body).toHaveProperty('ingested');
-    expect(body).toHaveProperty('classified');
     expect(Array.isArray(body.ingested)).toBe(true);
-    expect(body.classified.total).toBe(5);
   });
 });

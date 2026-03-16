@@ -111,7 +111,7 @@ async function callLLM(systemPrompt: string, userContent: string): Promise<strin
     return block.text;
   }
 
-  throw new Error('Neither OPENROUTER_API_KEY nor ANTHROPIC_API_KEY environment variable is set');
+  throw new Error('No LLM API key environment variable is set');
 }
 
 export async function classifyJob(title: string, description: string): Promise<ClassifiedCriteria> {
