@@ -465,3 +465,224 @@ describe('ResultsPage - Empty States (S-03)', () => {
     });
   });
 });
+
+describe('ResultsPage - Sort Bar (S-02)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    global.fetch = vi.fn();
+    Object.defineProperty(window, 'localStorage', {
+      value: {
+        getItem: vi.fn(() => 'test-restore-token'),
+        setItem: vi.fn(),
+        removeItem: vi.fn(),
+        clear: vi.fn(),
+      },
+      writable: true,
+    });
+  });
+
+  it('renders sort bar with Score, Date posted, and Salary options', async () => {
+    mockUseSearchParams.mockReturnValue({
+      get: (key: string) => (key === 'profile_id' ? 'test-profile-123' : null),
+    } as ReturnType<typeof useSearchParams>);
+
+    const mockJobs = [
+      {
+        job_id: 'job-1',
+        title: 'Software Engineer',
+        company: 'Test Co',
+        location: 'Sofia',
+        url: 'https://example.com/job1',
+        posted_at: new Date('2026-03-01'),
+        match_score: 7,
+        matched_criteria: ['years_experience', 'education_level'],
+        unmatched_criteria: [],
+        salary_min: 50000,
+        salary_max: 70000,
+        salary_currency: 'EUR',
+        employment_type: 'Full-time',
+        is_remote: false,
+      },
+    ];
+
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        data: { results: mockJobs, total: 1, search_id: 'search-1' },
+        meta: { threshold: 5, max_score: 8, searched_at: new Date().toISOString() },
+      }),
+    } as Response);
+
+    render(<ResultsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('1 Matches')).toBeTruthy();
+    });
+
+    const scoreButton = screen.getByText('Score');
+    const dateButton = screen.getByText('Date posted');
+    const salaryButton = screen.getByText('Salary');
+
+    expect(scoreButton).toBeTruthy();
+    expect(dateButton).toBeTruthy();
+    expect(salaryButton).toBeTruthy();
+  });
+
+  it('clicking Date posted triggers re-fetch with ?sort=posted_at', async () => {
+    mockUseSearchParams.mockReturnValue({
+      get: (key: string) => (key === 'profile_id' ? 'test-profile-123' : null),
+    } as ReturnType<typeof useSearchParams>);
+
+    const mockJobs = [
+      {
+        job_id: 'job-1',
+        title: 'Software Engineer',
+        company: 'Test Co',
+        location: 'Sofia',
+        url: 'https://example.com/job1',
+        posted_at: new Date('2026-03-01'),
+        match_score: 7,
+        matched_criteria: ['years_experience', 'education_level'],
+        unmatched_criteria: [],
+        salary_min: 50000,
+        salary_max: 70000,
+        salary_currency: 'EUR',
+        employment_type: 'Full-time',
+        is_remote: false,
+      },
+    ];
+
+    const fetchMock = vi.fn();
+    (global.fetch as unknown) = fetchMock;
+
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        data: { results: mockJobs, total: 1, search_id: 'search-1' },
+        meta: { threshold: 5, max_score: 8, searched_at: new Date().toISOString() },
+      }),
+    } as Response);
+
+    render(<ResultsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('1 Matches')).toBeTruthy();
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/search',
+      expect.objectContaining({
+        method: 'POST',
+        headers: expect.objectContaining({
+          'Content-Type': 'application/json',
+          'X-Restore-Token': 'test-restore-token',
+        }),
+        body: JSON.stringify({ profile_id: 'test-profile-123' }),
+      })
+    );
+
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        data: { results: mockJobs, total: 1, search_id: 'search-2' },
+        meta: { threshold: 5, max_score: 8, searched_at: new Date().toISOString() },
+      }),
+    } as Response);
+
+    const dateButton = screen.getByText('Date posted');
+    fireEvent.click(dateButton);
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/search?sort=posted_at',
+        expect.objectContaining({
+          method: 'POST',
+          headers: expect.objectContaining({
+            'Content-Type': 'application/json',
+            'X-Restore-Token': 'test-restore-token',
+          }),
+          body: JSON.stringify({ profile_id: 'test-profile-123' }),
+        })
+      );
+    });
+  });
+
+  it('clicking Salary triggers re-fetch with ?sort=salary_max', async () => {
+    mockUseSearchParams.mockReturnValue({
+      get: (key: string) => (key === 'profile_id' ? 'test-profile-123' : null),
+    } as ReturnType<typeof useSearchParams>);
+
+    const mockJobs = [
+      {
+        job_id: 'job-1',
+        title: 'Software Engineer',
+        company: 'Test Co',
+        location: 'Sofia',
+        url: 'https://example.com/job1',
+        posted_at: new Date('2026-03-01'),
+        match_score: 7,
+        matched_criteria: ['years_experience', 'education_level'],
+        unmatched_criteria: [],
+        salary_min: 50000,
+        salary_max: 70000,
+        salary_currency: 'EUR',
+        employment_type: 'Full-time',
+        is_remote: false,
+      },
+    ];
+
+    const fetchMock = vi.fn();
+    (global.fetch as unknown) = fetchMock;
+
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        data: { results: mockJobs, total: 1, search_id: 'search-1' },
+        meta: { threshold: 5, max_score: 8, searched_at: new Date().toISOString() },
+      }),
+    } as Response);
+
+    render(<ResultsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('1 Matches')).toBeTruthy();
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/search',
+      expect.objectContaining({
+        method: 'POST',
+        headers: expect.objectContaining({
+          'Content-Type': 'application/json',
+          'X-Restore-Token': 'test-restore-token',
+        }),
+        body: JSON.stringify({ profile_id: 'test-profile-123' }),
+      })
+    );
+
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        data: { results: mockJobs, total: 1, search_id: 'search-2' },
+        meta: { threshold: 5, max_score: 8, searched_at: new Date().toISOString() },
+      }),
+    } as Response);
+
+    const salaryButton = screen.getByText('Salary');
+    fireEvent.click(salaryButton);
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/search?sort=salary_max',
+        expect.objectContaining({
+          method: 'POST',
+          headers: expect.objectContaining({
+            'Content-Type': 'application/json',
+            'X-Restore-Token': 'test-restore-token',
+          }),
+          body: JSON.stringify({ profile_id: 'test-profile-123' }),
+        })
+      );
+    });
+  });
+});

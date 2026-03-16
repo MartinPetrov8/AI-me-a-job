@@ -167,7 +167,7 @@ function ResultsContent() {
   const [filterMinScore, setFilterMinScore] = useState<number>(5);
   const [filterEmploymentType, setFilterEmploymentType] = useState<string>('');
 
-  const [sortBy, setSortBy] = useState<'score' | 'date' | 'company'>('score');
+  const [sortBy, setSortBy] = useState<'score' | 'posted_at' | 'salary_max'>('score');
 
   const [panelOpen, setPanelOpen] = useState(false);
   const [panelLocation, setPanelLocation] = useState<string>('');
@@ -178,6 +178,8 @@ function ResultsContent() {
   const [panelLoading, setPanelLoading] = useState(false);
 
   useEffect(() => { if (profileId) performSearch(false); }, [profileId]);
+
+  useEffect(() => { if (profileId && sortBy !== 'score') performSearch(false); }, [sortBy]);
 
   useEffect(() => {
     if (panelOpen && !panelLocation) {
@@ -210,7 +212,8 @@ function ResultsContent() {
         return;
       }
       const endpoint = delta ? '/api/search/delta' : '/api/search';
-      const response = await fetch(endpoint, {
+      const sortParam = sortBy !== 'score' ? `?sort=${sortBy}` : '';
+      const response = await fetch(`${endpoint}${sortParam}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Restore-Token': restoreToken },
         body: JSON.stringify({ profile_id: profileId }),
@@ -281,12 +284,7 @@ function ResultsContent() {
     .filter(j => j.match_score >= filterMinScore)
     .filter(j => filterEmploymentType === '' || j.employment_type === filterEmploymentType);
 
-  const sortedFilteredResults = [...filteredResults].sort((a, b) => {
-    if (sortBy === 'score') return b.match_score - a.match_score;
-    if (sortBy === 'date') return (b.posted_at ? new Date(b.posted_at).getTime() : 0) - (a.posted_at ? new Date(a.posted_at).getTime() : 0);
-    if (sortBy === 'company') return (a.company || '').localeCompare(b.company || '');
-    return 0;
-  });
+  const sortedFilteredResults = filteredResults;
 
   const employmentTypes = Array.from(new Set(results.map(j => j.employment_type).filter(Boolean))) as string[];
   const hasFilters = filterRemote !== null || filterMinScore > 5 || filterEmploymentType !== '';
@@ -400,13 +398,12 @@ function ResultsContent() {
               <div className="flex items-center gap-3">
                 <span className="text-sm text-gray-400 whitespace-nowrap">{sortedFilteredResults.length} of {results.length}</span>
                 <div className="flex gap-2">
-                  {([['score', '🎯'], ['date', '🕐'], ['company', '🏢']] as const).map(([val, icon]) => (
+                  {([['score', 'Score'], ['posted_at', 'Date posted'], ['salary_max', 'Salary']] as const).map(([val, label]) => (
                     <button key={val}
                       onClick={() => setSortBy(val)}
-                      className={`px-2 py-1.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${sortBy === val ? 'bg-gray-900 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:border-gray-300'}`}
-                      title={val === 'score' ? 'Best match' : val === 'date' ? 'Newest' : 'Company'}
+                      className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${sortBy === val ? 'bg-gray-900 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:border-gray-300'}`}
                     >
-                      {icon}
+                      {label}
                     </button>
                   ))}
                 </div>
