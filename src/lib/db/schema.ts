@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, timestamp, integer, boolean, index, unique } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, timestamp, integer, boolean, index, unique, vector } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 
 export const users = pgTable('users', {
@@ -30,6 +30,7 @@ export const profiles = pgTable('profiles', {
   prefSalaryMax: integer('pref_salary_max'),
   prefSalaryCurrency: text('pref_salary_currency'),
   lastSearchAt: timestamp('last_search_at', { withTimezone: true }),
+  embedding: vector('embedding', { dimensions: 1536 }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
@@ -61,6 +62,7 @@ export const jobs = pgTable('jobs', {
   keySkills: text('key_skills').array(),
   classifiedAt: timestamp('classified_at', { withTimezone: true }),
   ingestedAt: timestamp('ingested_at', { withTimezone: true }).notNull().defaultNow(),
+  embedding: vector('embedding', { dimensions: 1536 }),
   // Cross-source dedup fields (Sprint A)
   canonicalUrl: text('canonical_url'),    // Normalized URL, UNIQUE WHERE NOT NULL
   contentHash: text('content_hash'),      // MD5(title+company+country+week), UNIQUE WHERE NOT NULL

@@ -29,6 +29,7 @@ describe('extractCvCriteria', () => {
       languages: ['English', 'Spanish'],
       industry: 'Technology',
       key_skills: ['Python', 'Go', 'Kubernetes'],
+      title_inferred: 'Senior Software Engineer',
     };
 
     vi.mocked(callLLM).mockResolvedValue(JSON.stringify(mockResponse));
@@ -49,6 +50,7 @@ describe('extractCvCriteria', () => {
       languages: ['English'],
       industry: 'Technology',
       key_skills: ['Python'],
+      title_inferred: 'Software Engineer',
     };
 
     vi.mocked(callLLM).mockResolvedValue(JSON.stringify(mockResponse));
@@ -60,10 +62,11 @@ describe('extractCvCriteria', () => {
     expect(result.sphere_of_expertise).toBeNull();
     expect(result.field_of_study).toBe('STEM');
     expect(result.seniority_level).toBe('Senior');
+    expect(result.title_inferred).toBe('Software Engineer');
   });
 
   it('should strip markdown code fences from LLM response', async () => {
-    const mockResponse = { years_experience: '5-9', education_level: 'Masters', field_of_study: 'STEM', sphere_of_expertise: 'Engineering', seniority_level: 'Senior', languages: ['English'], industry: 'Technology', key_skills: ['Python'] };
+    const mockResponse = { years_experience: '5-9', education_level: 'Masters', field_of_study: 'STEM', sphere_of_expertise: 'Engineering', seniority_level: 'Senior', languages: ['English'], industry: 'Technology', key_skills: ['Python'], title_inferred: null };
 
     vi.mocked(callLLM).mockResolvedValue('```json\n' + JSON.stringify(mockResponse) + '\n```');
 
@@ -81,6 +84,7 @@ describe('extractCvCriteria', () => {
       languages: ['English'],
       industry: 'Technology',
       key_skills: ['Python'],
+      title_inferred: null,
     };
 
     vi.mocked(callLLM)
@@ -113,6 +117,7 @@ describe('extractCvCriteria', () => {
       languages: null,
       industry: 'Technology',
       key_skills: null,
+      title_inferred: null,
     };
 
     vi.mocked(callLLM).mockResolvedValue(JSON.stringify(mockResponse));
@@ -124,5 +129,6 @@ describe('extractCvCriteria', () => {
     expect(result.languages).toBeNull();
     expect(result.key_skills).toBeNull();
     expect(result.seniority_level).toBe('Senior');
+    expect(result.title_inferred).toBeNull();
   });
 });

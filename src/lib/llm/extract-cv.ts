@@ -24,6 +24,7 @@ export interface ExtractedCriteria {
   languages: string[] | null;
   industry: Industry | null;
   key_skills: string[] | null;
+  title_inferred: string | null;
 }
 
 export class LLMExtractionError extends Error {
@@ -211,6 +212,7 @@ export async function extractCvCriteria(rawText: string): Promise<ExtractedCrite
         languages: Array.isArray(parsed.languages) ? parsed.languages : null,
         industry: fuzzyNormalize(parsed.industry, INDUSTRIES, INDUSTRY_ALIASES),
         key_skills: Array.isArray(parsed.key_skills) ? parsed.key_skills : null,
+        title_inferred: typeof parsed.title_inferred === 'string' ? parsed.title_inferred : null,
       };
 
       return validated;

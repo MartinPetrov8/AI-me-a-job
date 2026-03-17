@@ -18,10 +18,13 @@ export async function classifyJobsById(ids: string[]): Promise<BatchResult> {
   const result: BatchResult = { total: ids.length, classified: 0, failed: 0, errors: [] };
   if (ids.length === 0) return result;
 
-  const CHUNK_SIZE = 20;
-  for (let i = 0; i < ids.length; i += CHUNK_SIZE) {
-    const chunk = ids.slice(i, i + CHUNK_SIZE);
+  const CLASSIFY_CHUNK_SIZE = 20;
+
+  // Classify in chunks of 20
+  for (let i = 0; i < ids.length; i += CLASSIFY_CHUNK_SIZE) {
+    const chunk = ids.slice(i, i + CLASSIFY_CHUNK_SIZE);
     const jobBatch = await db.select().from(jobs).where(inArray(jobs.id, chunk));
+    
     for (const job of jobBatch) {
       try {
         const classified = await classifyJob(job.title, job.descriptionRaw);
@@ -43,6 +46,7 @@ export async function classifyJobsById(ids: string[]): Promise<BatchResult> {
       }
     }
   }
+
   return result;
 }
 

@@ -1,7 +1,8 @@
 import { db } from '../db/index';
 import { profiles, jobs, searches, searchResults } from '../db/schema';
-import { eq, gt, sql, desc } from 'drizzle-orm';
+import { eq, gt, sql } from 'drizzle-orm';
 import { YEARS_EXPERIENCE, EDUCATION_LEVELS, SENIORITY_LEVELS } from '../criteria';
+import { cosineSimilarity } from './cosine';
 
 export interface MatchedJob {
   job_id: string;
@@ -24,167 +25,7 @@ export interface MatchResult {
   results: MatchedJob[];
   total: number;
   search_id: string;
-  max_score: number; // 8 base criteria + 1 if location preference is set
-}
-
-interface JobRow {
-  id: string;
-  title: string;
-  company: string | null;
-  location: string | null;
-  url: string;
-  posted_at: Date | null;
-  salary_min: number | null;
-  salary_max: number | null;
-  salary_currency: string | null;
-  employment_type: string | null;
-  is_remote: boolean | null;
-  years_experience: string | null;
-  education_level: string | null;
-  field_of_study: string | null;
-  sphere_of_expertise: string | null;
-  seniority_level: string | null;
-  industry: string | null;
-  languages: string[] | null;
-  key_skills: string[] | null;
-}
-
-function matchYearsExperience(profileValue: string, jobValue: string | null): boolean {
-  if (jobValue === null) return true;
-  if (!profileValue) return true; // unknown profile field = benefit of doubt
-  const profileIndex = YEARS_EXPERIENCE.indexOf(profileValue as any);
-  const jobIndex = YEARS_EXPERIENCE.indexOf(jobValue as any);
-  if (profileIndex === -1 || jobIndex === -1) return true; // unrecognised = benefit of doubt
-  return Math.abs(profileIndex - jobIndex) <= 1;
-}
-
-function matchEducationLevel(profileValue: string, jobValue: string | null): boolean {
-  if (jobValue === null) return true;
-  if (!profileValue) return true; // unknown profile field = benefit of doubt
-  const profileIndex = EDUCATION_LEVELS.indexOf(profileValue as any);
-  const jobIndex = EDUCATION_LEVELS.indexOf(jobValue as any);
-  if (profileIndex === -1 || jobIndex === -1) return true; // unrecognised = benefit of doubt
-  return profileIndex >= jobIndex;
-}
-
-function matchSeniorityLevel(profileValue: string, jobValue: string | null): boolean {
-  if (jobValue === null) return true;
-  if (!profileValue) return true; // unknown profile field = benefit of doubt
-  const profileIndex = SENIORITY_LEVELS.indexOf(profileValue as any);
-  const jobIndex = SENIORITY_LEVELS.indexOf(jobValue as any);
-  if (profileIndex === -1 || jobIndex === -1) return true; // unrecognised = benefit of doubt
-  return Math.abs(profileIndex - jobIndex) <= 1;
-}
-
-function matchLanguages(profileLanguages: string[] | null, jobLanguages: string[] | null): boolean {
-  if (jobLanguages === null || jobLanguages.length === 0) return true;
-  if (!profileLanguages || profileLanguages.length === 0) return true; // unknown = benefit of doubt
-  const profileSet = new Set(profileLanguages.map(l => l.toLowerCase()));
-  return jobLanguages.every(lang => profileSet.has(lang.toLowerCase()));
-}
-
-function matchKeySkills(profileSkills: string[] | null, jobSkills: string[] | null): boolean {
-  // null OR empty = benefit of doubt (spec: "If job.key_skills IS NULL then score 1")
-  if (jobSkills === null || jobSkills.length === 0) return true;
-  if (!profileSkills || profileSkills.length === 0) return true; // unknown profile = benefit of doubt
-  const profileSet = new Set(profileSkills.map(s => s.toLowerCase()));
-  const overlapCount = jobSkills.filter(skill => profileSet.has(skill.toLowerCase())).length;
-  return overlapCount >= 2;
-}
-
-/**
- * Score location match: 0 | 1 | 2
- *   2 = prefLocation set AND city/country found in jobLocation string (explicit match)
- *   1 = neutral: no prefLocation, OR isRemote=true, OR jobLocation=null
- *   0 = prefLocation set but no city/country match (penalise, don't hard-exclude)
- *
- * Replaces the old boolean matchLocation() pre-filter (Issue #37).
- * Location is now a scored criterion, not a binary gate.
- */
-export function scoreLocation(prefLocation: string | null, jobLocation: string | null, isRemote: boolean | null): 0 | 1 | 2 {
-  if (!prefLocation) return 1;  // no preference = neutral
-  if (isRemote) return 1;       // remote = neutral (could work anywhere)
-  if (!jobLocation) return 1;   // unknown location = benefit of doubt
-  const pref = prefLocation.toLowerCase().trim();
-  const loc = jobLocation.toLowerCase();
-  if (loc.includes(pref) || pref.includes(loc.split(',')[0].trim())) return 2;
-  return 0;
-}
-
-function calculateMatch(profile: any, job: JobRow): { score: number; matched: string[]; unmatched: string[] } {
-  const matched: string[] = [];
-  const unmatched: string[] = [];
-
-  // a) years_experience
-  if (matchYearsExperience(profile.yearsExperience, job.years_experience)) {
-    matched.push('years_experience');
-  } else {
-    unmatched.push('years_experience');
-  }
-
-  // b) education_level
-  if (matchEducationLevel(profile.educationLevel, job.education_level)) {
-    matched.push('education_level');
-  } else {
-    unmatched.push('education_level');
-  }
-
-  // c) field_of_study
-  if (job.field_of_study === null || !profile.fieldOfStudy || profile.fieldOfStudy === job.field_of_study) {
-    matched.push('field_of_study');
-  } else {
-    unmatched.push('field_of_study');
-  }
-
-  // d) sphere_of_expertise — only auto-pass null if profile also has no sphere
-  if (!profile.sphereOfExpertise || job.sphere_of_expertise === null || profile.sphereOfExpertise === job.sphere_of_expertise) {
-    matched.push('sphere_of_expertise');
-  } else {
-    unmatched.push('sphere_of_expertise');
-  }
-
-  // e) seniority_level
-  if (matchSeniorityLevel(profile.seniorityLevel, job.seniority_level)) {
-    matched.push('seniority_level');
-  } else {
-    unmatched.push('seniority_level');
-  }
-
-  // f) languages
-  if (matchLanguages(profile.languages, job.languages)) {
-    matched.push('languages');
-  } else {
-    unmatched.push('languages');
-  }
-
-  // g) industry — only auto-pass null if profile also has no industry
-  if (!profile.industry || job.industry === null || profile.industry === job.industry) {
-    matched.push('industry');
-  } else {
-    unmatched.push('industry');
-  }
-
-  // h) key_skills
-  if (matchKeySkills(profile.keySkills, job.key_skills)) {
-    matched.push('key_skills');
-  } else {
-    unmatched.push('key_skills');
-  }
-
-  // i) location — scored criterion (Issue #37 fix)
-  // Only applies when user has set a location preference.
-  // score=2 → matched, score=0 → unmatched, score=1 → neutral (not added to either list)
-  if (profile.prefLocation) {
-    const locScore = scoreLocation(profile.prefLocation, job.location, job.is_remote);
-    if (locScore === 2) {
-      matched.push('location');
-    } else if (locScore === 0) {
-      unmatched.push('location');
-    }
-    // locScore === 1 = neutral (remote/unknown) → no impact on score
-  }
-
-  return { score: matched.length, matched, unmatched };
+  max_score: number; //8 base criteria + 1 if location preference is set
 }
 
 export async function findMatches(
@@ -201,7 +42,7 @@ export async function findMatches(
     employmentTypeOverride?: string;
   }
 ): Promise<MatchResult> {
-  // Fetch profile
+  // Fetch profile with embedding
   const profileResult = await db.select().from(profiles).where(eq(profiles.id, profileId)).limit(1);
   if (profileResult.length === 0) {
     throw new Error('Profile not found');
@@ -212,133 +53,243 @@ export async function findMatches(
   if (options?.locationOverride !== undefined) profile.prefLocation = options.locationOverride || null;
   if (options?.workModeOverride !== undefined) profile.prefWorkMode = options.workModeOverride || null;
   if (options?.employmentTypeOverride !== undefined) {
-    // prefEmploymentType is an array in DB; override replaces it entirely
     profile.prefEmploymentType = options.employmentTypeOverride
       ? [options.employmentTypeOverride]
       : [];
   }
 
-  // Fetch jobs with optional delta filter
-  let jobsQuery = db.select({
-    id: jobs.id,
-    title: jobs.title,
-    company: jobs.company,
-    location: jobs.location,
-    url: jobs.url,
-    posted_at: jobs.postedAt,
-    salary_min: jobs.salaryMin,
-    salary_max: jobs.salaryMax,
-    salary_currency: jobs.salaryCurrency,
-    employment_type: jobs.employmentType,
-    is_remote: jobs.isRemote,
-    years_experience: jobs.yearsExperience,
-    education_level: jobs.educationLevel,
-    field_of_study: jobs.fieldOfStudy,
-    sphere_of_expertise: jobs.sphereOfExpertise,
-    seniority_level: jobs.seniorityLevel,
-    industry: jobs.industry,
-    languages: jobs.languages,
-    key_skills: jobs.keySkills,
-  }).from(jobs);
+  // Build SQL query parameters
+  const yearsScale = YEARS_EXPERIENCE;
+  const eduScale = EDUCATION_LEVELS;
+  const senScale = SENIORITY_LEVELS;
 
-  if (options?.delta && profile.lastSearchAt) {
-    jobsQuery = jobsQuery.where(gt(jobs.ingestedAt, profile.lastSearchAt)) as any;
+  // Construct WHERE clause conditions dynamically
+  const whereConditions: any[] = [sql`classified_at IS NOT NULL`];
+
+  // Hard pre-filters
+  if (profile.prefWorkMode) {
+    if (profile.prefWorkMode === 'Remote') {
+      whereConditions.push(sql`(is_remote IS NULL OR is_remote = true)`);
+    } else if (profile.prefWorkMode === 'On-site') {
+      whereConditions.push(sql`(is_remote IS NULL OR is_remote = false)`);
+    }
+    // 'Hybrid' and 'Any' = no filter
   }
 
-  const allJobs = (await jobsQuery).filter(job => {
-    // Only exclude jobs that have no classified fields AND no title — pure junk rows
-    const hasClassifiedField = job.sphere_of_expertise !== null ||
-      job.key_skills !== null ||
-      job.industry !== null ||
-      job.seniority_level !== null ||
-      job.title !== null;  // null title = true junk; null criteria = benefit of doubt
-    if (!hasClassifiedField) return false;
+  if (profile.prefEmploymentType && profile.prefEmploymentType.length > 0) {
+    whereConditions.push(sql`(employment_type IS NULL OR employment_type = ANY(${profile.prefEmploymentType}))`);
+  }
 
-    // Apply preference pre-filters
-    // Work mode
-    if (profile.prefWorkMode) {
-      if (profile.prefWorkMode === 'Remote' && job.is_remote === false) return false;
-      if (profile.prefWorkMode === 'On-site' && job.is_remote === true) return false;
-      // 'Hybrid' and 'Any' = no filter
+  if (profile.prefSalaryMin !== null && profile.prefSalaryMin !== undefined) {
+    whereConditions.push(sql`(salary_max IS NULL OR salary_max >= ${profile.prefSalaryMin})`);
+  }
+
+  if (options?.salaryMin !== undefined) {
+    whereConditions.push(sql`(salary_max IS NULL OR salary_max >= ${options.salaryMin})`);
+  }
+
+  if (options?.salaryMax !== undefined) {
+    whereConditions.push(sql`(salary_min IS NULL OR salary_min <= ${options.salaryMax})`);
+  }
+
+  if (options?.postedWithin !== undefined) {
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - options.postedWithin);
+    whereConditions.push(sql`(posted_at IS NULL OR posted_at >= ${cutoffDate})`);
+  }
+
+  if (options?.delta && profile.lastSearchAt) {
+    whereConditions.push(gt(jobs.ingestedAt, profile.lastSearchAt));
+  }
+
+  // Combine WHERE conditions
+  const whereSql = whereConditions.length > 1
+    ? sql`${whereConditions[0]} AND ${sql.join(whereConditions.slice(1), sql` AND `)}`
+    : whereConditions[0];
+
+  // PHASE A: SQL structured scoring (returns up to 300 candidates)
+  const locationPattern = profile.prefLocation ? `%${profile.prefLocation}%` : null;
+
+  const candidatesQuery = sql`
+    SELECT
+      id, title, company, location, url, posted_at,
+      salary_min, salary_max, salary_currency, employment_type, is_remote,
+      embedding,
+
+      -- Per-criterion scores
+      CASE 
+        WHEN years_experience IS NULL THEN 1
+        WHEN array_position(${yearsScale}::text[], years_experience) IS NULL THEN 1
+        WHEN ABS(
+          array_position(${yearsScale}::text[], years_experience) - 
+          array_position(${yearsScale}::text[], ${profile.yearsExperience}::text)
+        ) <= 1 THEN 1 
+        ELSE 0 
+      END AS c_years,
+
+      CASE 
+        WHEN education_level IS NULL THEN 1
+        WHEN array_position(${eduScale}::text[], education_level) IS NULL THEN 1
+        WHEN array_position(${eduScale}::text[], education_level) <= 
+             array_position(${eduScale}::text[], ${profile.educationLevel}::text)
+        THEN 1 
+        ELSE 0 
+      END AS c_education,
+
+      CASE 
+        WHEN field_of_study IS NULL THEN 1
+        WHEN field_of_study = ${profile.fieldOfStudy} THEN 1 
+        ELSE 0 
+      END AS c_field,
+
+      CASE 
+        WHEN sphere_of_expertise IS NULL THEN 1
+        WHEN sphere_of_expertise = ${profile.sphereOfExpertise} THEN 1 
+        ELSE 0 
+      END AS c_sphere,
+
+      CASE 
+        WHEN seniority_level IS NULL THEN 1
+        WHEN array_position(${senScale}::text[], seniority_level) IS NULL THEN 1
+        WHEN ABS(
+          array_position(${senScale}::text[], seniority_level) - 
+          array_position(${senScale}::text[], ${profile.seniorityLevel}::text)
+        ) <= 1 THEN 1 
+        ELSE 0 
+      END AS c_seniority,
+
+      CASE 
+        WHEN languages IS NULL OR cardinality(languages) = 0 THEN 1
+        WHEN languages <@ ${profile.languages || []}::text[] THEN 1 
+        ELSE 0 
+      END AS c_languages,
+
+      CASE 
+        WHEN industry IS NULL THEN 1
+        WHEN industry = ${profile.industry} THEN 1 
+        ELSE 0 
+      END AS c_industry,
+
+      CASE 
+        WHEN key_skills IS NULL OR cardinality(key_skills) = 0 THEN 1
+        WHEN cardinality(ARRAY(
+          SELECT unnest(key_skills) INTERSECT SELECT unnest(${profile.keySkills || []}::text[])
+        )) >= 2 THEN 1 
+        ELSE 0 
+      END AS c_skills,
+
+      CASE
+        WHEN ${profile.prefLocation}::text IS NULL THEN NULL
+        WHEN is_remote = true THEN 1
+        WHEN location IS NULL THEN 1
+        WHEN location ILIKE ${locationPattern} THEN 2
+        ELSE 0
+      END AS c_location
+
+    FROM jobs
+    WHERE ${whereSql}
+  `;
+
+  const havingAndLimit = sql`
+    HAVING (
+      c_years + c_education + c_field + c_sphere + c_seniority +
+      c_languages + c_industry + c_skills + COALESCE(c_location, 0)
+    ) >= 4
+    ORDER BY (
+      c_years + c_education + c_field + c_sphere + c_seniority +
+      c_languages + c_industry + c_skills + COALESCE(c_location, 0)
+    ) DESC
+    LIMIT 300
+  `;
+
+  const finalQuery = sql`${candidatesQuery} ${havingAndLimit}`;
+
+  // drizzle-orm/postgres-js returns rows as a RowList (array-like) directly
+  const candidatesRaw = await db.execute(finalQuery);
+  const candidates = Array.from(candidatesRaw) as any[];
+
+  // PHASE B: JS vector re-rank (on 300 candidates)
+  const MAX_SQL_SCORE = profile.prefLocation ? 9 : 8;
+  const profileEmbedding = profile.embedding as number[] | null;
+
+  const scored = candidates.map((job: any) => {
+    const sqlScore = 
+      (job.c_years || 0) +
+      (job.c_education || 0) +
+      (job.c_field || 0) +
+      (job.c_sphere || 0) +
+      (job.c_seniority || 0) +
+      (job.c_languages || 0) +
+      (job.c_industry || 0) +
+      (job.c_skills || 0) +
+      (job.c_location || 0);
+
+    const sqlNorm = sqlScore / MAX_SQL_SCORE;
+
+    let hybridScore: number;
+    const jobEmbedding = job.embedding as number[] | null;
+
+    if (profileEmbedding && jobEmbedding) {
+      const cosine = cosineSimilarity(profileEmbedding, jobEmbedding);
+      hybridScore = 0.65 * sqlNorm + 0.35 * cosine;
+    } else {
+      // Graceful degradation: no embedding = use SQL score only
+      hybridScore = sqlNorm;
     }
 
-    // Employment type
-    if (profile.prefEmploymentType && profile.prefEmploymentType.length > 0 && job.employment_type) {
-      if (!profile.prefEmploymentType.includes(job.employment_type)) return false;
-    }
+    // Build matched/unmatched criteria lists
+    const matched: string[] = [];
+    const unmatched: string[] = [];
 
-    // Location: now scored (not filtered) — removed pre-filter, see calculateMatch() (Issue #37)
+    if (job.c_years === 1) matched.push('years_experience');
+    else if (job.c_years === 0) unmatched.push('years_experience');
 
-    // Salary min — only filter when job has salary data
-    if (profile.prefSalaryMin && job.salary_max !== null) {
-      if (job.salary_max < profile.prefSalaryMin) return false;
-    }
+    if (job.c_education === 1) matched.push('education_level');
+    else if (job.c_education === 0) unmatched.push('education_level');
 
-    // Apply API-level salary filters
-    if (options?.salaryMin !== undefined && job.salary_max !== null) {
-      if (job.salary_max < options.salaryMin) return false;
-    }
-    if (options?.salaryMax !== undefined && job.salary_min !== null) {
-      if (job.salary_min > options.salaryMax) return false;
-    }
+    if (job.c_field === 1) matched.push('field_of_study');
+    else if (job.c_field === 0) unmatched.push('field_of_study');
 
-    // Apply date posted filter
-    if (options?.postedWithin !== undefined && job.posted_at !== null) {
-      const cutoffDate = new Date();
-      cutoffDate.setDate(cutoffDate.getDate() - options.postedWithin);
-      if (job.posted_at < cutoffDate) return false;
-    }
+    if (job.c_sphere === 1) matched.push('sphere_of_expertise');
+    else if (job.c_sphere === 0) unmatched.push('sphere_of_expertise');
 
-    return true;
-  });
+    if (job.c_seniority === 1) matched.push('seniority_level');
+    else if (job.c_seniority === 0) unmatched.push('seniority_level');
 
-  // Calculate matches
-  const scoredJobs = allJobs.map(job => {
-    const match = calculateMatch(profile, job);
+    if (job.c_languages === 1) matched.push('languages');
+    else if (job.c_languages === 0) unmatched.push('languages');
+
+    if (job.c_industry === 1) matched.push('industry');
+    else if (job.c_industry === 0) unmatched.push('industry');
+
+    if (job.c_skills === 1) matched.push('key_skills');
+    else if (job.c_skills === 0) unmatched.push('key_skills');
+
+    if (job.c_location === 2 || job.c_location === 1) matched.push('location');
+    else if (job.c_location === 0) unmatched.push('location');
+
     return {
       job,
-      score: match.score,
-      matched: match.matched,
-      unmatched: match.unmatched,
+      sqlScore,
+      hybridScore,
+      matched,
+      unmatched,
     };
   });
 
-  // Filter >= 5, sort based on options, limit 50
-  const filteredJobs = scoredJobs
-    .filter(item => item.score >= 5)
-    .sort((a, b) => {
-      // Apply custom sort if specified
-      if (options?.sort === 'posted_at') {
-        // Sort by posted_at DESC NULLS LAST
-        if (a.job.posted_at === null && b.job.posted_at === null) return 0;
-        if (a.job.posted_at === null) return 1;
-        if (b.job.posted_at === null) return -1;
-        return b.job.posted_at.getTime() - a.job.posted_at.getTime();
-      } else if (options?.sort === 'salary_max') {
-        // Sort by salary_max DESC NULLS LAST
-        if (a.job.salary_max === null && b.job.salary_max === null) return 0;
-        if (a.job.salary_max === null) return 1;
-        if (b.job.salary_max === null) return -1;
-        return b.job.salary_max - a.job.salary_max;
-      } else {
-        // Default: sort by score DESC then posted_at DESC NULLS LAST
-        if (a.score !== b.score) return b.score - a.score;
-        if (a.job.posted_at === null && b.job.posted_at === null) return 0;
-        if (a.job.posted_at === null) return 1;
-        if (b.job.posted_at === null) return -1;
-        return b.job.posted_at.getTime() - a.job.posted_at.getTime();
-      }
-    })
+  // Sort by hybrid score DESC and take top 50
+  const topMatches = scored
+    .sort((a, b) => b.hybridScore - a.hybridScore)
     .slice(0, 50);
 
-  const results: MatchedJob[] = filteredJobs.map(item => ({
+  const results: MatchedJob[] = topMatches.map(item => ({
     job_id: item.job.id,
     title: item.job.title,
     company: item.job.company,
     location: item.job.location,
     url: item.job.url,
     posted_at: item.job.posted_at,
-    match_score: item.score,
+    match_score: item.sqlScore, // API contract: match_score = SQL structured score
     matched_criteria: item.matched,
     unmatched_criteria: item.unmatched,
     salary_min: item.job.salary_min,
@@ -373,13 +324,32 @@ export async function findMatches(
   // Update profile.last_search_at
   await db.update(profiles).set({ lastSearchAt: new Date() }).where(eq(profiles.id, profileId));
 
-  // max_score: 8 base criteria + 1 location criterion when user has set a location preference
-  const maxScore = profile.prefLocation ? 9 : 8;
-
   return {
     results,
     total: results.length,
     search_id: searchId,
-    max_score: maxScore,
+    max_score: MAX_SQL_SCORE,
   };
+}
+
+/**
+ * scoreLocation — pure JS utility kept for unit testing and future use.
+ * Mirrors the SQL CASE expression for c_location:
+ *   2 = city/country match found in jobLocation
+ *   1 = neutral (remote job, null location, or no prefLocation)
+ *   0 = location set but no match
+ */
+export function scoreLocation(
+  prefLocation: string | null,
+  jobLocation: string | null,
+  isRemote: boolean | null
+): number {
+  if (!prefLocation) return 1;
+  if (isRemote) return 1;
+  if (!jobLocation) return 1;
+  const loc = jobLocation.toLowerCase();
+  const pref = prefLocation.toLowerCase();
+  // Match if jobLocation contains the pref city/country (same logic as SQL ILIKE %pref%)
+  if (loc.includes(pref)) return 2;
+  return 0;
 }
