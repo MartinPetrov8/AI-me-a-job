@@ -11,7 +11,7 @@ npm run test 2>&1
 
 echo ""
 echo "=== CI: Typecheck ==="
-tsc --noEmit 2>&1
+npx tsc --noEmit 2>&1
 
 echo ""
 echo "✅ CI PASSED"
