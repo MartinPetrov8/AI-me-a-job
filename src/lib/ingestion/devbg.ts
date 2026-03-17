@@ -1,89 +1,157 @@
 import { RawJobPosting } from './types';
-import crypto from 'crypto';
 
 /**
- * Dev.bg scraper - Standard fetch (no Cloudflare)
- * Fetches IT jobs from dev.bg pages 1-3
+ * Dev.bg scraper
+ * Fetches IT jobs from dev.bg category pages.
+ *
+ * Structure: each category page has up to ~20 job-list-item cards.
+ * Cards include data-job-id (numeric), job URL, title, company, remote indicator.
+ * We scrape 4 categories × 3 pages = up to 240 jobs per run.
  */
+
+const DEVBG_CATEGORIES = [
+  'back-end-development',
+  'front-end-development',
+  'full-stack-development',
+  'data-science',
+  'ml-ai-data',
+  'devops',
+  'it-management',
+  'quality-assurance',
+] as const;
+
+const PAGES_PER_CATEGORY = 3;
+
+// HTML entity decode helper — avoids dependency on 'he' if not installed
+function decodeHtml(str: string): string {
+  return str
+    .replace(/&#8211;/g, '–')
+    .replace(/&#8212;/g, '—')
+    .replace(/&#038;/g, '&')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n)))
+    .trim();
+}
+
+function stripTags(str: string): string {
+  return str.replace(/<[^>]*>/g, '').trim();
+}
+
 export async function fetchDevBgJobs(): Promise<RawJobPosting[]> {
+  const seen = new Set<string>();
   const jobs: RawJobPosting[] = [];
 
-  try {
-    for (let page = 1; page <= 3; page++) {
-      const url = `https://dev.bg/jobs/?page=${page}`;
-      
-      const response = await fetch(url, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0',
-          'Accept-Language': 'bg,en',
-        },
-      });
+  for (const category of DEVBG_CATEGORIES) {
+    for (let page = 1; page <= PAGES_PER_CATEGORY; page++) {
+      const url = `https://dev.bg/company/jobs/${category}/${page > 1 ? `?fwp_paged=${page}` : ''}`;
 
-      if (!response.ok) {
-        console.warn(`[devbg] Failed to fetch page ${page}: ${response.status}`);
-        continue;
-      }
+      try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 15_000);
 
-      const html = await response.text();
-      
-      // Parse job listings - dev.bg uses job cards with specific structure
-      // Using simple regex patterns (avoiding 's' flag for ES compatibility)
-      const jobCardPattern = /<div class="job-card"[\s\S]*?<\/div>/gi;
-      const jobMatches = html.match(jobCardPattern) || [];
-      
-      for (const jobHtml of jobMatches) {
-        // Extract URL (contains numeric ID)
-        const urlMatch = jobHtml.match(/href="(\/jobs\/\d+\/[^"]+)"/);
-        if (!urlMatch) continue;
-        
-        const jobUrl = `https://dev.bg${urlMatch[1]}`;
-        
-        // Extract numeric ID from URL or use MD5 fallback
-        const idMatch = jobUrl.match(/\/jobs\/(\d+)\//);
-        const externalId = idMatch ? idMatch[1] : crypto.createHash('md5').update(jobUrl).digest('hex').substring(0, 16);
-        
-        // Extract title
-        const titleMatch = jobHtml.match(/<h3[^>]*>([\s\S]*?)<\/h3>/i);
-        const title = titleMatch ? titleMatch[1].replace(/<[^>]*>/g, '').trim() : 'Untitled';
-        
-        // Extract company
-        const companyMatch = jobHtml.match(/<div class="company"[^>]*>([\s\S]*?)<\/div>/i);
-        const company = companyMatch ? companyMatch[1].replace(/<[^>]*>/g, '').trim() : null;
-        
-        // Extract location
-        const locationMatch = jobHtml.match(/<div class="location"[^>]*>([\s\S]*?)<\/div>/i);
-        const location = locationMatch ? locationMatch[1].replace(/<[^>]*>/g, '').trim() : null;
-        
-        // Extract description snippet
-        const descMatch = jobHtml.match(/<div class="description"[^>]*>([\s\S]*?)<\/div>/i);
-        const description = descMatch ? descMatch[1].replace(/<[^>]*>/g, '').trim() : '';
-        
-        // Check for remote keywords
-        const fullText = `${title} ${description}`.toLowerCase();
-        const isRemote = fullText.includes('remote') || fullText.includes('дистанционно');
-        
-        jobs.push({
-          external_id: externalId,
-          source: 'dev_bg',
-          title,
-          company,
-          location,
-          country: 'bg',
-          url: jobUrl,
-          description_raw: description,
-          salary_min: null,
-          salary_max: null,
-          salary_currency: null,
-          employment_type: null,
-          is_remote: isRemote,
-          posted_at: null,
+        const response = await fetch(url, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (compatible; JobAggregator/1.0)',
+            'Accept-Language': 'bg,en',
+            'Accept': 'text/html,application/xhtml+xml',
+          },
+          signal: controller.signal,
         });
+        clearTimeout(timeout);
+
+        if (!response.ok) {
+          console.warn(`[devbg] Failed ${category} page ${page}: ${response.status}`);
+          break; // No more pages in this category
+        }
+
+        const html = await response.text();
+        const pageJobs = parseJobListItems(html);
+
+        if (pageJobs.length === 0) {
+          // Empty page — no more pages in this category
+          break;
+        }
+
+        for (const job of pageJobs) {
+          if (!seen.has(job.external_id)) {
+            seen.add(job.external_id);
+            jobs.push(job);
+          }
+        }
+
+        console.log(`[devbg] ${category} page ${page}: ${pageJobs.length} jobs`);
+
+        // Rate-limit: small delay between requests (skipped in test env)
+        if (process.env.NODE_ENV !== 'test') {
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+
+      } catch (err) {
+        console.warn(`[devbg] Error fetching ${category} page ${page}: ${err instanceof Error ? err.message : String(err)}`);
+        break;
       }
     }
-    
-    return jobs;
-  } catch (error) {
-    console.error('[devbg] Scraper error:', error instanceof Error ? error.message : String(error));
-    return [];
   }
+
+  console.log(`[devbg] Total unique jobs fetched: ${jobs.length}`);
+  return jobs;
+}
+
+function parseJobListItems(html: string): RawJobPosting[] {
+  const results: RawJobPosting[] = [];
+
+  // Match each job-list-item block by data-job-id attribute
+  // Pattern: <div class="job-list-item ... " data-job-id="NNNN" > ... </div></div></div>
+  const blockPattern = /<div[^>]+class="job-list-item[^"]*"[^>]+data-job-id="(\d+)"[^>]*>([\s\S]*?)(?=<div[^>]+class="job-list-item|<\/div>\s*<\/div>\s*<\/div>\s*<(?:div|section|main|footer))/gi;
+
+  let match: RegExpExecArray | null;
+  while ((match = blockPattern.exec(html)) !== null) {
+    const [, jobId, content] = match;
+
+    // URL: overlay-link href
+    const urlMatch = content.match(/href="(https:\/\/dev\.bg\/company\/jobads\/[^"]+)"/);
+    if (!urlMatch) continue;
+    const jobUrl = urlMatch[1];
+
+    // Title: class="job-title..."
+    const titleMatch = content.match(/class="job-title[^"]*"[^>]*>\s*([\s\S]*?)\s*<\/h\d>/i);
+    const title = titleMatch ? decodeHtml(stripTags(titleMatch[1])) : 'Untitled';
+
+    // Company: class="company-name..."
+    const companyMatch = content.match(/class="company-name[^"]*"[^>]*>\s*([\s\S]*?)\s*<\/(?:span|div|a|h\d)>/i);
+    const company = companyMatch ? decodeHtml(stripTags(companyMatch[1])) : null;
+
+    // Location: class="..location.."
+    const locationMatch = content.match(/class="[^"]*location[^"]*"[^>]*>\s*([\s\S]*?)\s*<\/(?:span|div)>/i);
+    const location = locationMatch ? decodeHtml(stripTags(locationMatch[1])) || null : null;
+
+    // Remote: look for remote keyword in title/content
+    const fullText = `${title} ${content}`.toLowerCase();
+    const isRemote = fullText.includes('remote') ||
+      fullText.includes('дистанционно') ||
+      fullText.includes('work from home') ||
+      content.includes('remote-badge') || null;
+
+    results.push({
+      external_id: `devbg-${jobId}`,
+      source: 'dev_bg',
+      title,
+      company,
+      location,
+      country: 'bg',
+      url: jobUrl,
+      description_raw: '',  // Description only available on job detail page — skip for now
+      salary_min: null,
+      salary_max: null,
+      salary_currency: null,
+      employment_type: null,
+      is_remote: isRemote,
+      posted_at: null,
+    });
+  }
+
+  return results;
 }

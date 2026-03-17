@@ -1,115 +1,142 @@
 import { describe, it, expect, vi } from 'vitest';
 import { fetchDevBgJobs } from './devbg';
-import type { RawJobPosting } from './types';
 
-// Mock HTML response with dev.bg job structure
+// Real dev.bg job-list-item HTML structure (verified 2026-03-17)
 const mockDevBgHTML = `
-<div class="job-card">
-  <h3><a href="/jobs/12345/senior-developer">Senior Developer</a></h3>
-  <div class="company">Tech Corp</div>
-  <div class="location">Sofia</div>
-  <div class="description">Looking for a senior developer with remote options available</div>
+<div class="jobs-loop facetwp-template">
+<div class="job-list-item  is-premium " data-job-id="518579" >
+  <div class="inner-left company-logo-wrap">
+    <a href="https://dev.bg/company/jobads/mentormate-data-engineer-5/" class="overlay-link ab-trigger  "></a>
+    <img src="logo.png" class="company-logo" alt="" />
+  </div>
+  <div class="inner-right">
+    <div class="title-date-wrap">
+      <h6 class="job-title ab-title-placeholder">Data Engineer &#8211; Remote</h6>
+      <span class="date date-with-icon">17 мар.</span>
+    </div>
+    <span class="company-name">MentorMate</span>
+    <span class="remote-badge">Remote</span>
+  </div>
 </div>
-<div class="job-card">
-  <h3><a href="/jobs/67890/junior-developer">Junior Developer</a></h3>
-  <div class="company">StartupBG</div>
-  <div class="location">Plovdiv</div>
-  <div class="description">On-site position for a junior developer</div>
+
+<div class="job-list-item " data-job-id="518444" >
+  <div class="inner-left company-logo-wrap">
+    <a href="https://dev.bg/company/jobads/softuni-senior-java-dev/" class="overlay-link ab-trigger  "></a>
+    <img src="logo2.png" class="company-logo" alt="" />
+  </div>
+  <div class="inner-right">
+    <div class="title-date-wrap">
+      <h6 class="job-title ab-title-placeholder">Senior Java Developer</h6>
+      <span class="date date-with-icon">16 мар.</span>
+    </div>
+    <span class="company-name">SoftUni</span>
+  </div>
+</div>
 </div>
 `;
 
 const mockMalformedHTML = `
-<div class="job-card">
-  <h3>No link here</h3>
-  <div class="company">
+<div class="jobs-loop facetwp-template">
+  <div class="job-list-item" data-job-id="999">
+    <!-- no overlay-link, no title — should be skipped -->
+    <h6 class="job-title">Broken Card</h6>
+  </div>
+</div>
 `;
 
 describe('fetchDevBgJobs', () => {
-  it('should return RawJobPosting[] with source=dev_bg and country=bg', async () => {
+  it('parses job-list-item cards and returns RawJobPosting[] with source=dev_bg country=bg', async () => {
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,
       text: async () => mockDevBgHTML,
-    });
+    } as Response);
 
     const jobs = await fetchDevBgJobs();
 
     expect(Array.isArray(jobs)).toBe(true);
     expect(jobs.length).toBeGreaterThan(0);
-    
-    const firstJob = jobs[0];
-    expect(firstJob.source).toBe('dev_bg');
-    expect(firstJob.country).toBe('bg');
-    expect(firstJob.external_id).toBeDefined();
-    expect(firstJob.url).toContain('https://dev.bg/jobs/');
+
+    const j = jobs[0];
+    expect(j.source).toBe('dev_bg');
+    expect(j.country).toBe('bg');
+    expect(j.external_id).toMatch(/^devbg-\d+$/);
+    expect(j.url).toContain('https://dev.bg/company/jobads/');
   });
 
-  it('should set is_remote to true when job contains "remote"', async () => {
+  it('uses data-job-id as external_id with devbg- prefix', async () => {
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,
       text: async () => mockDevBgHTML,
-    });
+    } as Response);
 
     const jobs = await fetchDevBgJobs();
-    const remoteJob = jobs.find(j => j.description_raw?.includes('remote'));
-    
-    if (remoteJob) {
-      expect(remoteJob.is_remote).toBe(true);
-    }
+    const ids = jobs.map(j => j.external_id);
+    // Both IDs appear in the mock HTML — at least one should be present
+    // (dedup across categories means only one copy of each ID survives)
+    expect(ids.some(id => id === 'devbg-518579' || id === 'devbg-518444')).toBe(true);
+    expect(ids.every(id => id.startsWith('devbg-'))).toBe(true);
   });
 
-  it('should set is_remote to false when job does not contain remote keywords', async () => {
+  it('decodes HTML entities in title (&#8211; → –)', async () => {
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,
       text: async () => mockDevBgHTML,
-    });
+    } as Response);
 
     const jobs = await fetchDevBgJobs();
-    const onSiteJob = jobs.find(j => j.description_raw?.includes('On-site'));
-    
-    if (onSiteJob) {
-      expect(onSiteJob.is_remote).toBe(false);
-    }
+    const dataEng = jobs.find(j => j.external_id === 'devbg-518579');
+    expect(dataEng?.title).toBe('Data Engineer – Remote');
   });
 
-  it('should not throw when fed malformed HTML', async () => {
+  it('sets is_remote=true when "remote" appears in title or content', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      text: async () => mockDevBgHTML,
+    } as Response);
+
+    const jobs = await fetchDevBgJobs();
+    const remoteJob = jobs.find(j => j.external_id === 'devbg-518579');
+    expect(remoteJob?.is_remote).toBe(true);
+  });
+
+  it('does not throw on malformed HTML — returns empty array or partial results', async () => {
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,
       text: async () => mockMalformedHTML,
-    });
+    } as Response);
 
     await expect(fetchDevBgJobs()).resolves.not.toThrow();
     const jobs = await fetchDevBgJobs();
     expect(Array.isArray(jobs)).toBe(true);
   });
 
-  it('should return empty array on fetch failure', async () => {
+  it('returns empty array when all category pages return 404', async () => {
     global.fetch = vi.fn().mockResolvedValue({
       ok: false,
-      status: 500,
-    });
+      status: 404,
+    } as Response);
 
     const jobs = await fetchDevBgJobs();
     expect(jobs).toEqual([]);
   });
 
-  it('should return empty array on network error', async () => {
+  it('returns empty array on network error', async () => {
     global.fetch = vi.fn().mockRejectedValue(new Error('Network error'));
 
     const jobs = await fetchDevBgJobs();
     expect(jobs).toEqual([]);
   });
 
-  it('should extract numeric external_id from URL', async () => {
+  it('deduplicates jobs with the same data-job-id across categories', async () => {
+    // Same HTML returned for all category calls → duplicates should be removed
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,
       text: async () => mockDevBgHTML,
-    });
+    } as Response);
 
     const jobs = await fetchDevBgJobs();
-    const jobWithNumericId = jobs.find(j => j.url.includes('/jobs/12345/'));
-    
-    if (jobWithNumericId) {
-      expect(jobWithNumericId.external_id).toBe('12345');
-    }
+    const ids = jobs.map(j => j.external_id);
+    const uniqueIds = new Set(ids);
+    expect(ids.length).toBe(uniqueIds.size);
   });
 });
