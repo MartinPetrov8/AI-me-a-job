@@ -182,6 +182,12 @@ function ResultsContent() {
   const initialLoadDone = useRef(false);
   useEffect(() => {
     if (profileId) {
+      // Seed localStorage with the token from the URL if not already present.
+      // This handles the fresh flow: preferences → results, where the token is
+      // passed as a URL param (?token=...) but localStorage is still empty.
+      if (token && !localStorage.getItem('restore_token')) {
+        localStorage.setItem('restore_token', token);
+      }
       initialLoadDone.current = false;
       performSearch(false).then(() => { initialLoadDone.current = true; });
     }
