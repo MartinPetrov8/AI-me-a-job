@@ -40,10 +40,16 @@ export async function findMatches(
     locationOverride?: string;
     workModeOverride?: string;
     employmentTypeOverride?: string;
+    // Defence-in-depth: caller SHOULD pass userId to scope the profile query.
+    // If omitted, falls back to profileId-only lookup (token validation at route layer still applies).
+    userId?: string;
   }
 ): Promise<MatchResult> {
-  // Fetch profile with embedding
-  const profileResult = await db.select().from(profiles).where(eq(profiles.id, profileId)).limit(1);
+  // Fetch profile — scoped to userId when provided (defence-in-depth IDOR guard)
+  const profileQuery = options?.userId
+    ? db.select().from(profiles).where(eq(profiles.id, profileId) && eq(profiles.userId, options.userId) as any).limit(1)
+    : db.select().from(profiles).where(eq(profiles.id, profileId)).limit(1);
+  const profileResult = await profileQuery;
   if (profileResult.length === 0) {
     throw new Error('Profile not found');
   }

@@ -1,6 +1,7 @@
 const EMBEDDING_MODEL = 'text-embedding-3-small';
 const EMBEDDING_DIMENSIONS = 1536;
 const OPENAI_EMBEDDINGS_URL = 'https://api.openai.com/v1/embeddings';
+const FETCH_TIMEOUT_MS = 20_000; // 20s — prevents hanging serverless functions
 
 function getApiKey(): string {
   const key = process.env.OPENAI_API_KEY;
@@ -28,6 +29,7 @@ export async function embedText(text: string): Promise<number[]> {
       input: text,
       dimensions: EMBEDDING_DIMENSIONS,
     }),
+    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
   });
 
   if (!res.ok) {
@@ -59,6 +61,7 @@ export async function embedBatch(texts: string[]): Promise<number[][]> {
       input: texts,
       dimensions: EMBEDDING_DIMENSIONS,
     }),
+    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
   });
 
   if (!res.ok) {
