@@ -54,6 +54,7 @@ describe('POST /api/upload', () => {
 
     vi.mocked(extractText).mockResolvedValue('Sample CV text with more than fifty characters for testing');
     vi.mocked(extractCvCriteria).mockResolvedValue({
+      title_inferred: null,
       years_experience: '5-9',
       education_level: 'Masters',
       field_of_study: 'STEM',
@@ -144,6 +145,7 @@ describe('POST /api/upload', () => {
     expect(data.data.user_id).toBe(mockUserId);
     expect(data.data.profile_id).toBe(mockProfileId);
     expect(data.data.extracted).toEqual({
+      title_inferred: null,
       years_experience: '5-9',
       education_level: 'Masters',
       field_of_study: 'STEM',

@@ -52,7 +52,7 @@ function setup(profile = baseProfile, rows = [makeRow()]) {
       }),
     }),
   });
-  mockExecute.mockResolvedValue({ rows });
+  mockExecute.mockResolvedValue(rows);
   mockInsert.mockReturnValue({
     values: vi.fn().mockReturnValue({
       returning: vi.fn().mockResolvedValue([{ id: 'search-001' }]),
