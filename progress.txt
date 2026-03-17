@@ -65,3 +65,13 @@ Started: 2026-03-08T20:41:42Z
 ---
 
 [S-01][done] Added pgvector support to database schema: embedding vector(1536) columns in jobs and profiles tables, migration file 0003_dual_engine.sql with CREATE EXTENSION vector, HNSW index on jobs.embedding, and 5 SQL scoring indexes (sphere, seniority, industry, is_remote, classified_posted). Removed incomplete embedding code from batch-classify.ts to avoid compile errors | tests:PASS
+
+## 2026-03-17 21:05 - Build Fix: Playwright Dynamic Import
+- Fixed Next.js build failure caused by Turbopack statically analyzing the dynamic import('playwright') in jobsbg.ts
+- Changed dynamic import to use Function constructor which hides the import from Next.js static analysis
+- Build now passes cleanly with 0 warnings (was failing with "Module not found: Can't resolve 'playwright'")
+- All 207 tests still pass
+- Root cause: Next.js Turbopack follows all import chains at build time, even dynamic imports wrapped in try/catch
+- Fix: Use `new Function('return import("playwright")')()` to completely hide the import from static analysis
+- Commit: 19093dd310f718b8d367d4d6096808ea05933aa0
+---

@@ -10,8 +10,13 @@ export async function fetchJobsBgJobs(): Promise<RawJobPosting[]> {
     // Dynamic import via variable — prevents vite/vitest static analysis from trying to resolve
     // the module at build/test time. Fails gracefully when playwright is not installed.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const pkg = 'playwright';
-    const playwright = await import(/* @vite-ignore */ pkg).catch(() => null);
+    let playwright: any = null;
+    try {
+      // Use Function constructor to completely hide the import from Next.js static analysis
+      playwright = await new Function('return import("playwright")')();
+    } catch {
+      return [];
+    }
     if (!playwright) return [];
     const { chromium } = playwright;
     
