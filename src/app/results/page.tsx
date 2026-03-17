@@ -194,36 +194,45 @@ function ResultsContent() {
     }
   }, [sortBy]);
 
-  useEffect(() => {
-    if (panelOpen && !panelLocation) {
-      const locationParam = searchParams.get('location');
-      const workModeParam = searchParams.get('work_mode');
-      const employmentTypeParam = searchParams.get('employment_type');
-      const salaryMinParam = searchParams.get('salary_min');
-      const salaryMaxParam = searchParams.get('salary_max');
-      const postedWithinParam = searchParams.get('posted_within');
+  // Track whether panel prefs have been loaded from the profile
+  const panelPrefsLoaded = useRef(false);
 
-      if (locationParam) setPanelLocation(locationParam);
-      if (workModeParam && ['remote', 'hybrid', 'onsite'].includes(workModeParam.toLowerCase())) {
-        setPanelWorkMode(workModeParam.toLowerCase() as 'remote' | 'hybrid' | 'onsite');
-      }
-      if (employmentTypeParam && ['full-time', 'part-time', 'contract'].includes(employmentTypeParam.toLowerCase())) {
-        setPanelEmploymentType(employmentTypeParam.toLowerCase() as 'full-time' | 'part-time' | 'contract');
-      }
-      if (salaryMinParam) {
-        const num = parseInt(salaryMinParam, 10);
-        if (!isNaN(num)) setPanelSalaryMin(num);
-      }
-      if (salaryMaxParam) {
-        const num = parseInt(salaryMaxParam, 10);
-        if (!isNaN(num)) setPanelSalaryMax(num);
-      }
-      if (postedWithinParam) {
-        const num = parseInt(postedWithinParam, 10);
-        if (!isNaN(num) && [7, 30].includes(num)) setPanelPostedWithin(num);
-      }
+  useEffect(() => {
+    if (!panelOpen) return;
+    if (panelPrefsLoaded.current) return; // Already loaded once — don't reset user edits
+
+    // Fetch stored profile preferences to pre-fill the panel
+    const restoreToken = localStorage.getItem('restore_token');
+    if (profileId && restoreToken) {
+      fetch(`/api/preferences?profile_id=${encodeURIComponent(profileId)}`, {
+        headers: { 'X-Restore-Token': restoreToken },
+      })
+        .then(r => r.ok ? r.json() : null)
+        .then(data => {
+          if (!data?.data) return;
+          const prefs = data.data;
+          if (prefs.pref_location) setPanelLocation(prefs.pref_location);
+          if (prefs.pref_work_mode && ['remote', 'hybrid', 'onsite'].includes(prefs.pref_work_mode.toLowerCase())) {
+            setPanelWorkMode(prefs.pref_work_mode.toLowerCase() as 'remote' | 'hybrid' | 'onsite');
+          }
+          const empTypes = prefs.pref_employment_type;
+          if (Array.isArray(empTypes) && empTypes.length > 0) {
+            const first = empTypes[0].toLowerCase();
+            if (['full-time', 'part-time', 'contract'].includes(first)) {
+              setPanelEmploymentType(first as 'full-time' | 'part-time' | 'contract');
+            }
+          }
+          if (prefs.pref_salary_min) setPanelSalaryMin(prefs.pref_salary_min);
+          if (prefs.pref_salary_max) setPanelSalaryMax(prefs.pref_salary_max);
+          panelPrefsLoaded.current = true;
+        })
+        .catch(() => {
+          // Fallback to URL params if API fails
+          const locationParam = searchParams.get('location');
+          if (locationParam) setPanelLocation(locationParam);
+        });
     }
-  }, [panelOpen, panelLocation, searchParams]);
+  }, [panelOpen, profileId, searchParams]);
 
   const performSearch = async (delta: boolean) => {
     if (!profileId) return;

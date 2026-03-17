@@ -12,7 +12,20 @@ const mockUseSearchParams = useSearchParams as ReturnType<typeof vi.fn>;
 describe('ResultsPage - Edit Preferences Panel (S-02)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    global.fetch = vi.fn();
+    global.fetch = vi.fn().mockImplementation((url, opts) => {
+      // Default: empty prefs for panel pre-fill GET
+      if (typeof url === 'string' && url.includes('/api/preferences')) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ data: { pref_location: null, pref_work_mode: null, pref_employment_type: [], pref_salary_min: null, pref_salary_max: null } }),
+        });
+      }
+      // Default: empty results
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({ data: { results: [], total: 0, search_id: 'search-default' }, meta: { threshold: 5, max_score: 8, searched_at: new Date().toISOString() } }),
+      });
+    });
     Object.defineProperty(window, 'localStorage', {
       value: {
         getItem: vi.fn(() => 'test-restore-token'),
@@ -186,7 +199,12 @@ describe('ResultsPage - Edit Preferences Panel (S-02)', () => {
       get: (key: string) => (key === 'profile_id' ? 'test-profile-123' : null),
     } as ReturnType<typeof useSearchParams>);
 
-    const mockFetch = vi.fn();
+    const mockFetch = vi.fn().mockImplementation((url) => {
+      if (typeof url === 'string' && url.includes('/api/preferences')) {
+        return Promise.resolve({ ok: true, json: async () => ({ data: { pref_location: null, pref_work_mode: null, pref_employment_type: [], pref_salary_min: null, pref_salary_max: null } }) });
+      }
+      return Promise.resolve({ ok: true, json: async () => ({ data: { results: [], total: 0, search_id: 'search-fallback' }, meta: { threshold: 5, max_score: 8, searched_at: new Date().toISOString() } }) });
+    });
     mockFetch
       .mockResolvedValueOnce({
         ok: true,
@@ -225,10 +243,10 @@ describe('ResultsPage - Edit Preferences Panel (S-02)', () => {
     fireEvent.click(rerunButton);
 
     await waitFor(() => {
-      expect(mockFetch).toHaveBeenCalledTimes(2);
+      expect(mockFetch).toHaveBeenCalledTimes(3); // 1=initial search, 2=prefs GET, 3=re-run
     });
 
-    const secondCall = mockFetch.mock.calls[1];
+    const secondCall = mockFetch.mock.calls[2]; // calls[0]=search, calls[1]=prefs GET, calls[2]=re-run
     expect(secondCall[0]).toBe('/api/search');
     expect(secondCall[1].method).toBe('POST');
     expect(secondCall[1].headers['X-Restore-Token']).toBe('test-restore-token');
@@ -243,7 +261,12 @@ describe('ResultsPage - Edit Preferences Panel (S-02)', () => {
       get: (key: string) => (key === 'profile_id' ? 'test-profile-123' : null),
     } as ReturnType<typeof useSearchParams>);
 
-    const mockFetch = vi.fn();
+    const mockFetch = vi.fn().mockImplementation((url) => {
+      if (typeof url === 'string' && url.includes('/api/preferences')) {
+        return Promise.resolve({ ok: true, json: async () => ({ data: { pref_location: null, pref_work_mode: null, pref_employment_type: [], pref_salary_min: null, pref_salary_max: null } }) });
+      }
+      return Promise.resolve({ ok: true, json: async () => ({ data: { results: [], total: 0, search_id: 'search-fallback' }, meta: { threshold: 5, max_score: 8, searched_at: new Date().toISOString() } }) });
+    });
     mockFetch
       .mockResolvedValueOnce({
         ok: true,
@@ -285,27 +308,35 @@ describe('ResultsPage - Edit Preferences Panel (S-02)', () => {
     });
   });
 
-  it('initializes panel preference state from URL params on first open', async () => {
+  it('initializes panel preference state from API profile prefs on first open', async () => {
     mockUseSearchParams.mockReturnValue({
-      get: (key: string) => {
-        const params: Record<string, string> = {
-          profile_id: 'test-profile-123',
-          location: 'Sofia',
-          work_mode: 'remote',
-          employment_type: 'full-time',
-          salary_min: '60000',
-        };
-        return params[key] || null;
-      },
+      get: (key: string) => (key === 'profile_id' ? 'test-profile-123' : null),
     } as ReturnType<typeof useSearchParams>);
 
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
-        data: { results: [], total: 0, search_id: 'search-1' },
-        meta: { threshold: 5, max_score: 8, searched_at: new Date().toISOString() },
-      }),
-    } as Response);
+    // Mock: initial search + preferences GET that returns stored prefs
+    (global.fetch as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
+      if (url.includes('/api/preferences')) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            data: {
+              pref_location: 'Sofia',
+              pref_work_mode: 'Remote',
+              pref_employment_type: ['Full-time'],
+              pref_salary_min: 60000,
+              pref_salary_max: null,
+            },
+          }),
+        });
+      }
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({
+          data: { results: [], total: 0, search_id: 'search-1' },
+          meta: { threshold: 5, max_score: 8, searched_at: new Date().toISOString() },
+        }),
+      });
+    });
 
     render(<ResultsPage />);
 
@@ -329,7 +360,20 @@ describe('ResultsPage - Edit Preferences Panel (S-02)', () => {
 describe('ResultsPage - Empty States (S-03)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    global.fetch = vi.fn();
+    global.fetch = vi.fn().mockImplementation((url, opts) => {
+      // Default: empty prefs for panel pre-fill GET
+      if (typeof url === 'string' && url.includes('/api/preferences')) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ data: { pref_location: null, pref_work_mode: null, pref_employment_type: [], pref_salary_min: null, pref_salary_max: null } }),
+        });
+      }
+      // Default: empty results
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({ data: { results: [], total: 0, search_id: 'search-default' }, meta: { threshold: 5, max_score: 8, searched_at: new Date().toISOString() } }),
+      });
+    });
     Object.defineProperty(window, 'localStorage', {
       value: {
         getItem: vi.fn(() => 'test-restore-token'),
@@ -480,7 +524,20 @@ describe('ResultsPage - Empty States (S-03)', () => {
 describe('ResultsPage - Sort Bar (S-02)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    global.fetch = vi.fn();
+    global.fetch = vi.fn().mockImplementation((url, opts) => {
+      // Default: empty prefs for panel pre-fill GET
+      if (typeof url === 'string' && url.includes('/api/preferences')) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ data: { pref_location: null, pref_work_mode: null, pref_employment_type: [], pref_salary_min: null, pref_salary_max: null } }),
+        });
+      }
+      // Default: empty results
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({ data: { results: [], total: 0, search_id: 'search-default' }, meta: { threshold: 5, max_score: 8, searched_at: new Date().toISOString() } }),
+      });
+    });
     Object.defineProperty(window, 'localStorage', {
       value: {
         getItem: vi.fn(() => 'test-restore-token'),
@@ -563,7 +620,12 @@ describe('ResultsPage - Sort Bar (S-02)', () => {
       },
     ];
 
-    const fetchMock = vi.fn();
+    const fetchMock = vi.fn().mockImplementation((url) => {
+      if (typeof url === 'string' && url.includes('/api/preferences')) {
+        return Promise.resolve({ ok: true, json: async () => ({ data: { pref_location: null, pref_work_mode: null, pref_employment_type: [], pref_salary_min: null, pref_salary_max: null } }) });
+      }
+      return Promise.resolve({ ok: true, json: async () => ({ data: { results: [], total: 0, search_id: 'search-fb' }, meta: { threshold: 5, max_score: 8, searched_at: new Date().toISOString() } }) });
+    });
     (global.fetch as unknown) = fetchMock;
 
     fetchMock.mockResolvedValueOnce({
@@ -642,7 +704,12 @@ describe('ResultsPage - Sort Bar (S-02)', () => {
       },
     ];
 
-    const fetchMock = vi.fn();
+    const fetchMock = vi.fn().mockImplementation((url) => {
+      if (typeof url === 'string' && url.includes('/api/preferences')) {
+        return Promise.resolve({ ok: true, json: async () => ({ data: { pref_location: null, pref_work_mode: null, pref_employment_type: [], pref_salary_min: null, pref_salary_max: null } }) });
+      }
+      return Promise.resolve({ ok: true, json: async () => ({ data: { results: [], total: 0, search_id: 'search-fb' }, meta: { threshold: 5, max_score: 8, searched_at: new Date().toISOString() } }) });
+    });
     (global.fetch as unknown) = fetchMock;
 
     fetchMock.mockResolvedValueOnce({
@@ -701,7 +768,20 @@ describe('ResultsPage - Sort Bar (S-02)', () => {
 describe('ResultsPage - Salary Range Filter (S-03)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    global.fetch = vi.fn();
+    global.fetch = vi.fn().mockImplementation((url, opts) => {
+      // Default: empty prefs for panel pre-fill GET
+      if (typeof url === 'string' && url.includes('/api/preferences')) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ data: { pref_location: null, pref_work_mode: null, pref_employment_type: [], pref_salary_min: null, pref_salary_max: null } }),
+        });
+      }
+      // Default: empty results
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({ data: { results: [], total: 0, search_id: 'search-default' }, meta: { threshold: 5, max_score: 8, searched_at: new Date().toISOString() } }),
+      });
+    });
     Object.defineProperty(window, 'localStorage', {
       value: {
         getItem: vi.fn(() => 'test-restore-token'),
@@ -748,7 +828,12 @@ describe('ResultsPage - Salary Range Filter (S-03)', () => {
       get: (key: string) => (key === 'profile_id' ? 'test-profile-123' : null),
     } as ReturnType<typeof useSearchParams>);
 
-    const fetchMock = vi.fn();
+    const fetchMock = vi.fn().mockImplementation((url) => {
+      if (typeof url === 'string' && url.includes('/api/preferences')) {
+        return Promise.resolve({ ok: true, json: async () => ({ data: { pref_location: null, pref_work_mode: null, pref_employment_type: [], pref_salary_min: null, pref_salary_max: null } }) });
+      }
+      return Promise.resolve({ ok: true, json: async () => ({ data: { results: [], total: 0, search_id: 'search-fb' }, meta: { threshold: 5, max_score: 8, searched_at: new Date().toISOString() } }) });
+    });
     (global.fetch as unknown) = fetchMock;
 
     fetchMock.mockResolvedValueOnce({
@@ -808,7 +893,12 @@ describe('ResultsPage - Salary Range Filter (S-03)', () => {
       get: (key: string) => (key === 'profile_id' ? 'test-profile-123' : null),
     } as ReturnType<typeof useSearchParams>);
 
-    const fetchMock = vi.fn();
+    const fetchMock = vi.fn().mockImplementation((url) => {
+      if (typeof url === 'string' && url.includes('/api/preferences')) {
+        return Promise.resolve({ ok: true, json: async () => ({ data: { pref_location: null, pref_work_mode: null, pref_employment_type: [], pref_salary_min: null, pref_salary_max: null } }) });
+      }
+      return Promise.resolve({ ok: true, json: async () => ({ data: { results: [], total: 0, search_id: 'search-fb' }, meta: { threshold: 5, max_score: 8, searched_at: new Date().toISOString() } }) });
+    });
     (global.fetch as unknown) = fetchMock;
 
     fetchMock.mockResolvedValueOnce({
@@ -868,7 +958,12 @@ describe('ResultsPage - Salary Range Filter (S-03)', () => {
       get: (key: string) => (key === 'profile_id' ? 'test-profile-123' : null),
     } as ReturnType<typeof useSearchParams>);
 
-    const fetchMock = vi.fn();
+    const fetchMock = vi.fn().mockImplementation((url) => {
+      if (typeof url === 'string' && url.includes('/api/preferences')) {
+        return Promise.resolve({ ok: true, json: async () => ({ data: { pref_location: null, pref_work_mode: null, pref_employment_type: [], pref_salary_min: null, pref_salary_max: null } }) });
+      }
+      return Promise.resolve({ ok: true, json: async () => ({ data: { results: [], total: 0, search_id: 'search-fb' }, meta: { threshold: 5, max_score: 8, searched_at: new Date().toISOString() } }) });
+    });
     (global.fetch as unknown) = fetchMock;
 
     fetchMock.mockResolvedValueOnce({
@@ -963,7 +1058,12 @@ describe('ResultsPage - Salary Range Filter (S-03)', () => {
       get: (key: string) => (key === 'profile_id' ? 'test-profile-123' : null),
     } as ReturnType<typeof useSearchParams>);
 
-    const fetchMock = vi.fn();
+    const fetchMock = vi.fn().mockImplementation((url) => {
+      if (typeof url === 'string' && url.includes('/api/preferences')) {
+        return Promise.resolve({ ok: true, json: async () => ({ data: { pref_location: null, pref_work_mode: null, pref_employment_type: [], pref_salary_min: null, pref_salary_max: null } }) });
+      }
+      return Promise.resolve({ ok: true, json: async () => ({ data: { results: [], total: 0, search_id: 'search-fb' }, meta: { threshold: 5, max_score: 8, searched_at: new Date().toISOString() } }) });
+    });
     (global.fetch as unknown) = fetchMock;
 
     fetchMock.mockResolvedValueOnce({
@@ -1023,7 +1123,12 @@ describe('ResultsPage - Salary Range Filter (S-03)', () => {
       get: (key: string) => (key === 'profile_id' ? 'test-profile-123' : null),
     } as ReturnType<typeof useSearchParams>);
 
-    const fetchMock = vi.fn();
+    const fetchMock = vi.fn().mockImplementation((url) => {
+      if (typeof url === 'string' && url.includes('/api/preferences')) {
+        return Promise.resolve({ ok: true, json: async () => ({ data: { pref_location: null, pref_work_mode: null, pref_employment_type: [], pref_salary_min: null, pref_salary_max: null } }) });
+      }
+      return Promise.resolve({ ok: true, json: async () => ({ data: { results: [], total: 0, search_id: 'search-fb' }, meta: { threshold: 5, max_score: 8, searched_at: new Date().toISOString() } }) });
+    });
     (global.fetch as unknown) = fetchMock;
 
     fetchMock.mockResolvedValueOnce({
@@ -1083,7 +1188,12 @@ describe('ResultsPage - Salary Range Filter (S-03)', () => {
       get: (key: string) => (key === 'profile_id' ? 'test-profile-123' : null),
     } as ReturnType<typeof useSearchParams>);
 
-    const fetchMock = vi.fn();
+    const fetchMock = vi.fn().mockImplementation((url) => {
+      if (typeof url === 'string' && url.includes('/api/preferences')) {
+        return Promise.resolve({ ok: true, json: async () => ({ data: { pref_location: null, pref_work_mode: null, pref_employment_type: [], pref_salary_min: null, pref_salary_max: null } }) });
+      }
+      return Promise.resolve({ ok: true, json: async () => ({ data: { results: [], total: 0, search_id: 'search-fb' }, meta: { threshold: 5, max_score: 8, searched_at: new Date().toISOString() } }) });
+    });
     (global.fetch as unknown) = fetchMock;
 
     fetchMock.mockResolvedValueOnce({
