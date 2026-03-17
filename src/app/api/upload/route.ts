@@ -4,6 +4,8 @@ import { extractText, UnsupportedFileTypeError, EmptyDocumentError } from '@/lib
 import { extractCvCriteria, LLMExtractionError } from '@/lib/llm/extract-cv';
 import { db } from '@/lib/db';
 import { users, profiles } from '@/lib/db/schema';
+import { eq } from 'drizzle-orm';
+import { embedText, buildProfileEmbeddingText } from '@/lib/embedding/embed';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const ALLOWED_MIME_TYPES = [
@@ -98,7 +100,26 @@ export async function POST(request: NextRequest) {
       industry: extracted.industry || '',
       languages: extracted.languages || [],
       keySkills: extracted.key_skills || [],
+      titleInferred: extracted.title_inferred,
     }).returning();
+
+    // AC-8: Embed profile for hybrid scoring
+    try {
+      const embeddingText = buildProfileEmbeddingText({
+        titleInferred: extracted.title_inferred,
+        sphereOfExpertise: extracted.sphere_of_expertise,
+        seniorityLevel: extracted.seniority_level,
+        industry: extracted.industry,
+        keySkills: extracted.key_skills,
+        yearsExperience: extracted.years_experience,
+        prefLocation: null, // Not available at upload time
+      });
+      const embedding = await embedText(embeddingText);
+      await db.update(profiles).set({ embedding }).where(eq(profiles.id, profile.id));
+    } catch (error) {
+      // Log error but don't block upload — embedding can be retried later
+      console.error('[upload] Failed to embed profile:', error);
+    }
 
     return NextResponse.json({
       data: {

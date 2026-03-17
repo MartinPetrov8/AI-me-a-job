@@ -2,6 +2,7 @@ import { db } from '../db';
 import { jobs } from '../db/schema';
 import { eq, inArray, isNull } from 'drizzle-orm';
 import { classifyJob } from './classify-job';
+import { embedText, buildJobEmbeddingText } from '../embedding/embed';
 
 export interface BatchResult {
   total: number;
@@ -28,6 +29,21 @@ export async function classifyJobsById(ids: string[]): Promise<BatchResult> {
     for (const job of jobBatch) {
       try {
         const classified = await classifyJob(job.title, job.descriptionRaw);
+
+        // AC-9: Embed job for hybrid scoring
+        let embedding: number[] | null = null;
+        try {
+          const embeddingText = buildJobEmbeddingText({
+            title: job.title,
+            company: job.company,
+            location: job.location,
+            descriptionRaw: job.descriptionRaw,
+          });
+          embedding = await embedText(embeddingText);
+        } catch (embedError) {
+          console.error(`[classify] Failed to embed job ${job.id}:`, embedError);
+        }
+
         await db.update(jobs).set({
           yearsExperience: classified.years_experience,
           educationLevel: classified.education_level,
@@ -37,6 +53,7 @@ export async function classifyJobsById(ids: string[]): Promise<BatchResult> {
           languages: classified.languages,
           industry: classified.industry,
           keySkills: classified.key_skills,
+          embedding: embedding,
           classifiedAt: new Date(),
         }).where(eq(jobs.id, job.id));
         result.classified++;
@@ -68,6 +85,20 @@ export async function classifyUnclassifiedJobs(batchSize: number = 500): Promise
     try {
       const classified = await classifyJob(job.title, job.descriptionRaw);
 
+      // AC-9: Embed job for hybrid scoring
+      let embedding: number[] | null = null;
+      try {
+        const embeddingText = buildJobEmbeddingText({
+          title: job.title,
+          company: job.company,
+          location: job.location,
+          descriptionRaw: job.descriptionRaw,
+        });
+        embedding = await embedText(embeddingText);
+      } catch (embedError) {
+        console.error(`[classify] Failed to embed job ${job.id}:`, embedError);
+      }
+
       await db
         .update(jobs)
         .set({
@@ -79,6 +110,7 @@ export async function classifyUnclassifiedJobs(batchSize: number = 500): Promise
           languages: classified.languages,
           industry: classified.industry,
           keySkills: classified.key_skills,
+          embedding: embedding,
           classifiedAt: new Date(),
         })
         .where(eq(jobs.id, job.id));

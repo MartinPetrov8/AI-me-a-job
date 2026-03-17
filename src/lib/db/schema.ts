@@ -30,6 +30,7 @@ export const profiles = pgTable('profiles', {
   prefSalaryMax: integer('pref_salary_max'),
   prefSalaryCurrency: text('pref_salary_currency'),
   lastSearchAt: timestamp('last_search_at', { withTimezone: true }),
+  titleInferred: text('title_inferred'),
   embedding: vector('embedding', { dimensions: 1536 }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
