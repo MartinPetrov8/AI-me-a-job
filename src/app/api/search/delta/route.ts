@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
       },
       meta: {
         threshold: 5,
-        max_score: 8,
+        max_score: result.max_score,  // 8 base + 1 location when prefLocation is set
         searched_at: searchedAt,
         is_delta: true,
         since,

@@ -46,6 +46,7 @@ describe('Search API', () => {
       ],
       total: 1,
       search_id: 'search-123',
+      max_score: 8, // no prefLocation set → 8 base criteria
     };
 
     (findMatches as any).mockResolvedValue(mockResults);
@@ -67,7 +68,7 @@ describe('Search API', () => {
     expect(data.data.total).toBe(1);
     expect(data.data.search_id).toBe('search-123');
     expect(data.meta.threshold).toBe(5);
-    expect(data.meta.max_score).toBe(9);
+    expect(data.meta.max_score).toBe(8); // 8 base criteria (no location preference)
     expect(data.meta.searched_at).toBeDefined();
   });
 

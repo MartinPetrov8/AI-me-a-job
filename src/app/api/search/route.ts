@@ -46,11 +46,24 @@ export async function POST(request: NextRequest) {
     const postedWithin = typeof postedWithinRaw === 'number' && VALID_POSTED_WITHIN.includes(postedWithinRaw)
       ? postedWithinRaw : undefined;
 
+    // Edit Filters panel overrides — location, work_mode, employment_type from request body
+    // These override the stored profile preferences for this search only (not persisted)
+    const locationOverride = typeof body.location === 'string' ? body.location.trim() : undefined;
+    const VALID_WORK_MODES = ['remote', 'hybrid', 'onsite', 'Remote', 'Hybrid', 'On-site', ''];
+    const workModeOverride = typeof body.work_mode === 'string' && VALID_WORK_MODES.includes(body.work_mode)
+      ? body.work_mode : undefined;
+    const VALID_EMPLOYMENT_TYPES = ['full-time', 'part-time', 'contract', 'Full-time', 'Part-time', 'Contract', ''];
+    const employmentTypeOverride = typeof body.employment_type === 'string' && VALID_EMPLOYMENT_TYPES.includes(body.employment_type)
+      ? body.employment_type : undefined;
+
     const result = await findMatches(profile_id, {
       sort,
       salaryMin,
       salaryMax,
       postedWithin,
+      locationOverride,
+      workModeOverride,
+      employmentTypeOverride,
     });
     const searchedAt = new Date().toISOString();
 
@@ -62,7 +75,7 @@ export async function POST(request: NextRequest) {
       },
       meta: {
         threshold: 5,
-        max_score: 9,  // location is now criterion #9 when prefLocation is set
+        max_score: result.max_score,  // 8 base + 1 location when prefLocation is set
         searched_at: searchedAt,
       },
     });

@@ -24,6 +24,7 @@ export interface MatchResult {
   results: MatchedJob[];
   total: number;
   search_id: string;
+  max_score: number; // 8 base criteria + 1 if location preference is set
 }
 
 interface JobRow {
@@ -194,6 +195,10 @@ export async function findMatches(
     salaryMin?: number;
     salaryMax?: number;
     postedWithin?: number;
+    // Runtime overrides — applied on top of stored profile preferences
+    locationOverride?: string;
+    workModeOverride?: string;
+    employmentTypeOverride?: string;
   }
 ): Promise<MatchResult> {
   // Fetch profile
@@ -202,6 +207,16 @@ export async function findMatches(
     throw new Error('Profile not found');
   }
   const profile = profileResult[0];
+
+  // Apply runtime overrides (from Edit Filters panel) on top of stored preferences
+  if (options?.locationOverride !== undefined) profile.prefLocation = options.locationOverride || null;
+  if (options?.workModeOverride !== undefined) profile.prefWorkMode = options.workModeOverride || null;
+  if (options?.employmentTypeOverride !== undefined) {
+    // prefEmploymentType is an array in DB; override replaces it entirely
+    profile.prefEmploymentType = options.employmentTypeOverride
+      ? [options.employmentTypeOverride]
+      : [];
+  }
 
   // Fetch jobs with optional delta filter
   let jobsQuery = db.select({
@@ -358,9 +373,13 @@ export async function findMatches(
   // Update profile.last_search_at
   await db.update(profiles).set({ lastSearchAt: new Date() }).where(eq(profiles.id, profileId));
 
+  // max_score: 8 base criteria + 1 location criterion when user has set a location preference
+  const maxScore = profile.prefLocation ? 9 : 8;
+
   return {
     results,
     total: results.length,
     search_id: searchId,
+    max_score: maxScore,
   };
 }

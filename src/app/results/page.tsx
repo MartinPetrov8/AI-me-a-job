@@ -81,14 +81,14 @@ function formatLabel(key: string) {
   return key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
 }
 
-function JobCard({ job, index }: { job: MatchedJob; index: number }) {
+function JobCard({ job, index, maxScore }: { job: MatchedJob; index: number; maxScore: number }) {
   const [expanded, setExpanded] = useState(false);
   const salary = formatSalary(job.salary_min, job.salary_max, job.salary_currency);
 
   return (
     <div className="isolate bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all duration-200 p-6">
       <div className="flex items-start gap-3">
-        <ScoreRing score={job.match_score} />
+        <ScoreRing score={job.match_score} max={maxScore} />
         <div className="flex items-start gap-3 flex-1 min-w-0">
           <CompanyAvatar company={job.company} />
           <div className="flex-1 min-w-0">
@@ -484,7 +484,7 @@ function ResultsContent() {
 
         {!loading && !error && sortedFilteredResults.length > 0 && (
           <div className="space-y-4">
-            {sortedFilteredResults.map((job, i) => <JobCard key={job.job_id} job={job} index={i} />)}
+            {sortedFilteredResults.map((job, i) => <JobCard key={job.job_id} job={job} index={i} maxScore={meta?.max_score ?? 8} />)}
           </div>
         )}
 

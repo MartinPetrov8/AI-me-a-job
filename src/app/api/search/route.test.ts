@@ -75,6 +75,7 @@ describe('POST /api/search with sort and filter params', () => {
     ],
     total: 3,
     search_id: 'search-123',
+    max_score: 8,
   };
 
   it('passes sort parameter to findMatches', async () => {
@@ -99,6 +100,9 @@ describe('POST /api/search with sort and filter params', () => {
       salaryMin: undefined,
       salaryMax: undefined,
       postedWithin: undefined,
+      locationOverride: undefined,
+      workModeOverride: undefined,
+      employmentTypeOverride: undefined,
     });
   });
 
@@ -124,6 +128,9 @@ describe('POST /api/search with sort and filter params', () => {
       salaryMin: 60000,
       salaryMax: undefined,
       postedWithin: undefined,
+      locationOverride: undefined,
+      workModeOverride: undefined,
+      employmentTypeOverride: undefined,
     });
   });
 
@@ -149,6 +156,9 @@ describe('POST /api/search with sort and filter params', () => {
       salaryMin: undefined,
       salaryMax: 50000,
       postedWithin: undefined,
+      locationOverride: undefined,
+      workModeOverride: undefined,
+      employmentTypeOverride: undefined,
     });
   });
 
@@ -174,6 +184,9 @@ describe('POST /api/search with sort and filter params', () => {
       salaryMin: undefined,
       salaryMax: undefined,
       postedWithin: 7,
+      locationOverride: undefined,
+      workModeOverride: undefined,
+      employmentTypeOverride: undefined,
     });
   });
 
@@ -199,6 +212,9 @@ describe('POST /api/search with sort and filter params', () => {
       salaryMin: 60000,
       salaryMax: undefined,
       postedWithin: 14,
+      locationOverride: undefined,
+      workModeOverride: undefined,
+      employmentTypeOverride: undefined,
     });
   });
 
@@ -225,5 +241,80 @@ describe('POST /api/search with sort and filter params', () => {
     expect(data.data.results.length).toBe(3);
     expect(data.data.results[0].job_id).toBe('job-1');
     expect(data.data.results[0].title).toBe('High Salary Job');
+  });
+
+  it('passes location override from body to findMatches', async () => {
+    vi.mocked(findMatches).mockResolvedValue(mockResults);
+
+    const request = new NextRequest(
+      'http://localhost:3000/api/search',
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', 'x-restore-token': 'test-token' },
+        body: JSON.stringify({ profile_id: 'profile-123', location: 'Berlin' }),
+      }
+    );
+
+    await POST(request);
+
+    expect(findMatches).toHaveBeenCalledWith('profile-123', expect.objectContaining({
+      locationOverride: 'Berlin',
+    }));
+  });
+
+  it('passes work_mode override from body to findMatches', async () => {
+    vi.mocked(findMatches).mockResolvedValue(mockResults);
+
+    const request = new NextRequest(
+      'http://localhost:3000/api/search',
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', 'x-restore-token': 'test-token' },
+        body: JSON.stringify({ profile_id: 'profile-123', work_mode: 'remote' }),
+      }
+    );
+
+    await POST(request);
+
+    expect(findMatches).toHaveBeenCalledWith('profile-123', expect.objectContaining({
+      workModeOverride: 'remote',
+    }));
+  });
+
+  it('passes employment_type override from body to findMatches', async () => {
+    vi.mocked(findMatches).mockResolvedValue(mockResults);
+
+    const request = new NextRequest(
+      'http://localhost:3000/api/search',
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', 'x-restore-token': 'test-token' },
+        body: JSON.stringify({ profile_id: 'profile-123', employment_type: 'full-time' }),
+      }
+    );
+
+    await POST(request);
+
+    expect(findMatches).toHaveBeenCalledWith('profile-123', expect.objectContaining({
+      employmentTypeOverride: 'full-time',
+    }));
+  });
+
+  it('returns dynamic max_score from engine result', async () => {
+    vi.mocked(findMatches).mockResolvedValue({ ...mockResults, max_score: 9 });
+
+    const request = new NextRequest(
+      'http://localhost:3000/api/search',
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', 'x-restore-token': 'test-token' },
+        body: JSON.stringify({ profile_id: 'profile-123' }),
+      }
+    );
+
+    const response = await POST(request);
+    const data = await response.json();
+
+    expect(data.meta.max_score).toBe(9);
   });
 });
