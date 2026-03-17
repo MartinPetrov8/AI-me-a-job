@@ -35,7 +35,37 @@ export async function POST(request: NextRequest) {
     const profile = profileResult[0];
     const since = profile.lastSearchAt ? profile.lastSearchAt.toISOString() : new Date(0).toISOString();
 
-    const result = await findMatches(profile_id, { delta: true });
+    // Forward filter overrides (same as main search route) so delta respects active panel state
+    const { searchParams } = new URL(request.url);
+    const VALID_SORT = ['score', 'posted_at', 'salary_max'] as const;
+    type SortOption = typeof VALID_SORT[number];
+    const sortParam = searchParams.get('sort');
+    const sort: SortOption | undefined = VALID_SORT.includes(sortParam as SortOption)
+      ? (sortParam as SortOption) : undefined;
+
+    const salaryMinRaw = body.salary_min ?? (searchParams.get('salary_min') ? Number(searchParams.get('salary_min')) : undefined);
+    const salaryMaxRaw = body.salary_max ?? (searchParams.get('salary_max') ? Number(searchParams.get('salary_max')) : undefined);
+    const postedWithinRaw = body.posted_within ?? (searchParams.get('posted_within') ? Number(searchParams.get('posted_within')) : undefined);
+    const salaryMin = typeof salaryMinRaw === 'number' && !isNaN(salaryMinRaw) && salaryMinRaw > 0 ? salaryMinRaw : undefined;
+    const salaryMax = typeof salaryMaxRaw === 'number' && !isNaN(salaryMaxRaw) && salaryMaxRaw > 0 ? salaryMaxRaw : undefined;
+    const VALID_POSTED_WITHIN = [7, 14, 30];
+    const postedWithin = typeof postedWithinRaw === 'number' && VALID_POSTED_WITHIN.includes(postedWithinRaw) ? postedWithinRaw : undefined;
+    const locationOverride = typeof body.location === 'string' ? body.location.trim() : undefined;
+    const VALID_WORK_MODES = ['remote', 'hybrid', 'onsite', 'Remote', 'Hybrid', 'On-site', ''];
+    const workModeOverride = typeof body.work_mode === 'string' && VALID_WORK_MODES.includes(body.work_mode) ? body.work_mode : undefined;
+    const VALID_EMPLOYMENT_TYPES = ['full-time', 'part-time', 'contract', 'Full-time', 'Part-time', 'Contract', ''];
+    const employmentTypeOverride = typeof body.employment_type === 'string' && VALID_EMPLOYMENT_TYPES.includes(body.employment_type) ? body.employment_type : undefined;
+
+    const result = await findMatches(profile_id, {
+      delta: true,
+      sort,
+      salaryMin,
+      salaryMax,
+      postedWithin,
+      locationOverride,
+      workModeOverride,
+      employmentTypeOverride,
+    });
     const searchedAt = new Date().toISOString();
 
     return NextResponse.json({

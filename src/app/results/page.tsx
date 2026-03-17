@@ -251,10 +251,20 @@ function ResultsContent() {
       }
       const endpoint = delta ? '/api/search/delta' : '/api/search';
       const sortParam = sortBy !== 'score' ? `?sort=${sortBy}` : '';
+
+      // Forward current panel filter state so delta search respects active filters
+      const body: Record<string, unknown> = { profile_id: profileId };
+      if (panelLocation) body.location = panelLocation;
+      if (panelWorkMode) body.work_mode = panelWorkMode;
+      if (panelEmploymentType) body.employment_type = panelEmploymentType;
+      if (panelSalaryMin !== null) body.salary_min = panelSalaryMin;
+      if (panelSalaryMax !== null) body.salary_max = panelSalaryMax;
+      if (panelPostedWithin !== null) body.posted_within = panelPostedWithin;
+
       const response = await fetch(`${endpoint}${sortParam}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Restore-Token': restoreToken },
-        body: JSON.stringify({ profile_id: profileId }),
+        body: JSON.stringify(body),
       });
       if (!response.ok) throw new Error('Search failed');
       const data: SearchResponse = await response.json();
@@ -357,13 +367,15 @@ function ResultsContent() {
           ))}
         </div>
 
-        {userId && profileId && (
+        {profileId && (userId || token) && (
           <div className="flex gap-4 text-xs text-gray-400 mb-5">
-            <Link href={`/profile?user_id=${userId}&profile_id=${profileId}&token=${token}`}
-              className="hover:text-indigo-600 transition-colors">
-              ✏️ Edit profile
-            </Link>
-            <Link href={`/preferences?user_id=${userId}&profile_id=${profileId}&token=${token}`}
+            {userId && (
+              <Link href={`/profile?user_id=${userId}&profile_id=${profileId}&token=${token}`}
+                className="hover:text-indigo-600 transition-colors">
+                ✏️ Edit profile
+              </Link>
+            )}
+            <Link href={`/preferences?user_id=${userId ?? ''}&profile_id=${profileId}&token=${token ?? ''}`}
               className="hover:text-indigo-600 transition-colors">
               🎛 Edit preferences
             </Link>
