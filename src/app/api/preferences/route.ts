@@ -4,7 +4,7 @@ import { profiles } from '@/lib/db/schema';
 import { preferencesInputSchema } from '@/lib/validation';
 import { eq } from 'drizzle-orm';
 import { ZodError } from 'zod';
-import { validateRestoreToken } from '@/lib/auth/validate-restore-token';
+import { authenticateRequest } from '@/lib/auth/middleware';
 
 export const runtime = 'nodejs';
 
@@ -17,8 +17,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'profile_id is required' }, { status: 400 });
     }
 
-    const token = request.headers.get('x-restore-token');
-    await validateRestoreToken(profileId, token);
+    await authenticateRequest(request, profileId);
 
     const [profile] = await db
       .select({
@@ -69,9 +68,7 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    // TODO: Replace with NextAuth session-based auth for production
-    const token = request.headers.get('x-restore-token');
-    await validateRestoreToken(profileId, token);
+    await authenticateRequest(request, profileId);
 
     // Validate preferences
     const validated = preferencesInputSchema.parse(preferences);

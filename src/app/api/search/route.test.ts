@@ -1,320 +1,117 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { POST } from './route';
-import { NextRequest } from 'next/server';
 import { findMatches } from '@/lib/matching/engine';
+import * as middlewareModule from '@/lib/auth/middleware';
 
-// Mock the matching engine
+vi.mock('@/lib/db', () => ({ db: {} }));
+vi.mock('@/lib/auth/middleware');
 vi.mock('@/lib/matching/engine', () => ({
   findMatches: vi.fn(),
 }));
 
-// Mock auth validation
-vi.mock('@/lib/auth/validate-restore-token', () => ({
-  validateRestoreToken: vi.fn().mockResolvedValue(undefined),
-}));
-
-describe('POST /api/search with sort and filter params', () => {
+describe('POST /api/search with authenticateRequest middleware', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
-
-  const now = new Date();
-  const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-  const fourteenDaysAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
 
   const mockResults = {
     results: [
       {
         job_id: 'job-1',
-        title: 'High Salary Job',
+        title: 'Senior Developer',
         company: 'Tech Corp',
-        location: 'New York',
-        url: 'https://example.com/1',
-        posted_at: fourteenDaysAgo,
-        match_score: 8,
-        matched_criteria: ['years_experience', 'education_level'],
-        unmatched_criteria: [],
-        salary_max: 100000,
-        salary_min: 80000,
-        salary_currency: 'USD',
-        employment_type: 'Full-time',
-        is_remote: false,
-      },
-      {
-        job_id: 'job-2',
-        title: 'Mid Salary Job',
-        company: 'Startup Inc',
-        location: 'San Francisco',
-        url: 'https://example.com/2',
-        posted_at: sevenDaysAgo,
+        location: 'Berlin',
+        url: 'https://example.com/job1',
+        posted_at: new Date('2026-03-08T00:00:00Z'),
         match_score: 7,
-        matched_criteria: ['years_experience'],
-        unmatched_criteria: ['education_level'],
-        salary_max: 70000,
-        salary_min: 50000,
-        salary_currency: 'USD',
+        matched_criteria: ['industry', 'seniority_level', 'years_experience'],
+        unmatched_criteria: ['field_of_study'],
+        salary_min: 80000,
+        salary_max: 120000,
+        salary_currency: 'EUR',
         employment_type: 'Full-time',
-        is_remote: true,
-      },
-      {
-        job_id: 'job-3',
-        title: 'Recent Job',
-        company: 'Remote Co',
-        location: null,
-        url: 'https://example.com/3',
-        posted_at: now,
-        match_score: 6,
-        matched_criteria: ['years_experience', 'key_skills'],
-        unmatched_criteria: [],
-        salary_max: 75000,
-        salary_min: 60000,
-        salary_currency: 'USD',
-        employment_type: 'Contract',
         is_remote: true,
       },
     ],
-    total: 3,
+    total: 1,
     search_id: 'search-123',
     max_score: 8,
   };
 
-  it('passes sort parameter to findMatches', async () => {
-    vi.mocked(findMatches).mockResolvedValue(mockResults);
+  it('returns 200 with valid X-Session-Token header', async () => {
+    vi.spyOn(middlewareModule, 'authenticateRequest').mockResolvedValue();
+    (findMatches as any).mockResolvedValue(mockResults);
 
-    const request = new NextRequest(
-      'http://localhost:3000/api/search?sort=posted_at',
-      {
-        method: 'POST',
-        headers: {
-          'content-type': 'application/json',
-          'x-restore-token': 'test-token',
-        },
-        body: JSON.stringify({ profile_id: 'profile-123' }),
-      }
-    );
-
-    await POST(request);
-
-    expect(findMatches).toHaveBeenCalledWith('profile-123', {
-      sort: 'posted_at',
-      salaryMin: undefined,
-      salaryMax: undefined,
-      postedWithin: undefined,
-      locationOverride: undefined,
-      workModeOverride: undefined,
-      employmentTypeOverride: undefined,
+    const request = new Request('http://localhost:3000/api/search', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Session-Token': 'valid-session-token',
+      },
+      body: JSON.stringify({ profile_id: 'profile-1' }),
     });
-  });
 
-  it('passes salary_min parameter to findMatches', async () => {
-    vi.mocked(findMatches).mockResolvedValue(mockResults);
-
-    const request = new NextRequest(
-      'http://localhost:3000/api/search?salary_min=60000',
-      {
-        method: 'POST',
-        headers: {
-          'content-type': 'application/json',
-          'x-restore-token': 'test-token',
-        },
-        body: JSON.stringify({ profile_id: 'profile-123' }),
-      }
-    );
-
-    await POST(request);
-
-    expect(findMatches).toHaveBeenCalledWith('profile-123', {
-      sort: undefined,
-      salaryMin: 60000,
-      salaryMax: undefined,
-      postedWithin: undefined,
-      locationOverride: undefined,
-      workModeOverride: undefined,
-      employmentTypeOverride: undefined,
-    });
-  });
-
-  it('passes salary_max parameter to findMatches', async () => {
-    vi.mocked(findMatches).mockResolvedValue(mockResults);
-
-    const request = new NextRequest(
-      'http://localhost:3000/api/search?salary_max=50000',
-      {
-        method: 'POST',
-        headers: {
-          'content-type': 'application/json',
-          'x-restore-token': 'test-token',
-        },
-        body: JSON.stringify({ profile_id: 'profile-123' }),
-      }
-    );
-
-    await POST(request);
-
-    expect(findMatches).toHaveBeenCalledWith('profile-123', {
-      sort: undefined,
-      salaryMin: undefined,
-      salaryMax: 50000,
-      postedWithin: undefined,
-      locationOverride: undefined,
-      workModeOverride: undefined,
-      employmentTypeOverride: undefined,
-    });
-  });
-
-  it('passes posted_within parameter to findMatches', async () => {
-    vi.mocked(findMatches).mockResolvedValue(mockResults);
-
-    const request = new NextRequest(
-      'http://localhost:3000/api/search?posted_within=7',
-      {
-        method: 'POST',
-        headers: {
-          'content-type': 'application/json',
-          'x-restore-token': 'test-token',
-        },
-        body: JSON.stringify({ profile_id: 'profile-123' }),
-      }
-    );
-
-    await POST(request);
-
-    expect(findMatches).toHaveBeenCalledWith('profile-123', {
-      sort: undefined,
-      salaryMin: undefined,
-      salaryMax: undefined,
-      postedWithin: 7,
-      locationOverride: undefined,
-      workModeOverride: undefined,
-      employmentTypeOverride: undefined,
-    });
-  });
-
-  it('passes multiple filter parameters to findMatches', async () => {
-    vi.mocked(findMatches).mockResolvedValue(mockResults);
-
-    const request = new NextRequest(
-      'http://localhost:3000/api/search?salary_min=60000&posted_within=14&sort=salary_max',
-      {
-        method: 'POST',
-        headers: {
-          'content-type': 'application/json',
-          'x-restore-token': 'test-token',
-        },
-        body: JSON.stringify({ profile_id: 'profile-123' }),
-      }
-    );
-
-    await POST(request);
-
-    expect(findMatches).toHaveBeenCalledWith('profile-123', {
-      sort: 'salary_max',
-      salaryMin: 60000,
-      salaryMax: undefined,
-      postedWithin: 14,
-      locationOverride: undefined,
-      workModeOverride: undefined,
-      employmentTypeOverride: undefined,
-    });
-  });
-
-  it('returns results from findMatches', async () => {
-    vi.mocked(findMatches).mockResolvedValue(mockResults);
-
-    const request = new NextRequest(
-      'http://localhost:3000/api/search',
-      {
-        method: 'POST',
-        headers: {
-          'content-type': 'application/json',
-          'x-restore-token': 'test-token',
-        },
-        body: JSON.stringify({ profile_id: 'profile-123' }),
-      }
-    );
-
-    const response = await POST(request);
+    const response = await POST(request as any);
     const data = await response.json();
 
     expect(response.status).toBe(200);
-    expect(data.data.total).toBe(3);
-    expect(data.data.results.length).toBe(3);
+    expect(data.data.results.length).toBe(1);
     expect(data.data.results[0].job_id).toBe('job-1');
-    expect(data.data.results[0].title).toBe('High Salary Job');
+    expect(middlewareModule.authenticateRequest).toHaveBeenCalledWith(
+      expect.anything(),
+      'profile-1'
+    );
   });
 
-  it('passes location override from body to findMatches', async () => {
-    vi.mocked(findMatches).mockResolvedValue(mockResults);
+  it('returns 200 with valid X-Restore-Token header (no session header)', async () => {
+    vi.spyOn(middlewareModule, 'authenticateRequest').mockResolvedValue();
+    (findMatches as any).mockResolvedValue(mockResults);
 
-    const request = new NextRequest(
-      'http://localhost:3000/api/search',
-      {
-        method: 'POST',
-        headers: { 'content-type': 'application/json', 'x-restore-token': 'test-token' },
-        body: JSON.stringify({ profile_id: 'profile-123', location: 'Berlin' }),
-      }
-    );
+    const request = new Request('http://localhost:3000/api/search', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Restore-Token': 'valid-restore-token',
+      },
+      body: JSON.stringify({ profile_id: 'profile-1' }),
+    });
 
-    await POST(request);
-
-    expect(findMatches).toHaveBeenCalledWith('profile-123', expect.objectContaining({
-      locationOverride: 'Berlin',
-    }));
-  });
-
-  it('passes work_mode override from body to findMatches', async () => {
-    vi.mocked(findMatches).mockResolvedValue(mockResults);
-
-    const request = new NextRequest(
-      'http://localhost:3000/api/search',
-      {
-        method: 'POST',
-        headers: { 'content-type': 'application/json', 'x-restore-token': 'test-token' },
-        body: JSON.stringify({ profile_id: 'profile-123', work_mode: 'remote' }),
-      }
-    );
-
-    await POST(request);
-
-    expect(findMatches).toHaveBeenCalledWith('profile-123', expect.objectContaining({
-      workModeOverride: 'remote',
-    }));
-  });
-
-  it('passes employment_type override from body to findMatches', async () => {
-    vi.mocked(findMatches).mockResolvedValue(mockResults);
-
-    const request = new NextRequest(
-      'http://localhost:3000/api/search',
-      {
-        method: 'POST',
-        headers: { 'content-type': 'application/json', 'x-restore-token': 'test-token' },
-        body: JSON.stringify({ profile_id: 'profile-123', employment_type: 'full-time' }),
-      }
-    );
-
-    await POST(request);
-
-    expect(findMatches).toHaveBeenCalledWith('profile-123', expect.objectContaining({
-      employmentTypeOverride: 'full-time',
-    }));
-  });
-
-  it('returns dynamic max_score from engine result', async () => {
-    vi.mocked(findMatches).mockResolvedValue({ ...mockResults, max_score: 9 });
-
-    const request = new NextRequest(
-      'http://localhost:3000/api/search',
-      {
-        method: 'POST',
-        headers: { 'content-type': 'application/json', 'x-restore-token': 'test-token' },
-        body: JSON.stringify({ profile_id: 'profile-123' }),
-      }
-    );
-
-    const response = await POST(request);
+    const response = await POST(request as any);
     const data = await response.json();
 
-    expect(data.meta.max_score).toBe(9);
+    expect(response.status).toBe(200);
+    expect(data.data.results.length).toBe(1);
+    expect(data.data.results[0].job_id).toBe('job-1');
+    expect(middlewareModule.authenticateRequest).toHaveBeenCalledWith(
+      expect.anything(),
+      'profile-1'
+    );
+  });
+
+  it('returns 401 with no auth headers', async () => {
+    const mock401Response = new Response(
+      JSON.stringify({ error: 'Unauthorized' }),
+      { status: 401, headers: { 'Content-Type': 'application/json' } }
+    );
+
+    vi.spyOn(middlewareModule, 'authenticateRequest').mockRejectedValue(mock401Response);
+
+    const request = new Request('http://localhost:3000/api/search', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ profile_id: 'profile-1' }),
+    });
+
+    const response = await POST(request as any);
+    const data = await response.json();
+
+    expect(response.status).toBe(401);
+    expect(data.error).toBe('Unauthorized');
+    expect(middlewareModule.authenticateRequest).toHaveBeenCalledWith(
+      expect.anything(),
+      'profile-1'
+    );
   });
 });

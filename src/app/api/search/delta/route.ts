@@ -3,7 +3,7 @@ import { findMatches } from '@/lib/matching/engine';
 import { db } from '@/lib/db/index';
 import { profiles } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
-import { validateRestoreToken } from '@/lib/auth/validate-restore-token';
+import { authenticateRequest } from '@/lib/auth/middleware';
 
 export const runtime = 'nodejs';
 
@@ -19,9 +19,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // TODO: Add proper session auth before scaling
-    const token = request.headers.get('x-restore-token');
-    await validateRestoreToken(profile_id, token);
+    await authenticateRequest(request, profile_id);
 
     // Get profile to check last_search_at
     const profileResult = await db.select().from(profiles).where(eq(profiles.id, profile_id)).limit(1);

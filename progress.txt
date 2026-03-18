@@ -79,3 +79,4 @@ Started: 2026-03-08T20:41:42Z
 [S-01][done] Added sessions table schema with id, profileId, sessionToken, createdAt, expiresAt columns; generated migration 0005_add_sessions_table.sql; sessionToken has unique constraint; profileId has foreign key to profiles with CASCADE delete | tests:PASS
 [S-02][done] Implemented session creation and validation utilities (generateSessionToken, createSession, validateSession) with 7-day expiry, 401 Response on invalid/expired/missing token, and comprehensive test coverage | tests:PASS
 [S-03][done] Add session creation to /api/restore - createSession() called after validation, response includes both restore_token (deprecated) and session_token, session row created with 7-day expiry | tests:PASS
+[S-04][done] Session-first auth middleware (authenticateRequest) validates X-Session-Token before falling back to X-Restore-Token, applied to /api/search, /api/preferences, /api/search/delta with comprehensive test coverage | tests:PASS

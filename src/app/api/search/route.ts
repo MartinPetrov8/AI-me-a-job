@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { findMatches } from '@/lib/matching/engine';
-import { validateRestoreToken } from '@/lib/auth/validate-restore-token';
+import { authenticateRequest } from '@/lib/auth/middleware';
 
 export const runtime = 'nodejs';
 
@@ -16,8 +16,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const token = request.headers.get('x-restore-token');
-    await validateRestoreToken(profile_id, token);
+    await authenticateRequest(request, profile_id);
 
     // Parse sort + filter params from BOTH query string (sort) and request body (filters)
     // Sort comes via query param (?sort=posted_at) since UI appends it to the URL
