@@ -75,3 +75,5 @@ Started: 2026-03-08T20:41:42Z
 - Fix: Use `new Function('return import("playwright")')()` to completely hide the import from static analysis
 - Commit: 19093dd310f718b8d367d4d6096808ea05933aa0
 ---
+
+[S-01][done] Added sessions table schema with id, profileId, sessionToken, createdAt, expiresAt columns; generated migration 0005_add_sessions_table.sql; sessionToken has unique constraint; profileId has foreign key to profiles with CASCADE delete | tests:PASS

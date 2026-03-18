@@ -93,3 +93,11 @@ export const searchResults = pgTable('search_results', {
 }, (table) => ({
   uniqueSearchJob: unique().on(table.searchId, table.jobId),
 }));
+
+export const sessions = pgTable('sessions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  profileId: uuid('profile_id').notNull().references(() => profiles.id, { onDelete: 'cascade' }),
+  sessionToken: text('session_token').notNull().unique(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+});
