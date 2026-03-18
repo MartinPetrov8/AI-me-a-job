@@ -7,6 +7,9 @@ vi.mock('@/lib/db', () => ({
     from: vi.fn().mockReturnThis(),
     where: vi.fn().mockReturnThis(),
     limit: vi.fn().mockReturnThis(),
+    insert: vi.fn().mockReturnValue({
+      values: vi.fn().mockResolvedValue(undefined),
+    }),
     // Token invalidation (ISSUE-2 fix)
     update: vi.fn().mockReturnValue({
       set: vi.fn().mockReturnValue({
@@ -19,6 +22,7 @@ vi.mock('@/lib/db', () => ({
 vi.mock('@/lib/db/schema', () => ({
   users: { id: 'id', email: 'email', restoreToken: 'restore_token' },
   profiles: { id: 'id', userId: 'user_id' },
+  sessions: { profileId: 'profile_id', sessionToken: 'session_token', expiresAt: 'expires_at' },
 }));
 
 vi.mock('drizzle-orm', () => ({
@@ -59,7 +63,7 @@ describe('POST /api/restore', () => {
       from: vi.fn().mockReturnValue({
         where: vi.fn().mockReturnValue({
           limit: vi.fn()
-            .mockResolvedValueOnce([{ id: 'user-uuid-1' }]) // user found
+            .mockResolvedValueOnce([{ id: 'user-uuid-1', restoreToken: 'abc123def456' }]) // user found
             .mockResolvedValueOnce([MOCK_PROFILE]) // profile found
         })
       })
@@ -73,6 +77,10 @@ describe('POST /api/restore', () => {
 
     expect(res.status).toBe(200);
     expect(data.data.profile_id).toBe('profile-uuid-1');
+    expect(data.data.restore_token).toBe('abc123def456');
+    expect(data.data.session_token).toBeDefined();
+    expect(typeof data.data.session_token).toBe('string');
+    expect(data.data.session_token.length).toBe(32);
     expect(data.data.profile.yearsExperience).toBe('5-9');
   });
 

@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { db } from '@/lib/db';
 import { users, profiles } from '@/lib/db/schema';
 import { eq, and } from 'drizzle-orm';
+import { createSession } from '@/lib/auth/session';
 
 export const runtime = 'nodejs';
 
@@ -58,10 +59,14 @@ export async function POST(request: NextRequest) {
 
     const p = profile[0];
 
+    // Create a new session for the profile
+    const sessionToken = await createSession(p.id);
+
     return NextResponse.json({
       data: {
         profile_id: p.id,
-        restore_token: user[0].restoreToken,
+        restore_token: user[0].restoreToken, // Deprecated: use session_token instead
+        session_token: sessionToken,
         profile: {
           id: p.id,
           userId: p.userId,
@@ -78,7 +83,6 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('[restore] error:', error);
     return NextResponse.json(
       { errors: [{ code: 'INTERNAL_ERROR', message: 'Internal server error' }] },
       { status: 500 }
