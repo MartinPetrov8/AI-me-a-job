@@ -15,7 +15,8 @@
     "typecheck": "tsc --noEmit",
     "seed": "tsx scripts/seed.ts",
     "db:generate": "drizzle-kit generate",
-    "db:push": "drizzle-kit push"
+    "db:push": "drizzle-kit push",
+    "backfill:hashes": "tsx scripts/backfill-hashes.ts"
   },
   "repository": {
     "type": "git",

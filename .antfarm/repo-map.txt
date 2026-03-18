@@ -1,4 +1,4 @@
-# Repo Map — generated 2026-03-18T18:13:04Z
+# Repo Map — generated 2026-03-18T18:31:58Z
 # Architecture snapshot: class/function signatures, routes, exports
 # Use this to find the right file/function without reading full source.
 
@@ -95,6 +95,8 @@ node_modules/flatted/golang/pkg/flatted/flatted.go:
   postcss.config.js
   progress.txt
   scripts
+  scripts/backfill-hashes.test.ts
+  scripts/backfill-hashes.ts
   scripts/classify-jobs.ts
   scripts/ingest-jobs.ts
   scripts/seed.ts
