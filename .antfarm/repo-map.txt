@@ -1,4 +1,4 @@
-# Repo Map — generated 2026-03-18T18:31:58Z
+# Repo Map — generated 2026-03-18T18:56:42Z
 # Architecture snapshot: class/function signatures, routes, exports
 # Use this to find the right file/function without reading full source.
 

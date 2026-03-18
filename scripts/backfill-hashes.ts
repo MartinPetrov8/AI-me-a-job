@@ -50,6 +50,8 @@ async function backfillHashes() {
     }
   }
 
+  process.stdout.write(`Updated ${updatedCount} rows\n`);
+
   await sql.end();
 }
 
