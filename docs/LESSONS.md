@@ -4,14 +4,16 @@
 
 **Date:** 2026-03-18
 **Severity:** HIGH — burned through entire Adzuna daily API quota (251/250 calls)
-**Root cause:** `aimeajob-classify-backlog` cron was set to run every 6 minutes (`everyMs: 360000`). Each call hits the Vercel `/api/pipeline?classify=true` endpoint, which internally fetches job details from the Adzuna API. That's 240 calls/day — exceeding the 250/day free tier limit before the daily ingestion cron even fires.
+**Root cause:** Two compounding issues:
+1. `aimeajob-adzuna-daily` ingestion cron calls `fetchAllAdzunaJobs()` which iterates 7 countries × 14 queries = **98 API calls per run**. Running once daily = 98/250 quota. But any manual testing, debugging, or accidental double-trigger pushes this over 250.
+2. `aimeajob-classify-backlog` cron ran every 6 min, calling the pipeline endpoint. While classification itself uses OpenRouter LLM (not Adzuna), the cron had no guard against accidentally triggering full ingestion, and burned OpenRouter tokens needlessly (240 LLM calls/day).
 
 **Why this happened:**
-1. The cron was created during Sprint D to process the unclassified backlog (551/1539 jobs)
-2. The 6-minute interval was chosen to "chip away" at the backlog gradually
-3. No one checked whether the classify endpoint calls external APIs or just uses local data
-4. There's no rate limiting, quota tracking, or circuit breaker in the pipeline endpoint
-5. The cron runs 24/7 even after the backlog is cleared — it doesn't check if there's work to do
+1. The daily ingestion makes 98 Adzuna calls — 39% of daily quota in one shot. No budget tracking.
+2. The classify cron ran every 6 min with no pre-flight check (are there unclassified jobs?)
+3. No rate limit headers are read or respected (`X-RateLimit-Remaining`)
+4. No circuit breaker — if API returns 429, cron retries blindly next cycle
+5. The crons run 24/7 even when there's no work to do
 
 **What should have existed:**
 - **Quota-aware scheduling:** Check remaining API quota before making calls. If quota < 20%, skip.
