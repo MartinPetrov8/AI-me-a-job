@@ -19,10 +19,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // IDOR Prevention: Validate restore token matches the profile
+    // This ensures the requester owns the profile_id they're querying
     const token = request.headers.get('x-restore-token');
     await validateRestoreToken(profile_id, token);
 
-    // Extract userId from profile for IDOR defence-in-depth
+    // Extract userId from profile for IDOR defense-in-depth
+    // Even after token validation, we pass userId to the matching engine
+    // so future enhancements can enforce user-level access control
     const profileResult = await db.select({ userId: profiles.userId })
       .from(profiles)
       .where(eq(profiles.id, profile_id))

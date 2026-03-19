@@ -1,4 +1,4 @@
-# Repo Map — generated 2026-03-19T11:58:08Z
+# Repo Map — generated 2026-03-19T12:14:20Z
 # Architecture snapshot: class/function signatures, routes, exports
 # Use this to find the right file/function without reading full source.
 
@@ -74,6 +74,7 @@ node_modules/flatted/golang/pkg/flatted/flatted.go:
   docs/RANKING-ALGORITHM.md
   docs/RISKS.md
   docs/SCOPE.md
+  docs/SECURITY.md
   docs/SPEC-DUAL-ENGINE.md
   docs/SPEC-M1-sql-scoring-engine.md
   docs/SPRINT-LOG.md

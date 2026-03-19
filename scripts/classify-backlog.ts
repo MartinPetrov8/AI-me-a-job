@@ -1,3 +1,36 @@
+/**
+ * Classify Backlog Script
+ * 
+ * One-time script to classify existing unclassified jobs in the database.
+ * 
+ * Usage:
+ *   npx tsx scripts/classify-backlog.ts
+ * 
+ * What it does:
+ * - Counts total jobs and unclassified jobs
+ * - Classifies up to 500 unclassified jobs using Claude Haiku 4.5
+ * - Processes jobs in batches of 20 (CLASSIFY_CHUNK_SIZE)
+ * - Prints summary with success/failure counts
+ * - Exits with code 0 on success, 1 if any jobs failed
+ * 
+ * Idempotency:
+ * - Safe to re-run multiple times
+ * - Already-classified jobs are skipped (checks classified_at timestamp)
+ * - If interrupted, re-running will pick up where it left off
+ * 
+ * Requirements:
+ * - ANTHROPIC_API_KEY must be set in .env
+ * - Database connection must be configured (DATABASE_URL in .env)
+ * 
+ * Classification fields:
+ * - seniority_level (Junior, Mid, Senior, Staff, Principal, C-level, Other)
+ * - work_mode (Remote, Hybrid, On-site)
+ * - employment_type (Full-time, Part-time, Contract, Internship, Other)
+ * - requires_degree (boolean)
+ * - visa_sponsorship (boolean)
+ * - skills (array of technical skills)
+ */
+
 import { db } from '../src/lib/db';
 import { jobs } from '../src/lib/db/schema';
 import { isNull, count } from 'drizzle-orm';

@@ -19,11 +19,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // IDOR Prevention: Validate restore token matches the profile
+    // This ensures the requester owns the profile_id they're querying
     // TODO: Add proper session auth before scaling
     const token = request.headers.get('x-restore-token');
     await validateRestoreToken(profile_id, token);
 
-    // Get profile to check last_search_at AND extract userId for IDOR defence-in-depth
+    // Get profile to check last_search_at AND extract userId for IDOR defense-in-depth
+    // Even after token validation, we pass userId to the matching engine
+    // so future enhancements can enforce user-level access control
     const profileResult = await db.select().from(profiles).where(eq(profiles.id, profile_id)).limit(1);
     if (profileResult.length === 0) {
       return NextResponse.json(
