@@ -75,3 +75,16 @@ Started: 2026-03-08T20:41:42Z
 - Fix: Use `new Function('return import("playwright")')()` to completely hide the import from static analysis
 - Commit: 19093dd310f718b8d367d4d6096808ea05933aa0
 ---
+
+[S-01][done] Verified LLM model uses claude-haiku-4-5 for Anthropic SDK path and anthropic/claude-haiku-4-5 for OpenRouter path in classify-job.ts — both model identifiers confirmed correct, all 5 classification tests pass | tests:PASS
+
+[S-01][done] Verified classification pipeline integration and added comprehensive tests for classifyJobsById — confirmed ingestAllSources calls classifyJobsById after upsertJobs, CLASSIFY_CHUNK_SIZE=20, model is claude-haiku-4-5. Added 4 new tests covering batching behavior (25 jobs in chunks of 20), idempotency (classified jobs skipped), error handling (partial failures), and empty input edge case | tests:PASS
+
+[S-01][done] Fixed classifyJobsById idempotency check — added check for job.classifiedAt before calling LLM, updated test to assert 0 LLM calls for already-classified jobs, removed console.error debug debris | tests:PASS
+
+[S-02][done] Added userId parameter to findMatches() calls in /api/search — queries profiles table for userId after token validation, passes userId to findMatches() for IDOR defence-in-depth, added 6 comprehensive tests | tests:PASS
+[S-03][done] Added userId parameter to findMatches() calls in /api/search/delta — queries profiles table to extract userId after restore_token validation, passes userId to findMatches() for IDOR defence-in-depth, added 6 comprehensive tests | tests:PASS
+[S-04][done] Added integration tests for IDOR fix across both search endpoints — created tests/api/search-idor.test.ts with 9 comprehensive tests covering valid/invalid tokens, profile ownership checks, and 404 scenarios for both /api/search and /api/search/delta routes | tests:PASS
+
+[S-05][done] Created classify-backlog.ts script that counts unclassified jobs, calls classifyUnclassifiedJobs(500), logs summary with total/classified/failed counts, exits with code 0 on success or 1 on failure, is idempotent (safe to re-run) | tests:PASS
+[S-06][done] Added security documentation (docs/SECURITY.md) covering IDOR fix, classification pipeline, and API key management. Added inline comments in /api/search and /api/search/delta explaining userId extraction for IDOR prevention. Added comprehensive usage documentation header to scripts/classify-backlog.ts. Verified next build succeeds and all 223 tests pass | tests:PASS

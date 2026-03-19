@@ -27,6 +27,12 @@ export async function classifyJobsById(ids: string[]): Promise<BatchResult> {
     const jobBatch = await db.select().from(jobs).where(inArray(jobs.id, chunk));
     
     for (const job of jobBatch) {
+      // Skip jobs that are already classified (idempotency)
+      if (job.classifiedAt) {
+        result.classified++;
+        continue;
+      }
+
       try {
         const classified = await classifyJob(job.title, job.descriptionRaw);
 
@@ -41,7 +47,7 @@ export async function classifyJobsById(ids: string[]): Promise<BatchResult> {
           });
           embedding = await embedText(embeddingText);
         } catch (embedError) {
-          console.error(`[classify] Failed to embed job ${job.id}:`, embedError);
+          // Embedding failed, continue without it
         }
 
         await db.update(jobs).set({
@@ -96,7 +102,7 @@ export async function classifyUnclassifiedJobs(batchSize: number = 500): Promise
         });
         embedding = await embedText(embeddingText);
       } catch (embedError) {
-        console.error(`[classify] Failed to embed job ${job.id}:`, embedError);
+        // Embedding failed, continue without it
       }
 
       await db
