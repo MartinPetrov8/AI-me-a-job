@@ -1,7 +1,7 @@
 import { db } from '../db';
 import { jobs } from '../db/schema';
 import { and, lt, ne, or, isNull } from 'drizzle-orm';
-import { fetchAllAdzunaJobs } from './adzuna';
+import { fetchAllAdzunaJobs, fetchAdzunaJobs } from './adzuna';
 import { fetchJoobleJobs } from './jooble';
 import { fetchDevBgJobs } from './devbg';
 import { fetchJobsBgJobs } from './jobsbg';
@@ -119,6 +119,49 @@ async function truncateOldDescriptions(): Promise<number> {
     .returning({ id: jobs.id });
 
   return updated.length;
+}
+
+export async function ingestAdzunaIncremental(): Promise<IngestionResult[]> {
+  const results: IngestionResult[] = [];
+
+  // Incremental mode: high-value countries only (3 countries × 5 queries = 15 API calls max)
+  const incrementalCountries = ['gb', 'us', 'bg'] as const;
+  const incrementalQueries = [
+    'data scientist',
+    'software engineer',
+    'data analyst',
+    'machine learning',
+    'product manager',
+  ] as const;
+
+  const all: RawJobPosting[] = [];
+  const seen = new Set<string>();
+
+  for (const country of incrementalCountries) {
+    for (const query of incrementalQueries) {
+      console.log(`[adzuna-incremental] Fetching "${query}" in ${country}...`);
+      const jobs = await fetchAdzunaJobs(country, 1, query);
+      // Deduplicate by external_id
+      for (const job of jobs) {
+        if (!seen.has(job.external_id)) {
+          seen.add(job.external_id);
+          all.push(job);
+        }
+      }
+    }
+  }
+
+  console.log(`[adzuna-incremental] Total unique jobs fetched: ${all.length}`);
+
+  // Upsert and classify
+  const adzunaUpsert = await upsertJobs(all);
+  if (adzunaUpsert.insertedIds.length > 0) await classifyJobsById(adzunaUpsert.insertedIds);
+  results.push({ source: 'adzuna-incremental', fetched: all.length, new: adzunaUpsert.newCount, errors: adzunaUpsert.errorCount, deleted: 0 });
+
+  // Safety-net: catch any that slipped through
+  await classifyUnclassifiedJobs(500);
+
+  return results;
 }
 
 export async function ingestAllSources(): Promise<IngestionResult[]> {
