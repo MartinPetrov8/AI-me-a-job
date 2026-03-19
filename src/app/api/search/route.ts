@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { findMatches } from '@/lib/matching/engine';
 import { validateRestoreToken } from '@/lib/auth/validate-restore-token';
+import { db } from '@/lib/db';
+import { profiles } from '@/lib/db/schema';
+import { eq } from 'drizzle-orm';
 
 export const runtime = 'nodejs';
 
@@ -18,6 +21,21 @@ export async function POST(request: NextRequest) {
 
     const token = request.headers.get('x-restore-token');
     await validateRestoreToken(profile_id, token);
+
+    // Extract userId from profile for IDOR defence-in-depth
+    const profileResult = await db.select({ userId: profiles.userId })
+      .from(profiles)
+      .where(eq(profiles.id, profile_id))
+      .limit(1);
+    
+    if (profileResult.length === 0) {
+      return NextResponse.json(
+        { error: 'Profile not found' },
+        { status: 404 }
+      );
+    }
+    
+    const userId = profileResult[0].userId;
 
     // Parse sort + filter params from BOTH query string (sort) and request body (filters)
     // Sort comes via query param (?sort=posted_at) since UI appends it to the URL
@@ -64,6 +82,7 @@ export async function POST(request: NextRequest) {
       locationOverride,
       workModeOverride,
       employmentTypeOverride,
+      userId,
     });
     const searchedAt = new Date().toISOString();
 

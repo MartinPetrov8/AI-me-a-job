@@ -2,8 +2,24 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { POST } from '../../src/app/api/search/route';
 import { findMatches } from '../../src/lib/matching/engine';
 
-// Mock db to prevent DATABASE_URL module-level throw in test environment
-vi.mock('../../src/lib/db', () => ({ db: {} }));
+// Create mock functions that will be used by the db mock
+const mockLimit = vi.fn();
+const mockWhere = vi.fn(() => ({ limit: mockLimit }));
+const mockFrom = vi.fn(() => ({ where: mockWhere }));
+const mockSelect = vi.fn(() => ({ from: mockFrom }));
+
+// Mock db with select/from/where/limit chainable methods
+vi.mock('../../src/lib/db', () => ({
+  db: {
+    select: vi.fn(() => ({
+      from: vi.fn(() => ({
+        where: vi.fn(() => ({
+          limit: mockLimit,
+        })),
+      })),
+    })),
+  },
+}));
 
 // Mock auth — bypass ownership check in unit tests (ISSUE-1 fix applied)
 vi.mock('../../src/lib/auth', () => ({
@@ -46,9 +62,10 @@ describe('Search API', () => {
       ],
       total: 1,
       search_id: 'search-123',
-      max_score: 8, // no prefLocation set → 8 base criteria
+      max_score: 8,
     };
 
+    mockLimit.mockResolvedValue([{ userId: 'user-A' }]);
     (findMatches as any).mockResolvedValue(mockResults);
 
     const request = new Request('http://localhost:3000/api/search', {
@@ -68,11 +85,53 @@ describe('Search API', () => {
     expect(data.data.total).toBe(1);
     expect(data.data.search_id).toBe('search-123');
     expect(data.meta.threshold).toBe(5);
-    expect(data.meta.max_score).toBe(8); // 8 base criteria (no location preference)
+    expect(data.meta.max_score).toBe(8);
     expect(data.meta.searched_at).toBeDefined();
   });
 
-  it('should return 404 for non-existent profile_id', async () => {
+  it('should pass userId to findMatches() after extracting from profile', async () => {
+    const mockResults = {
+      results: [],
+      total: 0,
+      search_id: 'search-456',
+      max_score: 8,
+    };
+
+    mockLimit.mockResolvedValue([{ userId: 'user-A' }]);
+    (findMatches as any).mockResolvedValue(mockResults);
+
+    const request = new Request('http://localhost:3000/api/search', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ profile_id: 'profile-1' }),
+    });
+
+    await POST(request as any);
+
+    expect(findMatches).toHaveBeenCalledWith(
+      'profile-1',
+      expect.objectContaining({ userId: 'user-A' })
+    );
+  });
+
+  it('should return 404 when profile not found in database', async () => {
+    mockLimit.mockResolvedValue([]);
+
+    const request = new Request('http://localhost:3000/api/search', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ profile_id: 'non-existent' }),
+    });
+
+    const response = await POST(request as any);
+    const data = await response.json();
+
+    expect(response.status).toBe(404);
+    expect(data.error).toBe('Profile not found');
+  });
+
+  it('should return 404 for non-existent profile_id from findMatches', async () => {
+    mockLimit.mockResolvedValue([{ userId: 'user-A' }]);
     (findMatches as any).mockRejectedValue(new Error('Profile not found'));
 
     const request = new Request('http://localhost:3000/api/search', {
