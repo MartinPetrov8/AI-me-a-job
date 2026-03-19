@@ -1,0 +1,83 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { extractText } from '@/lib/cv-parser/extract-text';
+import { extractCvCriteria } from '@/lib/llm/extract-cv';
+import { db } from '@/lib/db';
+import { users } from '@/lib/db/schema';
+import crypto from 'crypto';
+
+export const runtime = 'nodejs';
+export const maxDuration = 60;
+
+/**
+ * Diagnostic endpoint: tests each step of the upload pipeline individually.
+ * POST with multipart form data (file field).
+ * Returns which step fails.
+ */
+export async function POST(request: NextRequest) {
+  const steps: Record<string, { status: string; duration: number; detail?: string }> = {};
+  
+  // Step 1: Parse form data
+  let file: File | null = null;
+  try {
+    const start = Date.now();
+    const formData = await request.formData();
+    file = formData.get('file') as File | null;
+    steps['1_parse_form'] = { status: 'OK', duration: Date.now() - start, detail: `file: ${file?.name}, size: ${file?.size}` };
+  } catch (e) {
+    steps['1_parse_form'] = { status: 'FAILED', duration: 0, detail: e instanceof Error ? e.message : String(e) };
+    return NextResponse.json({ steps });
+  }
+
+  if (!file) {
+    return NextResponse.json({ steps, error: 'No file' });
+  }
+
+  // Step 2: Read file to buffer
+  let buffer: Buffer;
+  try {
+    const start = Date.now();
+    const ab = await file.arrayBuffer();
+    buffer = Buffer.from(ab);
+    steps['2_read_buffer'] = { status: 'OK', duration: Date.now() - start, detail: `${buffer.length} bytes` };
+  } catch (e) {
+    steps['2_read_buffer'] = { status: 'FAILED', duration: 0, detail: e instanceof Error ? e.message : String(e) };
+    return NextResponse.json({ steps });
+  }
+
+  // Step 3: Extract text from PDF
+  let rawText: string;
+  try {
+    const start = Date.now();
+    rawText = await extractText(buffer, file.type);
+    steps['3_extract_text'] = { status: 'OK', duration: Date.now() - start, detail: `${rawText.length} chars, first 100: ${rawText.substring(0, 100)}` };
+  } catch (e) {
+    steps['3_extract_text'] = { status: 'FAILED', duration: 0, detail: e instanceof Error ? e.message : String(e) };
+    return NextResponse.json({ steps });
+  }
+
+  // Step 4: LLM extraction
+  let extracted: any;
+  try {
+    const start = Date.now();
+    extracted = await extractCvCriteria(rawText);
+    steps['4_llm_extract'] = { status: 'OK', duration: Date.now() - start, detail: JSON.stringify(extracted).substring(0, 200) };
+  } catch (e) {
+    steps['4_llm_extract'] = { status: 'FAILED', duration: 0, detail: e instanceof Error ? e.message : String(e) };
+    return NextResponse.json({ steps });
+  }
+
+  // Step 5: DB write (users table only — lightweight)
+  try {
+    const start = Date.now();
+    const restoreToken = crypto.randomBytes(24).toString('base64url');
+    const [user] = await db.insert(users).values({ restoreToken }).returning();
+    steps['5_db_write'] = { status: 'OK', duration: Date.now() - start, detail: `user_id: ${user.id}` };
+    // Clean up test user
+    // (don't clean up — might be useful for debugging)
+  } catch (e) {
+    steps['5_db_write'] = { status: 'FAILED', duration: 0, detail: e instanceof Error ? e.message : String(e) };
+    return NextResponse.json({ steps });
+  }
+
+  return NextResponse.json({ steps, allPassed: true });
+}
