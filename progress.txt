@@ -75,3 +75,5 @@ Started: 2026-03-08T20:41:42Z
 - Fix: Use `new Function('return import("playwright")')()` to completely hide the import from static analysis
 - Commit: 19093dd310f718b8d367d4d6096808ea05933aa0
 ---
+
+[S-01][done] Verified LLM model uses claude-haiku-4-5 for Anthropic SDK path and anthropic/claude-haiku-4-5 for OpenRouter path in classify-job.ts — both model identifiers confirmed correct, all 5 classification tests pass | tests:PASS
