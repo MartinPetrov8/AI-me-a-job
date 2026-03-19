@@ -83,3 +83,4 @@ Started: 2026-03-08T20:41:42Z
 [S-01][done] Fixed classifyJobsById idempotency check — added check for job.classifiedAt before calling LLM, updated test to assert 0 LLM calls for already-classified jobs, removed console.error debug debris | tests:PASS
 
 [S-02][done] Added userId parameter to findMatches() calls in /api/search — queries profiles table for userId after token validation, passes userId to findMatches() for IDOR defence-in-depth, added 6 comprehensive tests | tests:PASS
+[S-03][done] Added userId parameter to findMatches() calls in /api/search/delta — queries profiles table to extract userId after restore_token validation, passes userId to findMatches() for IDOR defence-in-depth, added 6 comprehensive tests | tests:PASS
