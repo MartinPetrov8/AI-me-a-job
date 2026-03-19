@@ -16,7 +16,8 @@ export async function GET() {
   // Test DB connection
   try {
     const { db } = await import('@/lib/db');
-    const result = await db.execute(new (await import('drizzle-orm')).SQL(['SELECT 1 as ok']));
+    const { sql } = await import('drizzle-orm');
+    const result = await db.execute(sql`SELECT 1 as ok`);
     checks.db_connection = 'OK';
   } catch (e) {
     checks.db_connection = `FAILED: ${e instanceof Error ? e.message : String(e)}`;
