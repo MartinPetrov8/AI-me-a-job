@@ -85,3 +85,5 @@ Started: 2026-03-08T20:41:42Z
 [S-02][done] Added userId parameter to findMatches() calls in /api/search — queries profiles table for userId after token validation, passes userId to findMatches() for IDOR defence-in-depth, added 6 comprehensive tests | tests:PASS
 [S-03][done] Added userId parameter to findMatches() calls in /api/search/delta — queries profiles table to extract userId after restore_token validation, passes userId to findMatches() for IDOR defence-in-depth, added 6 comprehensive tests | tests:PASS
 [S-04][done] Added integration tests for IDOR fix across both search endpoints — created tests/api/search-idor.test.ts with 9 comprehensive tests covering valid/invalid tokens, profile ownership checks, and 404 scenarios for both /api/search and /api/search/delta routes | tests:PASS
+
+[S-05][done] Created classify-backlog.ts script that counts unclassified jobs, calls classifyUnclassifiedJobs(500), logs summary with total/classified/failed counts, exits with code 0 on success or 1 on failure, is idempotent (safe to re-run) | tests:PASS
