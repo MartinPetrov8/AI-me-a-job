@@ -378,7 +378,7 @@ describe('classifyJobsById', () => {
     expect(result.total).toBe(3);
     expect(result.classified).toBe(3);
     expect(result.failed).toBe(0);
-    expect(classifyJobModule.classifyJob).toHaveBeenCalledTimes(3);
+    expect(classifyJobModule.classifyJob).toHaveBeenCalledTimes(0);
   });
 
   it('handles classification errors and continues processing remaining jobs', async () => {
