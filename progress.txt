@@ -77,3 +77,5 @@ Started: 2026-03-08T20:41:42Z
 ---
 
 [S-01][done] Verified LLM model uses claude-haiku-4-5 for Anthropic SDK path and anthropic/claude-haiku-4-5 for OpenRouter path in classify-job.ts — both model identifiers confirmed correct, all 5 classification tests pass | tests:PASS
+
+[S-01][done] Verified classification pipeline integration and added comprehensive tests for classifyJobsById — confirmed ingestAllSources calls classifyJobsById after upsertJobs, CLASSIFY_CHUNK_SIZE=20, model is claude-haiku-4-5. Added 4 new tests covering batching behavior (25 jobs in chunks of 20), idempotency (classified jobs skipped), error handling (partial failures), and empty input edge case | tests:PASS
