@@ -66,16 +66,41 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ steps });
   }
 
-  // Step 5: DB write (users table only — lightweight)
+  // Step 5: DB write — users table
+  let userId: string;
+  let restoreToken: string;
   try {
     const start = Date.now();
-    const restoreToken = crypto.randomBytes(24).toString('base64url');
+    restoreToken = crypto.randomBytes(24).toString('base64url');
     const [user] = await db.insert(users).values({ restoreToken }).returning();
-    steps['5_db_write'] = { status: 'OK', duration: Date.now() - start, detail: `user_id: ${user.id}` };
-    // Clean up test user
-    // (don't clean up — might be useful for debugging)
+    userId = user.id;
+    steps['5_db_users'] = { status: 'OK', duration: Date.now() - start, detail: `user_id: ${user.id}` };
   } catch (e) {
-    steps['5_db_write'] = { status: 'FAILED', duration: 0, detail: e instanceof Error ? e.message : String(e) };
+    steps['5_db_users'] = { status: 'FAILED', duration: 0, detail: e instanceof Error ? e.message : String(e) };
+    return NextResponse.json({ steps });
+  }
+
+  // Step 6: DB write — profiles table (this is where the real upload fails)
+  try {
+    const start = Date.now();
+    const { profiles } = await import('@/lib/db/schema');
+    const [profile] = await db.insert(profiles).values({
+      userId,
+      cvFilename: file!.name,
+      cvRawText: rawText,
+      yearsExperience: extracted.years_experience || '',
+      educationLevel: extracted.education_level || '',
+      fieldOfStudy: extracted.field_of_study || '',
+      sphereOfExpertise: extracted.sphere_of_expertise || '',
+      seniorityLevel: extracted.seniority_level || '',
+      industry: extracted.industry || '',
+      languages: extracted.languages || [],
+      keySkills: extracted.key_skills || [],
+      titleInferred: extracted.title_inferred,
+    }).returning();
+    steps['6_db_profiles'] = { status: 'OK', duration: Date.now() - start, detail: `profile_id: ${profile.id}` };
+  } catch (e) {
+    steps['6_db_profiles'] = { status: 'FAILED', duration: 0, detail: e instanceof Error ? e.message : String(e) };
     return NextResponse.json({ steps });
   }
 
