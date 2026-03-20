@@ -13,6 +13,9 @@ vi.mock('@supabase/ssr', () => ({
 describe('Auth Middleware', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Set Supabase env vars so middleware doesn't skip auth
+    process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://test.supabase.co';
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'test-anon-key';
   });
 
   it('allows access to public routes without auth', async () => {
