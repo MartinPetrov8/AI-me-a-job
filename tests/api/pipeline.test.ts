@@ -1,9 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NextRequest } from 'next/server';
 
-const mockSelect = vi.fn();
-const mockFrom = vi.fn();
-const mockWhere = vi.fn();
+const { mockSelect, mockFrom, mockWhere } = vi.hoisted(() => ({
+  mockSelect: vi.fn(),
+  mockFrom: vi.fn(),
+  mockWhere: vi.fn(),
+}));
 
 vi.mock('@/lib/db', () => ({
   db: {
@@ -18,6 +20,7 @@ vi.mock('@/lib/ingestion/ingest', () => ({
   ingestAdzuna: vi.fn().mockResolvedValue({ source: 'adzuna', fetched: 10, new: 5, errors: 0, deleted: 0 }),
   ingestDevBg: vi.fn().mockResolvedValue({ source: 'dev_bg', fetched: 8, new: 4, errors: 0, deleted: 0 }),
   ingestJobsBg: vi.fn().mockResolvedValue({ source: 'jobs_bg', fetched: 6, new: 3, errors: 0, deleted: 0 }),
+  ingestJooble: vi.fn().mockResolvedValue({ source: 'jooble', fetched: 12, new: 6, errors: 0, deleted: 0 }),
 }));
 
 vi.mock('@/lib/llm/batch-classify', () => ({

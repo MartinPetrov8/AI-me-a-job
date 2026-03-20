@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { ingestAllSources } from '@/lib/ingestion/ingest';
+import { ingestAllSources, ingestAdzuna, ingestDevBg, ingestJobsBg, ingestJooble } from '@/lib/ingestion/ingest';
 import { classifyUnclassifiedJobs } from '@/lib/llm/batch-classify';
 import { db } from '@/lib/db';
 import { jobs } from '@/lib/db/schema';
@@ -66,6 +66,21 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    // Support ?source= param for per-source cron calls (Vercel 300s timeout)
+    const source = request.nextUrl.searchParams.get('source');
+    const sourceMap: Record<string, () => Promise<import('@/lib/ingestion/types').IngestionResult>> = {
+      adzuna: ingestAdzuna,
+      devbg: ingestDevBg,
+      jobsbg: ingestJobsBg,
+      jooble: ingestJooble,
+    };
+
+    if (source && sourceMap[source]) {
+      const result = await sourceMap[source]();
+      return NextResponse.json({ ingested: [result] });
+    }
+
+    // No source param = run all sources
     const ingested = await ingestAllSources();
     return NextResponse.json({ ingested });
   } catch (error) {

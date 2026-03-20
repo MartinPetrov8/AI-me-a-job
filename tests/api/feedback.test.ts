@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { NextRequest } from 'next/server';
 
 const mockInsert = vi.fn();
 
@@ -20,7 +21,7 @@ describe('POST /api/feedback', () => {
 
     const { POST } = await import('@/app/api/feedback/route');
 
-    const request = new Request('http://localhost/api/feedback', {
+    const request = new NextRequest('http://localhost/api/feedback', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -40,7 +41,7 @@ describe('POST /api/feedback', () => {
   it('validates search_result_id as UUID', async () => {
     const { POST } = await import('@/app/api/feedback/route');
 
-    const request = new Request('http://localhost/api/feedback', {
+    const request = new NextRequest('http://localhost/api/feedback', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -60,7 +61,7 @@ describe('POST /api/feedback', () => {
   it('validates useful field as boolean', async () => {
     const { POST } = await import('@/app/api/feedback/route');
 
-    const request = new Request('http://localhost/api/feedback', {
+    const request = new NextRequest('http://localhost/api/feedback', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -83,7 +84,7 @@ describe('POST /api/feedback', () => {
 
     const { POST } = await import('@/app/api/feedback/route');
 
-    const request = new Request('http://localhost/api/feedback', {
+    const request = new NextRequest('http://localhost/api/feedback', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
