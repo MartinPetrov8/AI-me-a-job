@@ -1,7 +1,22 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
+import { checkRateLimit } from '@/lib/rate-limit';
 
 export async function middleware(request: NextRequest) {
+  const rateLimit = checkRateLimit(request.nextUrl.pathname, request.headers);
+  
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      { error: 'Rate limit exceeded', retryAfter: rateLimit.retryAfter },
+      {
+        status: 429,
+        headers: {
+          'Retry-After': rateLimit.retryAfter.toString(),
+        },
+      }
+    );
+  }
+
   let supabaseResponse = NextResponse.next({
     request,
   });

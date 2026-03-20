@@ -5,6 +5,9 @@ import { fetchAllAdzunaJobs } from './adzuna';
 import { fetchJoobleJobs } from './jooble';
 import { fetchDevBgJobs } from './devbg';
 import { fetchJobsBgJobs } from './jobsbg';
+import { fetchRemoteOkJobs } from "./remoteok";
+import { fetchWeWorkRemotelyJobs } from "./weworkremotely";
+import { fetchNoFluffJobs } from "./nofluffjobs";
 import { normalizeUrl, computeContentHash } from './dedup';
 import { RawJobPosting, IngestionResult } from './types';
 import { classifyJobsById, classifyUnclassifiedJobs } from '../llm/batch-classify';
@@ -201,6 +204,9 @@ export async function ingestAllSources(): Promise<IngestionResult[]> {
     { name: 'jooble', fn: ingestJooble },
     { name: 'dev_bg', fn: ingestDevBg },
     { name: 'jobs_bg', fn: ingestJobsBg },
+    { name: 'remoteok', fn: ingestRemoteOk },
+    { name: 'weworkremotely', fn: ingestWeWorkRemotely },
+    { name: 'nofluffjobs', fn: ingestNoFluffJobs },
   ];
 
   for (const source of sources) {
@@ -220,4 +226,61 @@ export async function ingestAllSources(): Promise<IngestionResult[]> {
   if (results.length > 0) results[0].deleted = deleted;
   void truncated;
   return results;
+}
+
+export async function ingestRemoteOk(): Promise<IngestionResult> {
+  try {
+    const remoteOkJobs = await fetchRemoteOkJobs();
+    const remoteOkUpsert = await upsertJobs(remoteOkJobs);
+    if (remoteOkUpsert.insertedIds.length > 0) {
+      await classifyJobsById(remoteOkUpsert.insertedIds.slice(0, 100));
+    }
+    return {
+      source: 'remoteok',
+      fetched: remoteOkJobs.length,
+      new: remoteOkUpsert.newCount,
+      errors: remoteOkUpsert.errorCount,
+      deleted: 0
+    };
+  } catch (err) {
+    return { source: 'remoteok', fetched: 0, new: 0, errors: 1, deleted: 0 };
+  }
+}
+
+export async function ingestWeWorkRemotely(): Promise<IngestionResult> {
+  try {
+    const wwrJobs = await fetchWeWorkRemotelyJobs();
+    const wwrUpsert = await upsertJobs(wwrJobs);
+    if (wwrUpsert.insertedIds.length > 0) {
+      await classifyJobsById(wwrUpsert.insertedIds.slice(0, 100));
+    }
+    return {
+      source: 'weworkremotely',
+      fetched: wwrJobs.length,
+      new: wwrUpsert.newCount,
+      errors: wwrUpsert.errorCount,
+      deleted: 0
+    };
+  } catch (err) {
+    return { source: 'weworkremotely', fetched: 0, new: 0, errors: 1, deleted: 0 };
+  }
+}
+
+export async function ingestNoFluffJobs(): Promise<IngestionResult> {
+  try {
+    const nfjJobs = await fetchNoFluffJobs();
+    const nfjUpsert = await upsertJobs(nfjJobs);
+    if (nfjUpsert.insertedIds.length > 0) {
+      await classifyJobsById(nfjUpsert.insertedIds.slice(0, 100));
+    }
+    return {
+      source: 'nofluffjobs',
+      fetched: nfjJobs.length,
+      new: nfjUpsert.newCount,
+      errors: nfjUpsert.errorCount,
+      deleted: 0
+    };
+  } catch (err) {
+    return { source: 'nofluffjobs', fetched: 0, new: 0, errors: 1, deleted: 0 };
+  }
 }
