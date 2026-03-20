@@ -1,4 +1,4 @@
-# Repo Map — generated 2026-03-20T14:39:11Z
+# Repo Map — generated 2026-03-20T15:59:30Z
 # Architecture snapshot: class/function signatures, routes, exports
 # Use this to find the right file/function without reading full source.
 
@@ -46,8 +46,6 @@ node_modules/flatted/golang/pkg/flatted/flatted.go:
   .next/routes-manifest.json
   .next/server
   .next/static
-  .next/trace
-  .next/trace-build
   .next/turbopack
   .next/types
   .vercel
@@ -102,6 +100,7 @@ node_modules/flatted/golang/pkg/flatted/flatted.go:
   scripts/classify-backlog.ts
   scripts/classify-jobs.ts
   scripts/ingest-jobs.ts
+  scripts/scrapers
   scripts/seed.ts
   src
   src/app

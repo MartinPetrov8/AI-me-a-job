@@ -8,6 +8,8 @@ import { fetchJobsBgJobs } from './jobsbg';
 import { fetchRemoteOkJobs } from './remoteok';
 import { fetchWeWorkRemotelyJobs } from './weworkremotely';
 import { fetchNoFluffJobs } from './nofluffjobs';
+import { fetchZaplataJobs } from './zaplata';
+import { fetchJustJoinItJobs } from './justjoinit';
 import { normalizeUrl, computeContentHash } from './dedup';
 import { RawJobPosting, IngestionResult } from './types';
 import { classifyJobsById, classifyUnclassifiedJobs } from '../llm/batch-classify';
@@ -251,6 +253,44 @@ export async function ingestNoFluffJobs(): Promise<IngestionResult> {
   }
 }
 
+export async function ingestZaplata(): Promise<IngestionResult> {
+  try {
+    const zaplataJobs = await fetchZaplataJobs();
+    const zaplataUpsert = await upsertJobs(zaplataJobs);
+    if (zaplataUpsert.insertedIds.length > 0) {
+      await classifyJobsById(zaplataUpsert.insertedIds.slice(0, 100));
+    }
+    return {
+      source: 'zaplata',
+      fetched: zaplataJobs.length,
+      new: zaplataUpsert.newCount,
+      errors: zaplataUpsert.errorCount,
+      deleted: 0
+    };
+  } catch (err) {
+    return { source: 'zaplata', fetched: 0, new: 0, errors: 1, deleted: 0 };
+  }
+}
+
+export async function ingestJustJoinIt(): Promise<IngestionResult> {
+  try {
+    const justJoinItJobs = await fetchJustJoinItJobs();
+    const justJoinItUpsert = await upsertJobs(justJoinItJobs);
+    if (justJoinItUpsert.insertedIds.length > 0) {
+      await classifyJobsById(justJoinItUpsert.insertedIds.slice(0, 100));
+    }
+    return {
+      source: 'justjoinit',
+      fetched: justJoinItJobs.length,
+      new: justJoinItUpsert.newCount,
+      errors: justJoinItUpsert.errorCount,
+      deleted: 0
+    };
+  } catch (err) {
+    return { source: 'justjoinit', fetched: 0, new: 0, errors: 1, deleted: 0 };
+  }
+}
+
 export async function ingestAllSources(): Promise<IngestionResult[]> {
   const startTime = Date.now();
   const timeoutMs = 240000;
@@ -264,6 +304,8 @@ export async function ingestAllSources(): Promise<IngestionResult[]> {
     { name: 'remoteok', fn: ingestRemoteOk },
     { name: 'weworkremotely', fn: ingestWeWorkRemotely },
     { name: 'nofluffjobs', fn: ingestNoFluffJobs },
+    { name: 'zaplata', fn: ingestZaplata },
+    { name: 'justjoinit', fn: ingestJustJoinIt },
   ];
 
   for (const source of sources) {

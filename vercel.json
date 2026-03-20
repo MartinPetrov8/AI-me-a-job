@@ -23,6 +23,14 @@
     {
       "path": "/api/pipeline?source=nofluffjobs",
       "schedule": "25 9 * * *"
+    },
+    {
+      "path": "/api/pipeline?source=zaplata",
+      "schedule": "30 9 * * *"
+    },
+    {
+      "path": "/api/pipeline?source=justjoinit",
+      "schedule": "35 9 * * *"
     }
   ]
 }

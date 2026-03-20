@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { ingestAllSources, ingestAdzuna, ingestDevBg, ingestJobsBg, ingestJooble, ingestRemoteOk, ingestWeWorkRemotely, ingestNoFluffJobs } from '@/lib/ingestion/ingest';
+import { ingestAllSources, ingestAdzuna, ingestDevBg, ingestJobsBg, ingestJooble, ingestRemoteOk, ingestWeWorkRemotely, ingestNoFluffJobs, ingestZaplata, ingestJustJoinIt } from '@/lib/ingestion/ingest';
 import { classifyUnclassifiedJobs } from '@/lib/llm/batch-classify';
 import { db } from '@/lib/db';
 import { jobs } from '@/lib/db/schema';
@@ -76,6 +76,8 @@ export async function POST(request: NextRequest) {
       remoteok: ingestRemoteOk,
       weworkremotely: ingestWeWorkRemotely,
       nofluffjobs: ingestNoFluffJobs,
+      zaplata: ingestZaplata,
+      justjoinit: ingestJustJoinIt,
     };
 
     if (source && sourceMap[source]) {

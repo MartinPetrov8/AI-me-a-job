@@ -102,3 +102,5 @@ Started: 2026-03-08T20:41:42Z
 
 [S-01][done] Sprint R SEO implementation: robots.txt, dynamic sitemap with priorities, per-page metadata exports (9 layouts with OpenGraph + Twitter cards), JSON-LD structured data (WebSite, WebApplication, Organization schemas), OG/Twitter images with ImageResponse, results/upload loading skeletons, metadataBase canonical URLs | tests:PASS
 [S-01][done] Sprint T production hardening: rate limiting (5/hr upload, 20/hr search), GDPR account deletion/export APIs, settings page with data download/delete UI, security headers (X-Frame-Options, nosniff, etc), cleaned health endpoint, nav bar Settings link | tests:PASS
+
+[S-01][done] Sprint V: Regional job scrapers with Python↔Node bridge - created python-runner.ts (execFile wrapper with 120s timeout, JSON parsing, error handling), 3 Python scrapers (jobsbg_scraper.py with StealthyFetcher for Cloudflare bypass, zaplata_scraper.py for salary board, justjoinit_scraper.py with API-first approach), Node.js wrappers (jobsbg.ts, zaplata.ts, justjoinit.ts), registered in ingestAllSources(), added to pipeline sourceMap, 2 new Vercel cron jobs (9:30/9:35 UTC) | tests:PASS
