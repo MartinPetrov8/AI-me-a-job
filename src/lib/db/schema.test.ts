@@ -1,7 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import { jobs, profiles } from './schema';
 import { readFileSync } from 'fs';
-import { join } from 'path';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
+
+// ESM-safe __dirname replacement (fixes __dirname is not defined in ESM contexts)
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 describe('Database schema pgvector support', () => {
   it('jobs table has embedding column with type PgVector', () => {
