@@ -117,8 +117,7 @@ export async function POST(request: NextRequest) {
       const embedding = await embedText(embeddingText);
       await db.update(profiles).set({ embedding }).where(eq(profiles.id, profile.id));
     } catch (error) {
-      // Log error but don't block upload — embedding can be retried later
-      console.error('[upload] Failed to embed profile:', error);
+      // Embedding can be retried later
     }
 
     return NextResponse.json({
@@ -131,7 +130,6 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('[upload] Unhandled error:', error);
     const message = error instanceof Error ? error.message : 'Internal server error';
     return NextResponse.json(
       { error: 'Internal server error', detail: process.env.NODE_ENV === 'development' ? message : undefined },

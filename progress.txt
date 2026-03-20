@@ -93,3 +93,7 @@ Started: 2026-03-08T20:41:42Z
 
 [S-01][done] Upload pipeline hardening (422 for LLM failures, 400 for parse errors), LLM provider fallback (OpenRouter → Anthropic on 5xx/429/timeout), ingestion batching (source=adzuna/devbg/jobsbg query param), vercel.json crons (3 separate jobs at 09:00/09:05/09:10 UTC), comprehensive test coverage | tests:PASS
 [S-01][done] Sprint N: Expanded Adzuna to 10 countries (added pl, at, ch) with 17 queries and 1req/sec rate limiting; integrated Jooble with 15 searches via fetchAllJoobleJobs; added /api/stats with 1hr cache and live stats strip on landing page; added /api/feedback with feedback table migration; added thumbs up/down widget on results page job cards; updated How it works section and footer | tests:PASS
+
+[S-01][done] Sprint O: Implemented Supabase Auth integration — added @supabase/supabase-js and @supabase/ssr packages, created Supabase client wrappers (browser + server), auth middleware for protected routes, login/signup/forgot-password pages, auth callback route, auth context provider, updated users table schema with authId and subscriptionStatus columns, maintained backward compatibility with restore_token flow | tests:PASS
+
+[S-01][done] Sprint O: Fixed vitest.config.ts __dirname ES module error by using fileURLToPath(import.meta.url) pattern, removed console.error debug statements from upload route | tests:PASS

@@ -1,4 +1,4 @@
-# Repo Map — generated 2026-03-20T06:21:37Z
+# Repo Map — generated 2026-03-20T08:41:39Z
 # Architecture snapshot: class/function signatures, routes, exports
 # Use this to find the right file/function without reading full source.
 
@@ -87,6 +87,7 @@ node_modules/flatted/golang/pkg/flatted/flatted.go:
   drizzle/0001_sturdy_sugar_man.sql
   drizzle/0004_add_sessions_table.sql
   drizzle/0005_add_feedback_table.sql
+  drizzle/0006_add_auth_columns.sql
   drizzle/meta
   next-env.d.ts
   next.config.js
@@ -104,6 +105,7 @@ node_modules/flatted/golang/pkg/flatted/flatted.go:
   src/app
   src/components
   src/lib
+  src/middleware.ts
   tailwind.config.ts
   tests
   tests/api
@@ -111,6 +113,7 @@ node_modules/flatted/golang/pkg/flatted/flatted.go:
   tests/components
   tests/fixtures
   tests/lib
+  tests/middleware.test.ts
   tests/scripts
   tsconfig.json
   tsconfig.tsbuildinfo
