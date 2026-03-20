@@ -1,6 +1,25 @@
+'use client';
+
 import Link from 'next/link';
+import { useEffect, useState } from 'react';
+
+interface Stats {
+  total_jobs: number;
+  countries: number;
+  sources: number;
+  last_updated: string | null;
+}
 
 export default function Home() {
+  const [stats, setStats] = useState<Stats | null>(null);
+
+  useEffect(() => {
+    fetch('/api/stats')
+      .then(res => res.json())
+      .then(data => setStats(data))
+      .catch(() => setStats(null));
+  }, []);
+
   return (
     <main className="min-h-screen bg-[#F7F7F5]">
       <nav className="bg-white border-b border-gray-100 sticky top-0 z-10">
@@ -39,41 +58,65 @@ export default function Home() {
         <p className="mt-4 text-sm text-gray-400">Free · PDF or DOCX · Results in under 30 seconds</p>
       </div>
 
-      <div className="max-w-5xl mx-auto px-6 pb-16">
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm grid grid-cols-3 divide-x divide-gray-100">
-          {[
-            { n: '1,500+', label: 'Live job listings' },
-            { n: '8',      label: 'Match criteria' },
-            { n: '<30s',   label: 'Time to results' },
-          ].map(({ n, label }) => (
-            <div key={label} className="px-8 py-6 text-center">
-              <div className="text-3xl font-bold text-indigo-600 mb-1">{n}</div>
-              <div className="text-sm text-gray-500">{label}</div>
+      {stats && (
+        <div className="max-w-5xl mx-auto px-6 pb-8">
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 text-center">
+            <div className="flex items-center justify-center gap-8 text-sm text-gray-600">
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-2xl text-indigo-600 animate-count">{stats.total_jobs}</span>
+                <span>active jobs</span>
+              </div>
+              <span className="text-gray-300">|</span>
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-2xl text-indigo-600 animate-count">{stats.countries}</span>
+                <span>countries</span>
+              </div>
+              <span className="text-gray-300">|</span>
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-2xl text-indigo-600 animate-count">{stats.sources}</span>
+                <span>sources</span>
+              </div>
+              <span className="text-gray-300">|</span>
+              <span className="text-gray-500">Updated daily</span>
             </div>
-          ))}
+          </div>
         </div>
-      </div>
+      )}
 
-      <div className="max-w-5xl mx-auto px-6 pb-24">
-        <h2 className="text-2xl font-bold text-gray-900 text-center mb-10">How it works</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-          {[
-            { n: '1', icon: '📄', title: 'Upload your CV', desc: 'AI reads your experience, skills, education, and expertise automatically.' },
-            { n: '2', icon: '✏️', title: 'Confirm your profile', desc: 'Review what AI found, fix anything, and set your preferences.' },
-            { n: '3', icon: '🎯', title: 'See matched jobs', desc: 'Get a ranked shortlist scored on 8 criteria — not who paid for placement.' },
-          ].map(({ n, icon, title, desc }) => (
-            <div key={n} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-7 hover:shadow-md transition-shadow">
-              <div className="text-3xl mb-4">{icon}</div>
-              <h3 className="font-semibold text-gray-900 mb-2 text-lg">{title}</h3>
-              <p className="text-gray-500 text-sm leading-relaxed">{desc}</p>
-            </div>
-          ))}
+      <div className="max-w-5xl mx-auto px-6 pb-16">
+        <h2 className="text-3xl font-bold text-gray-900 text-center mb-12">How it works</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 hover:shadow-md transition-shadow">
+            <div className="text-5xl mb-4">📄</div>
+            <h3 className="font-bold text-gray-900 mb-3 text-xl">Upload Your CV</h3>
+            <p className="text-gray-600 text-sm leading-relaxed">PDF or DOCX, analyzed in seconds</p>
+          </div>
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 hover:shadow-md transition-shadow">
+            <div className="text-5xl mb-4">🤖</div>
+            <h3 className="font-bold text-gray-900 mb-3 text-xl">AI Extracts Your Profile</h3>
+            <p className="text-gray-600 text-sm leading-relaxed">8 criteria matched automatically</p>
+          </div>
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 hover:shadow-md transition-shadow">
+            <div className="text-5xl mb-4">🎯</div>
+            <h3 className="font-bold text-gray-900 mb-3 text-xl">See Your Matches</h3>
+            <p className="text-gray-600 text-sm leading-relaxed">Ranked by relevance, no noise</p>
+          </div>
         </div>
       </div>
 
       <footer className="border-t border-gray-100 bg-white py-6 text-center text-gray-400 text-sm">
-        aimeajob © 2026 · AI-powered job matching
+        <p>Built by Martin Petrov | <a href="https://github.com/MartinPetrov8/AI-me-a-job" target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:text-indigo-700 transition-colors">Open source on GitHub</a></p>
       </footer>
+
+      <style jsx>{`
+        @keyframes count {
+          from { opacity: 0.5; transform: scale(0.95); }
+          to { opacity: 1; transform: scale(1); }
+        }
+        .animate-count {
+          animation: count 0.6s ease-out;
+        }
+      `}</style>
     </main>
   );
 }

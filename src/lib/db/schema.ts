@@ -64,9 +64,8 @@ export const jobs = pgTable('jobs', {
   classifiedAt: timestamp('classified_at', { withTimezone: true }),
   ingestedAt: timestamp('ingested_at', { withTimezone: true }).notNull().defaultNow(),
   embedding: vector('embedding', { dimensions: 1536 }),
-  // Cross-source dedup fields (Sprint A)
-  canonicalUrl: text('canonical_url'),    // Normalized URL, UNIQUE WHERE NOT NULL
-  contentHash: text('content_hash'),      // MD5(title+company+country+week), UNIQUE WHERE NOT NULL
+  canonicalUrl: text('canonical_url'),
+  contentHash: text('content_hash'),
 }, (table) => ({
   uniqueSourceExternal: unique().on(table.source, table.externalId),
   keySkillsIdx: index('jobs_key_skills_idx').using('gin', table.keySkills),
@@ -93,3 +92,10 @@ export const searchResults = pgTable('search_results', {
 }, (table) => ({
   uniqueSearchJob: unique().on(table.searchId, table.jobId),
 }));
+
+export const feedback = pgTable('feedback', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  searchResultId: uuid('search_result_id').notNull().references(() => searchResults.id, { onDelete: 'cascade' }),
+  useful: boolean('useful').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});

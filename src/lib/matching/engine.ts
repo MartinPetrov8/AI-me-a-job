@@ -6,6 +6,7 @@ import { cosineSimilarity } from './cosine';
 
 export interface MatchedJob {
   job_id: string;
+  search_result_id?: string;
   title: string;
   company: string | null;
   location: string | null;
@@ -314,9 +315,9 @@ export async function findMatches(
 
   const searchId = searchRecord[0].id;
 
-  // Create search_results records
+  // Create search_results records and get IDs back
   if (results.length > 0) {
-    await db.insert(searchResults).values(
+    const insertedResults = await db.insert(searchResults).values(
       results.map((result, index) => ({
         searchId,
         jobId: result.job_id,
@@ -324,7 +325,12 @@ export async function findMatches(
         matchedCriteria: result.matched_criteria,
         rank: index + 1,
       }))
-    );
+    ).returning({ id: searchResults.id });
+
+    // Attach search_result_id to each result
+    insertedResults.forEach((inserted, index) => {
+      results[index].search_result_id = inserted.id;
+    });
   }
 
   // Update profile.last_search_at

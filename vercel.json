@@ -1,8 +1,16 @@
 {
   "crons": [
     {
-      "path": "/api/pipeline",
-      "schedule": "0 6 * * *"
+      "path": "/api/pipeline?source=adzuna",
+      "schedule": "0 9 * * *"
+    },
+    {
+      "path": "/api/pipeline?source=devbg",
+      "schedule": "5 9 * * *"
+    },
+    {
+      "path": "/api/pipeline?source=jobsbg",
+      "schedule": "10 9 * * *"
     }
   ]
 }

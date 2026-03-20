@@ -88,7 +88,6 @@ async function upsertJobs(postings: RawJobPosting[]): Promise<UpsertResult> {
 
 async function cleanupOldJobs(): Promise<number> {
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-  // Use ingestedAt as fallback when postedAt is null — ensures null-postedAt jobs still get cleaned (ISSUE-F fix)
   const deleted = await db
     .delete(jobs)
     .where(
@@ -121,45 +120,99 @@ async function truncateOldDescriptions(): Promise<number> {
   return updated.length;
 }
 
-export async function ingestAllSources(): Promise<IngestionResult[]> {
-  const results: IngestionResult[] = [];
-
-  // Adzuna
+export async function ingestAdzuna(): Promise<IngestionResult> {
   const adzunaJobs = await fetchAllAdzunaJobs();
   const adzunaUpsert = await upsertJobs(adzunaJobs);
-  if (adzunaUpsert.insertedIds.length > 0) await classifyJobsById(adzunaUpsert.insertedIds);
-  results.push({ source: 'adzuna', fetched: adzunaJobs.length, new: adzunaUpsert.newCount, errors: adzunaUpsert.errorCount, deleted: 0 });
+  if (adzunaUpsert.insertedIds.length > 0) {
+    await classifyJobsById(adzunaUpsert.insertedIds.slice(0, 100));
+  }
+  return {
+    source: 'adzuna',
+    fetched: adzunaJobs.length,
+    new: adzunaUpsert.newCount,
+    errors: adzunaUpsert.errorCount,
+    deleted: 0
+  };
+}
 
-  // Jooble
+export async function ingestJooble(): Promise<IngestionResult> {
   let allJoobleJobs: RawJobPosting[] = [];
   for (const search of JOOBLE_SEARCHES) {
     allJoobleJobs.push(...await fetchJoobleJobs(search.keywords, search.location));
   }
   const joobleUpsert = await upsertJobs(allJoobleJobs);
-  if (joobleUpsert.insertedIds.length > 0) await classifyJobsById(joobleUpsert.insertedIds);
-  results.push({ source: 'jooble', fetched: allJoobleJobs.length, new: joobleUpsert.newCount, errors: joobleUpsert.errorCount, deleted: 0 });
+  if (joobleUpsert.insertedIds.length > 0) {
+    await classifyJobsById(joobleUpsert.insertedIds.slice(0, 100));
+  }
+  return {
+    source: 'jooble',
+    fetched: allJoobleJobs.length,
+    new: joobleUpsert.newCount,
+    errors: joobleUpsert.errorCount,
+    deleted: 0
+  };
+}
 
-  // dev.bg
+export async function ingestDevBg(): Promise<IngestionResult> {
   try {
     const devBgJobs = await fetchDevBgJobs();
     const devBgUpsert = await upsertJobs(devBgJobs);
-    if (devBgUpsert.insertedIds.length > 0) await classifyJobsById(devBgUpsert.insertedIds);
-    results.push({ source: 'dev_bg', fetched: devBgJobs.length, new: devBgUpsert.newCount, errors: devBgUpsert.errorCount, deleted: 0 });
+    if (devBgUpsert.insertedIds.length > 0) {
+      await classifyJobsById(devBgUpsert.insertedIds.slice(0, 100));
+    }
+    return {
+      source: 'dev_bg',
+      fetched: devBgJobs.length,
+      new: devBgUpsert.newCount,
+      errors: devBgUpsert.errorCount,
+      deleted: 0
+    };
   } catch (err) {
-    results.push({ source: 'dev_bg', fetched: 0, new: 0, errors: 1, deleted: 0 });
+    return { source: 'dev_bg', fetched: 0, new: 0, errors: 1, deleted: 0 };
   }
+}
 
-  // jobs.bg
+export async function ingestJobsBg(): Promise<IngestionResult> {
   try {
     const jobsBgJobs = await fetchJobsBgJobs();
     const jobsBgUpsert = await upsertJobs(jobsBgJobs);
-    if (jobsBgUpsert.insertedIds.length > 0) await classifyJobsById(jobsBgUpsert.insertedIds);
-    results.push({ source: 'jobs_bg', fetched: jobsBgJobs.length, new: jobsBgUpsert.newCount, errors: jobsBgUpsert.errorCount, deleted: 0 });
+    if (jobsBgUpsert.insertedIds.length > 0) {
+      await classifyJobsById(jobsBgUpsert.insertedIds.slice(0, 100));
+    }
+    return {
+      source: 'jobs_bg',
+      fetched: jobsBgJobs.length,
+      new: jobsBgUpsert.newCount,
+      errors: jobsBgUpsert.errorCount,
+      deleted: 0
+    };
   } catch (err) {
-    results.push({ source: 'jobs_bg', fetched: 0, new: 0, errors: 1, deleted: 0 });
+    return { source: 'jobs_bg', fetched: 0, new: 0, errors: 1, deleted: 0 };
+  }
+}
+
+export async function ingestAllSources(): Promise<IngestionResult[]> {
+  const startTime = Date.now();
+  const timeoutMs = 240000;
+  const results: IngestionResult[] = [];
+
+  const sources = [
+    { name: 'adzuna', fn: ingestAdzuna },
+    { name: 'jooble', fn: ingestJooble },
+    { name: 'dev_bg', fn: ingestDevBg },
+    { name: 'jobs_bg', fn: ingestJobsBg },
+  ];
+
+  for (const source of sources) {
+    const elapsed = Date.now() - startTime;
+    if (elapsed > timeoutMs) {
+      break;
+    }
+
+    const result = await source.fn();
+    results.push(result);
   }
 
-  // Safety-net: catch any that slipped through
   await classifyUnclassifiedJobs(500);
 
   const deleted = await cleanupOldJobs();

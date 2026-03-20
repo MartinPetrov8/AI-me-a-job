@@ -19,9 +19,8 @@ interface AdzunaResponse {
   count: number;
 }
 
-const ADZUNA_COUNTRIES = ['gb', 'us', 'de', 'fr', 'nl', 'bg', 'pl', 'au'] as const;
+const ADZUNA_COUNTRIES = ['gb', 'us', 'de', 'fr', 'nl', 'bg', 'pl', 'au', 'at', 'ch'] as const;
 
-// Targeted search queries covering all spheres we match against
 const ADZUNA_QUERIES = [
   'data scientist',
   'data analyst',
@@ -37,6 +36,9 @@ const ADZUNA_QUERIES = [
   'hr manager',
   'operations manager',
   'consultant',
+  'frontend developer',
+  'backend developer',
+  'full stack developer',
 ] as const;
 
 export async function fetchAdzunaJobs(
@@ -78,6 +80,8 @@ export async function fetchAdzunaJobs(
       nl: 'EUR',
       bg: 'BGN',
       pl: 'PLN',
+      at: 'EUR',
+      ch: 'CHF',
     };
 
     return (data.results ?? []).map((job): RawJobPosting => ({
@@ -104,27 +108,40 @@ export async function fetchAdzunaJobs(
 
 export { ADZUNA_COUNTRIES, ADZUNA_QUERIES };
 
+function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 export async function fetchAllAdzunaJobs(): Promise<RawJobPosting[]> {
   const all: RawJobPosting[] = [];
   const seen = new Set<string>();
+  let apiCallCount = 0;
+  const MAX_API_CALLS = 200;
 
-  // Expanded to 7 countries (GB, US, DE, FR, NL, BG, PL) covering Western + Eastern Europe
-  const countries: typeof ADZUNA_COUNTRIES[number][] = ['gb', 'us', 'de', 'fr', 'nl', 'bg', 'pl'];
+  const countries: typeof ADZUNA_COUNTRIES[number][] = ['gb', 'us', 'de', 'fr', 'nl', 'bg', 'pl', 'at', 'ch'];
 
   for (const country of countries) {
     for (const query of ADZUNA_QUERIES) {
-      console.log(`[adzuna] Fetching "${query}" in ${country}...`);
+      if (apiCallCount >= MAX_API_CALLS) {
+        break;
+      }
+
       const jobs = await fetchAdzunaJobs(country, 1, query);
-      // Deduplicate by external_id
+      apiCallCount++;
+
       for (const job of jobs) {
         if (!seen.has(job.external_id)) {
           seen.add(job.external_id);
           all.push(job);
         }
       }
+
+      await sleep(1000);
+    }
+    if (apiCallCount >= MAX_API_CALLS) {
+      break;
     }
   }
 
-  console.log(`[adzuna] Total unique jobs fetched: ${all.length}`);
   return all;
 }

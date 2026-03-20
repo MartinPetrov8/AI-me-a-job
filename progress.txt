@@ -88,3 +88,8 @@ Started: 2026-03-08T20:41:42Z
 
 [S-05][done] Created classify-backlog.ts script that counts unclassified jobs, calls classifyUnclassifiedJobs(500), logs summary with total/classified/failed counts, exits with code 0 on success or 1 on failure, is idempotent (safe to re-run) | tests:PASS
 [S-06][done] Added security documentation (docs/SECURITY.md) covering IDOR fix, classification pipeline, and API key management. Added inline comments in /api/search and /api/search/delta explaining userId extraction for IDOR prevention. Added comprehensive usage documentation header to scripts/classify-backlog.ts. Verified next build succeeds and all 223 tests pass | tests:PASS
+
+[S-01][done] Sprint M: Redesigned restore page to match Wellfound design system (bg-[#F7F7F5], rounded-2xl cards, indigo-600 buttons), updated pipeline route with GET stats endpoint and 1000-job batch size for classification, added comprehensive restore page tests | tests:PASS
+
+[S-01][done] Upload pipeline hardening (422 for LLM failures, 400 for parse errors), LLM provider fallback (OpenRouter → Anthropic on 5xx/429/timeout), ingestion batching (source=adzuna/devbg/jobsbg query param), vercel.json crons (3 separate jobs at 09:00/09:05/09:10 UTC), comprehensive test coverage | tests:PASS
+[S-01][done] Sprint N: Expanded Adzuna to 10 countries (added pl, at, ch) with 17 queries and 1req/sec rate limiting; integrated Jooble with 15 searches via fetchAllJoobleJobs; added /api/stats with 1hr cache and live stats strip on landing page; added /api/feedback with feedback table migration; added thumbs up/down widget on results page job cards; updated How it works section and footer | tests:PASS

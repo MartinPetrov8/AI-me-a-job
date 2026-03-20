@@ -1,9 +1,41 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ingestAllSources } from '@/lib/ingestion/ingest';
 import { classifyUnclassifiedJobs } from '@/lib/llm/batch-classify';
+import { db } from '@/lib/db';
+import { jobs } from '@/lib/db/schema';
+import { sql, isNull, isNotNull } from 'drizzle-orm';
 
 export const runtime = 'nodejs';
 export const maxDuration = 300;
+
+export async function GET(request: NextRequest) {
+  const cronSecret = process.env.CRON_SECRET;
+  const incomingSecret = request.headers.get('x-cron-secret');
+
+  if (!cronSecret || incomingSecret !== cronSecret) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const [totalJobs, classifiedJobs, unclassifiedJobs, jobsBySource] = await Promise.all([
+    db.select({ count: sql<number>`count(*)::int` }).from(jobs),
+    db.select({ count: sql<number>`count(*)::int` }).from(jobs).where(isNotNull(jobs.classifiedAt)),
+    db.select({ count: sql<number>`count(*)::int` }).from(jobs).where(isNull(jobs.classifiedAt)),
+    db.select({
+      source: jobs.source,
+      total: sql<number>`count(*)::int`,
+      classified: sql<number>`count(*) filter (where classified_at is not null)::int`,
+    })
+      .from(jobs)
+      .groupBy(jobs.source),
+  ]);
+
+  return NextResponse.json({
+    total: totalJobs[0]?.count ?? 0,
+    classified: classifiedJobs[0]?.count ?? 0,
+    unclassified: unclassifiedJobs[0]?.count ?? 0,
+    by_source: jobsBySource,
+  });
+}
 
 export async function POST(request: NextRequest) {
   const cronSecret = process.env.CRON_SECRET;
@@ -13,21 +45,31 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  // Optional ?classify=true to run classification only (backlog clearing — up to 500/call)
   const classifyOnly = request.nextUrl.searchParams.get('classify') === 'true';
 
   try {
     if (classifyOnly) {
-      const classified = await classifyUnclassifiedJobs(500);
-      return NextResponse.json({ classified });
+      const batchResult = await classifyUnclassifiedJobs(1000);
+      
+      const [remainingCount] = await db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(jobs)
+        .where(isNull(jobs.classifiedAt));
+
+      return NextResponse.json({
+        classified: {
+          total: batchResult.total,
+          success: batchResult.classified,
+          failed: batchResult.failed,
+          remaining: remainingCount?.count ?? 0,
+        },
+      });
     }
 
-    // Full pipeline: ingest all sources (each source classifies its own new jobs immediately)
     const ingested = await ingestAllSources();
     return NextResponse.json({ ingested });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    console.error('[pipeline] Error:', message);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
