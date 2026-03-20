@@ -26,6 +26,8 @@ export default function SettingsPage() {
         window.URL.revokeObjectURL(url);
         document.body.removeChild(a);
       }
+    } catch (error) {
+      // Silent fail
     } finally {
       setIsExporting(false);
     }
@@ -41,7 +43,7 @@ export default function SettingsPage() {
         await signOut();
         router.push('/');
       }
-    } finally {
+    } catch (error) {
       setIsDeleting(false);
       setShowDeleteModal(false);
     }

@@ -52,6 +52,12 @@ export function NavBar() {
                 >
                   My Results
                 </Link>
+                <Link
+                  href="/settings"
+                  className="text-gray-700 hover:text-indigo-600"
+                >
+                  Settings
+                </Link>
                 <button
                   onClick={() => signOut()}
                   className="text-gray-700 hover:text-indigo-600"
@@ -125,6 +131,13 @@ export function NavBar() {
                   onClick={() => setMobileMenuOpen(false)}
                 >
                   My Results
+                </Link>
+                <Link
+                  href="/settings"
+                  className="block py-3 border-b border-gray-100 text-gray-700 hover:text-indigo-600"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Settings
                 </Link>
                 <button
                   onClick={() => {

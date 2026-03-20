@@ -5,9 +5,9 @@ import { fetchAllAdzunaJobs } from './adzuna';
 import { fetchJoobleJobs } from './jooble';
 import { fetchDevBgJobs } from './devbg';
 import { fetchJobsBgJobs } from './jobsbg';
-import { fetchRemoteOkJobs } from "./remoteok";
-import { fetchWeWorkRemotelyJobs } from "./weworkremotely";
-import { fetchNoFluffJobs } from "./nofluffjobs";
+import { fetchRemoteOkJobs } from './remoteok';
+import { fetchWeWorkRemotelyJobs } from './weworkremotely';
+import { fetchNoFluffJobs } from './nofluffjobs';
 import { normalizeUrl, computeContentHash } from './dedup';
 import { RawJobPosting, IngestionResult } from './types';
 import { classifyJobsById, classifyUnclassifiedJobs } from '../llm/batch-classify';
@@ -194,40 +194,6 @@ export async function ingestJobsBg(): Promise<IngestionResult> {
   }
 }
 
-export async function ingestAllSources(): Promise<IngestionResult[]> {
-  const startTime = Date.now();
-  const timeoutMs = 240000;
-  const results: IngestionResult[] = [];
-
-  const sources = [
-    { name: 'adzuna', fn: ingestAdzuna },
-    { name: 'jooble', fn: ingestJooble },
-    { name: 'dev_bg', fn: ingestDevBg },
-    { name: 'jobs_bg', fn: ingestJobsBg },
-    { name: 'remoteok', fn: ingestRemoteOk },
-    { name: 'weworkremotely', fn: ingestWeWorkRemotely },
-    { name: 'nofluffjobs', fn: ingestNoFluffJobs },
-  ];
-
-  for (const source of sources) {
-    const elapsed = Date.now() - startTime;
-    if (elapsed > timeoutMs) {
-      break;
-    }
-
-    const result = await source.fn();
-    results.push(result);
-  }
-
-  await classifyUnclassifiedJobs(500);
-
-  const deleted = await cleanupOldJobs();
-  const truncated = await truncateOldDescriptions();
-  if (results.length > 0) results[0].deleted = deleted;
-  void truncated;
-  return results;
-}
-
 export async function ingestRemoteOk(): Promise<IngestionResult> {
   try {
     const remoteOkJobs = await fetchRemoteOkJobs();
@@ -283,4 +249,38 @@ export async function ingestNoFluffJobs(): Promise<IngestionResult> {
   } catch (err) {
     return { source: 'nofluffjobs', fetched: 0, new: 0, errors: 1, deleted: 0 };
   }
+}
+
+export async function ingestAllSources(): Promise<IngestionResult[]> {
+  const startTime = Date.now();
+  const timeoutMs = 240000;
+  const results: IngestionResult[] = [];
+
+  const sources = [
+    { name: 'adzuna', fn: ingestAdzuna },
+    { name: 'jooble', fn: ingestJooble },
+    { name: 'dev_bg', fn: ingestDevBg },
+    { name: 'jobs_bg', fn: ingestJobsBg },
+    { name: 'remoteok', fn: ingestRemoteOk },
+    { name: 'weworkremotely', fn: ingestWeWorkRemotely },
+    { name: 'nofluffjobs', fn: ingestNoFluffJobs },
+  ];
+
+  for (const source of sources) {
+    const elapsed = Date.now() - startTime;
+    if (elapsed > timeoutMs) {
+      break;
+    }
+
+    const result = await source.fn();
+    results.push(result);
+  }
+
+  await classifyUnclassifiedJobs(500);
+
+  const deleted = await cleanupOldJobs();
+  const truncated = await truncateOldDescriptions();
+  if (results.length > 0) results[0].deleted = deleted;
+  void truncated;
+  return results;
 }

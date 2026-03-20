@@ -51,7 +51,7 @@ export async function POST() {
       );
       await adminClient.auth.admin.deleteUser(user.id);
     } catch (error) {
-      //
+      // Silent fail
     }
   }
 

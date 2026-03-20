@@ -9,6 +9,7 @@ import * as weworkremotely from './weworkremotely';
 import * as nofluffjobs from './nofluffjobs';
 import type { RawJobPosting } from './types';
 
+// Mock all source modules
 vi.mock('./adzuna');
 vi.mock('./jooble');
 vi.mock('./devbg');
@@ -16,6 +17,7 @@ vi.mock('./jobsbg');
 vi.mock('./remoteok');
 vi.mock('./weworkremotely');
 vi.mock('./nofluffjobs');
+// Mock playwright dynamic import — not available in test env
 vi.mock('playwright', () => ({ chromium: { launch: vi.fn() } }));
 vi.mock('../db', () => ({
   db: {
@@ -47,6 +49,8 @@ vi.mock('../db', () => ({
     })),
   },
 }));
+
+// Mock batch-classify to avoid LLM calls in tests
 vi.mock('../llm/batch-classify', () => ({
   classifyJobsById: vi.fn(() => Promise.resolve({ total: 0, classified: 0, failed: 0, errors: [] })),
   classifyUnclassifiedJobs: vi.fn(() => Promise.resolve({ total: 0, classified: 0, failed: 0, errors: [] })),
@@ -55,27 +59,30 @@ vi.mock('../llm/batch-classify', () => ({
 describe('ingestAllSources with dev.bg and jobs.bg', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Suppress console.log during tests
     vi.spyOn(console, 'log').mockImplementation(() => {});
     vi.spyOn(console, 'error').mockImplementation(() => {});
   });
 
   it('should ingest dev.bg jobs and include in results', async () => {
-    const mockDevBgJobs: RawJobPosting[] = [{
-      external_id: 'devbg-123',
-      source: 'dev_bg',
-      title: 'Senior Developer',
-      company: 'TechCo',
-      location: 'Sofia',
-      country: 'bg',
-      url: 'https://dev.bg/jobs/123',
-      description_raw: 'Great job',
-      salary_min: null,
-      salary_max: null,
-      salary_currency: null,
-      employment_type: null,
-      is_remote: false,
-      posted_at: new Date('2026-03-15'),
-    }];
+    const mockDevBgJobs: RawJobPosting[] = [
+      {
+        external_id: 'devbg-123',
+        source: 'dev_bg',
+        title: 'Senior Developer',
+        company: 'TechCo',
+        location: 'Sofia',
+        country: 'bg',
+        url: 'https://dev.bg/jobs/123',
+        description_raw: 'Great job',
+        salary_min: null,
+        salary_max: null,
+        salary_currency: null,
+        employment_type: null,
+        is_remote: false,
+        posted_at: new Date('2026-03-15'),
+      },
+    ];
 
     vi.mocked(adzuna.fetchAllAdzunaJobs).mockResolvedValue([]);
     vi.mocked(jooble.fetchJoobleJobs).mockResolvedValue([]);
@@ -86,6 +93,7 @@ describe('ingestAllSources with dev.bg and jobs.bg', () => {
     vi.mocked(nofluffjobs.fetchNoFluffJobs).mockResolvedValue([]);
 
     const results = await ingestAllSources();
+
     const devBgResult = results.find(r => r.source === 'dev_bg');
     expect(devBgResult).toBeDefined();
     expect(devBgResult?.fetched).toBe(1);
@@ -93,22 +101,24 @@ describe('ingestAllSources with dev.bg and jobs.bg', () => {
   });
 
   it('should ingest jobs.bg jobs and include in results', async () => {
-    const mockJobsBgJobs: RawJobPosting[] = [{
-      external_id: 'jobsbg-456',
-      source: 'jobs_bg',
-      title: 'Data Scientist',
-      company: 'DataCorp',
-      location: 'Plovdiv',
-      country: 'bg',
-      url: 'https://www.jobs.bg/job/456',
-      description_raw: 'ML role',
-      salary_min: null,
-      salary_max: null,
-      salary_currency: null,
-      employment_type: null,
-      is_remote: true,
-      posted_at: new Date('2026-03-14'),
-    }];
+    const mockJobsBgJobs: RawJobPosting[] = [
+      {
+        external_id: 'jobsbg-456',
+        source: 'jobs_bg',
+        title: 'Data Scientist',
+        company: 'DataCorp',
+        location: 'Plovdiv',
+        country: 'bg',
+        url: 'https://www.jobs.bg/job/456',
+        description_raw: 'ML role',
+        salary_min: null,
+        salary_max: null,
+        salary_currency: null,
+        employment_type: null,
+        is_remote: true,
+        posted_at: new Date('2026-03-14'),
+      },
+    ];
 
     vi.mocked(adzuna.fetchAllAdzunaJobs).mockResolvedValue([]);
     vi.mocked(jooble.fetchJoobleJobs).mockResolvedValue([]);
@@ -119,6 +129,7 @@ describe('ingestAllSources with dev.bg and jobs.bg', () => {
     vi.mocked(nofluffjobs.fetchNoFluffJobs).mockResolvedValue([]);
 
     const results = await ingestAllSources();
+
     const jobsBgResult = results.find(r => r.source === 'jobs_bg');
     expect(jobsBgResult).toBeDefined();
     expect(jobsBgResult?.fetched).toBe(1);
@@ -135,6 +146,7 @@ describe('ingestAllSources with dev.bg and jobs.bg', () => {
     vi.mocked(nofluffjobs.fetchNoFluffJobs).mockResolvedValue([]);
 
     const results = await ingestAllSources();
+
     const devBgResult = results.find(r => r.source === 'dev_bg');
     expect(devBgResult).toBeDefined();
     expect(devBgResult?.errors).toBe(1);
@@ -151,6 +163,7 @@ describe('ingestAllSources with dev.bg and jobs.bg', () => {
     vi.mocked(nofluffjobs.fetchNoFluffJobs).mockResolvedValue([]);
 
     const results = await ingestAllSources();
+
     const jobsBgResult = results.find(r => r.source === 'jobs_bg');
     expect(jobsBgResult).toBeDefined();
     expect(jobsBgResult?.errors).toBe(1);
