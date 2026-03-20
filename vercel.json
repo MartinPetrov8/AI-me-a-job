@@ -11,6 +11,18 @@
     {
       "path": "/api/pipeline?source=jobsbg",
       "schedule": "10 9 * * *"
+    },
+    {
+      "path": "/api/pipeline?source=remoteok",
+      "schedule": "15 9 * * *"
+    },
+    {
+      "path": "/api/pipeline?source=weworkremotely",
+      "schedule": "20 9 * * *"
+    },
+    {
+      "path": "/api/pipeline?source=nofluffjobs",
+      "schedule": "25 9 * * *"
     }
   ]
 }

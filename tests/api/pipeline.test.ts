@@ -21,6 +21,9 @@ vi.mock('@/lib/ingestion/ingest', () => ({
   ingestDevBg: vi.fn().mockResolvedValue({ source: 'dev_bg', fetched: 8, new: 4, errors: 0, deleted: 0 }),
   ingestJobsBg: vi.fn().mockResolvedValue({ source: 'jobs_bg', fetched: 6, new: 3, errors: 0, deleted: 0 }),
   ingestJooble: vi.fn().mockResolvedValue({ source: 'jooble', fetched: 12, new: 6, errors: 0, deleted: 0 }),
+  ingestRemoteOk: vi.fn().mockResolvedValue({ source: 'remoteok', fetched: 200, new: 150, errors: 0, deleted: 0 }),
+  ingestWeWorkRemotely: vi.fn().mockResolvedValue({ source: 'weworkremotely', fetched: 120, new: 90, errors: 0, deleted: 0 }),
+  ingestNoFluffJobs: vi.fn().mockResolvedValue({ source: 'nofluffjobs', fetched: 180, new: 120, errors: 0, deleted: 0 }),
 }));
 
 vi.mock('@/lib/llm/batch-classify', () => ({
