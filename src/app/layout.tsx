@@ -3,8 +3,10 @@ import './globals.css'
 import { AuthProvider } from '@/components/auth-provider'
 import { NavBar } from '@/components/nav-bar'
 import { Footer } from '@/components/footer'
+import { JsonLd } from '@/components/json-ld'
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://aimeajob.com'),
   title: 'AI-me-a-job · AI Job Matching',
   description: 'Upload your CV and get AI-matched jobs ranked by fit',
 }
@@ -24,6 +26,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="bg-[#F7F7F5] text-gray-900 antialiased">
+        <JsonLd />
         <AuthProvider>
           <div className="flex flex-col min-h-screen">
             <NavBar />
