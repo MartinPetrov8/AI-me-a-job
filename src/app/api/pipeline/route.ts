@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { ingestAllSources, ingestAdzuna, ingestDevBg, ingestJobsBg } from '@/lib/ingestion/ingest';
+import { ingestAllSources } from '@/lib/ingestion/ingest';
 import { classifyUnclassifiedJobs } from '@/lib/llm/batch-classify';
 import { db } from '@/lib/db';
 import { jobs } from '@/lib/db/schema';
@@ -46,7 +46,6 @@ export async function POST(request: NextRequest) {
   }
 
   const classifyOnly = request.nextUrl.searchParams.get('classify') === 'true';
-  const sourceParam = request.nextUrl.searchParams.get('source');
 
   try {
     if (classifyOnly) {
@@ -67,20 +66,7 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    let ingested;
-    if (sourceParam === 'adzuna') {
-      const result = await ingestAdzuna();
-      ingested = [result];
-    } else if (sourceParam === 'devbg') {
-      const result = await ingestDevBg();
-      ingested = [result];
-    } else if (sourceParam === 'jobsbg') {
-      const result = await ingestJobsBg();
-      ingested = [result];
-    } else {
-      ingested = await ingestAllSources();
-    }
-
+    const ingested = await ingestAllSources();
     return NextResponse.json({ ingested });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);

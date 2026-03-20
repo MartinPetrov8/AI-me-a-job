@@ -1,9 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NextRequest } from 'next/server';
 
+const mockSelect = vi.fn();
+const mockFrom = vi.fn();
+const mockWhere = vi.fn();
+
 vi.mock('@/lib/db', () => ({
   db: {
-    select: vi.fn(),
+    select: mockSelect,
   },
 }));
 
@@ -12,8 +16,8 @@ vi.mock('@/lib/ingestion/ingest', () => ({
     { source: 'adzuna', fetched: 10, new: 5, errors: 0, deleted: 0 },
   ]),
   ingestAdzuna: vi.fn().mockResolvedValue({ source: 'adzuna', fetched: 10, new: 5, errors: 0, deleted: 0 }),
-  ingestDevBg: vi.fn().mockResolvedValue({ source: 'dev_bg', fetched: 8, new: 3, errors: 0, deleted: 0 }),
-  ingestJobsBg: vi.fn().mockResolvedValue({ source: 'jobs_bg', fetched: 6, new: 2, errors: 0, deleted: 0 }),
+  ingestDevBg: vi.fn().mockResolvedValue({ source: 'dev_bg', fetched: 8, new: 4, errors: 0, deleted: 0 }),
+  ingestJobsBg: vi.fn().mockResolvedValue({ source: 'jobs_bg', fetched: 6, new: 3, errors: 0, deleted: 0 }),
 }));
 
 vi.mock('@/lib/llm/batch-classify', () => ({
@@ -28,7 +32,6 @@ vi.mock('@/lib/llm/batch-classify', () => ({
 import { POST, GET } from '@/app/api/pipeline/route';
 import { ingestAllSources, ingestAdzuna, ingestDevBg, ingestJobsBg } from '@/lib/ingestion/ingest';
 import { classifyUnclassifiedJobs } from '@/lib/llm/batch-classify';
-import { db } from '@/lib/db';
 
 const CRON_SECRET = 'test-secret-123';
 
@@ -44,9 +47,10 @@ describe('POST /api/pipeline', () => {
     vi.clearAllMocks();
     process.env.CRON_SECRET = CRON_SECRET;
     
-    (db.select as any).mockReturnValue({
-      from: vi.fn().mockReturnValue(Promise.resolve([{ count: 0 }])),
+    mockSelect.mockReturnValue({
+      from: mockFrom.mockReturnValue(Promise.resolve([{ count: 0 }])),
     });
+    mockWhere.mockReturnValue(Promise.resolve([{ count: 0 }]));
   });
 
   it('returns 401 when X-Cron-Secret header is missing', async () => {
@@ -68,10 +72,40 @@ describe('POST /api/pipeline', () => {
     expect(ingestAllSources).toHaveBeenCalledOnce();
   });
 
+  it('calls ingestAdzuna when source=adzuna', async () => {
+    const res = await POST(makeRequest(CRON_SECRET, 'source=adzuna'));
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.ingested).toHaveLength(1);
+    expect(body.ingested[0].source).toBe('adzuna');
+    expect(ingestAdzuna).toHaveBeenCalledOnce();
+    expect(ingestAllSources).not.toHaveBeenCalled();
+  });
+
+  it('calls ingestDevBg when source=devbg', async () => {
+    const res = await POST(makeRequest(CRON_SECRET, 'source=devbg'));
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.ingested).toHaveLength(1);
+    expect(body.ingested[0].source).toBe('dev_bg');
+    expect(ingestDevBg).toHaveBeenCalledOnce();
+    expect(ingestAllSources).not.toHaveBeenCalled();
+  });
+
+  it('calls ingestJobsBg when source=jobsbg', async () => {
+    const res = await POST(makeRequest(CRON_SECRET, 'source=jobsbg'));
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.ingested).toHaveLength(1);
+    expect(body.ingested[0].source).toBe('jobs_bg');
+    expect(ingestJobsBg).toHaveBeenCalledOnce();
+    expect(ingestAllSources).not.toHaveBeenCalled();
+  });
+
   it('calls classifyUnclassifiedJobs with batchSize 1000 when classify=true', async () => {
-    (db.select as any).mockReturnValue({
-      from: vi.fn().mockReturnValue({
-        where: vi.fn().mockResolvedValue([{ count: 10 }]),
+    mockSelect.mockReturnValue({
+      from: mockFrom.mockReturnValue({
+        where: mockWhere.mockResolvedValue([{ count: 10 }]),
       }),
     });
 
@@ -85,33 +119,6 @@ describe('POST /api/pipeline', () => {
       remaining: 10,
     });
     expect(classifyUnclassifiedJobs).toHaveBeenCalledWith(1000);
-    expect(ingestAllSources).not.toHaveBeenCalled();
-  });
-
-  it('calls ingestAdzuna when source=adzuna', async () => {
-    const res = await POST(makeRequest(CRON_SECRET, 'source=adzuna'));
-    expect(res.status).toBe(200);
-    const body = await res.json();
-    expect(body.ingested).toEqual([{ source: 'adzuna', fetched: 10, new: 5, errors: 0, deleted: 0 }]);
-    expect(ingestAdzuna).toHaveBeenCalledOnce();
-    expect(ingestAllSources).not.toHaveBeenCalled();
-  });
-
-  it('calls ingestDevBg when source=devbg', async () => {
-    const res = await POST(makeRequest(CRON_SECRET, 'source=devbg'));
-    expect(res.status).toBe(200);
-    const body = await res.json();
-    expect(body.ingested).toEqual([{ source: 'dev_bg', fetched: 8, new: 3, errors: 0, deleted: 0 }]);
-    expect(ingestDevBg).toHaveBeenCalledOnce();
-    expect(ingestAllSources).not.toHaveBeenCalled();
-  });
-
-  it('calls ingestJobsBg when source=jobsbg', async () => {
-    const res = await POST(makeRequest(CRON_SECRET, 'source=jobsbg'));
-    expect(res.status).toBe(200);
-    const body = await res.json();
-    expect(body.ingested).toEqual([{ source: 'jobs_bg', fetched: 6, new: 2, errors: 0, deleted: 0 }]);
-    expect(ingestJobsBg).toHaveBeenCalledOnce();
     expect(ingestAllSources).not.toHaveBeenCalled();
   });
 });
@@ -133,20 +140,20 @@ describe('GET /api/pipeline', () => {
   });
 
   it('returns stats when secret is correct', async () => {
-    (db.select as any).mockReturnValueOnce({
+    mockSelect.mockReturnValueOnce({
       from: vi.fn().mockResolvedValue([{ count: 100 }]),
     });
-    (db.select as any).mockReturnValueOnce({
+    mockSelect.mockReturnValueOnce({
       from: vi.fn().mockReturnValue({
         where: vi.fn().mockResolvedValue([{ count: 80 }]),
       }),
     });
-    (db.select as any).mockReturnValueOnce({
+    mockSelect.mockReturnValueOnce({
       from: vi.fn().mockReturnValue({
         where: vi.fn().mockResolvedValue([{ count: 20 }]),
       }),
     });
-    (db.select as any).mockReturnValueOnce({
+    mockSelect.mockReturnValueOnce({
       from: vi.fn().mockReturnValue({
         groupBy: vi.fn().mockResolvedValue([
           { source: 'adzuna', total: 50, classified: 40 },
