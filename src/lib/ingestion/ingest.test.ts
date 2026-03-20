@@ -7,6 +7,11 @@ import * as jobsbg from './jobsbg';
 import * as remoteok from './remoteok';
 import * as weworkremotely from './weworkremotely';
 import * as nofluffjobs from './nofluffjobs';
+import * as zaplata from './zaplata';
+import * as justjoinit from './justjoinit';
+import * as ejobs from './ejobs';
+import * as bestjobs from './bestjobs';
+import * as bulldogjob from './bulldogjob';
 import type { RawJobPosting } from './types';
 
 // Mock all source modules
@@ -17,6 +22,11 @@ vi.mock('./jobsbg');
 vi.mock('./remoteok');
 vi.mock('./weworkremotely');
 vi.mock('./nofluffjobs');
+vi.mock('./zaplata');
+vi.mock('./justjoinit');
+vi.mock('./ejobs');
+vi.mock('./bestjobs');
+vi.mock('./bulldogjob');
 // Mock playwright dynamic import — not available in test env
 vi.mock('playwright', () => ({ chromium: { launch: vi.fn() } }));
 vi.mock('../db', () => ({
@@ -59,7 +69,6 @@ vi.mock('../llm/batch-classify', () => ({
 describe('ingestAllSources with dev.bg and jobs.bg', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // Suppress console.log during tests
     vi.spyOn(console, 'log').mockImplementation(() => {});
     vi.spyOn(console, 'error').mockImplementation(() => {});
   });
@@ -91,6 +100,11 @@ describe('ingestAllSources with dev.bg and jobs.bg', () => {
     vi.mocked(remoteok.fetchRemoteOkJobs).mockResolvedValue([]);
     vi.mocked(weworkremotely.fetchWeWorkRemotelyJobs).mockResolvedValue([]);
     vi.mocked(nofluffjobs.fetchNoFluffJobs).mockResolvedValue([]);
+    vi.mocked(zaplata.fetchZaplataJobs).mockResolvedValue([]);
+    vi.mocked(justjoinit.fetchJustJoinItJobs).mockResolvedValue([]);
+    vi.mocked(ejobs.fetchEJobsJobs).mockResolvedValue([]);
+    vi.mocked(bestjobs.fetchBestJobsJobs).mockResolvedValue([]);
+    vi.mocked(bulldogjob.fetchBulldogJobJobs).mockResolvedValue([]);
 
     const results = await ingestAllSources();
 
@@ -127,6 +141,11 @@ describe('ingestAllSources with dev.bg and jobs.bg', () => {
     vi.mocked(remoteok.fetchRemoteOkJobs).mockResolvedValue([]);
     vi.mocked(weworkremotely.fetchWeWorkRemotelyJobs).mockResolvedValue([]);
     vi.mocked(nofluffjobs.fetchNoFluffJobs).mockResolvedValue([]);
+    vi.mocked(zaplata.fetchZaplataJobs).mockResolvedValue([]);
+    vi.mocked(justjoinit.fetchJustJoinItJobs).mockResolvedValue([]);
+    vi.mocked(ejobs.fetchEJobsJobs).mockResolvedValue([]);
+    vi.mocked(bestjobs.fetchBestJobsJobs).mockResolvedValue([]);
+    vi.mocked(bulldogjob.fetchBulldogJobJobs).mockResolvedValue([]);
 
     const results = await ingestAllSources();
 
@@ -144,6 +163,11 @@ describe('ingestAllSources with dev.bg and jobs.bg', () => {
     vi.mocked(remoteok.fetchRemoteOkJobs).mockResolvedValue([]);
     vi.mocked(weworkremotely.fetchWeWorkRemotelyJobs).mockResolvedValue([]);
     vi.mocked(nofluffjobs.fetchNoFluffJobs).mockResolvedValue([]);
+    vi.mocked(zaplata.fetchZaplataJobs).mockResolvedValue([]);
+    vi.mocked(justjoinit.fetchJustJoinItJobs).mockResolvedValue([]);
+    vi.mocked(ejobs.fetchEJobsJobs).mockResolvedValue([]);
+    vi.mocked(bestjobs.fetchBestJobsJobs).mockResolvedValue([]);
+    vi.mocked(bulldogjob.fetchBulldogJobJobs).mockResolvedValue([]);
 
     const results = await ingestAllSources();
 
@@ -161,6 +185,11 @@ describe('ingestAllSources with dev.bg and jobs.bg', () => {
     vi.mocked(remoteok.fetchRemoteOkJobs).mockResolvedValue([]);
     vi.mocked(weworkremotely.fetchWeWorkRemotelyJobs).mockResolvedValue([]);
     vi.mocked(nofluffjobs.fetchNoFluffJobs).mockResolvedValue([]);
+    vi.mocked(zaplata.fetchZaplataJobs).mockResolvedValue([]);
+    vi.mocked(justjoinit.fetchJustJoinItJobs).mockResolvedValue([]);
+    vi.mocked(ejobs.fetchEJobsJobs).mockResolvedValue([]);
+    vi.mocked(bestjobs.fetchBestJobsJobs).mockResolvedValue([]);
+    vi.mocked(bulldogjob.fetchBulldogJobJobs).mockResolvedValue([]);
 
     const results = await ingestAllSources();
 

@@ -1,8 +1,11 @@
-# Repo Map — generated 2026-03-20T15:59:30Z
+# Repo Map — generated 2026-03-20T19:05:55Z
 # Architecture snapshot: class/function signatures, routes, exports
 # Use this to find the right file/function without reading full source.
 
 ## Python
+
+scripts/scrapers/bestjobs_scraper.py:
+  def scrape_bestjobs()
 
 ## Go
 
@@ -46,6 +49,8 @@ node_modules/flatted/golang/pkg/flatted/flatted.go:
   .next/routes-manifest.json
   .next/server
   .next/static
+  .next/trace
+  .next/trace-build
   .next/turbopack
   .next/types
   .vercel

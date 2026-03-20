@@ -31,6 +31,18 @@
     {
       "path": "/api/pipeline?source=justjoinit",
       "schedule": "35 9 * * *"
+    },
+    {
+      "path": "/api/pipeline?source=ejobs",
+      "schedule": "40 9 * * *"
+    },
+    {
+      "path": "/api/pipeline?source=bestjobs",
+      "schedule": "45 9 * * *"
+    },
+    {
+      "path": "/api/pipeline?source=bulldogjob",
+      "schedule": "50 9 * * *"
     }
   ]
 }

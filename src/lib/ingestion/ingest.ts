@@ -10,6 +10,9 @@ import { fetchWeWorkRemotelyJobs } from './weworkremotely';
 import { fetchNoFluffJobs } from './nofluffjobs';
 import { fetchZaplataJobs } from './zaplata';
 import { fetchJustJoinItJobs } from './justjoinit';
+import { fetchEJobsJobs } from './ejobs';
+import { fetchBestJobsJobs } from './bestjobs';
+import { fetchBulldogJobJobs } from './bulldogjob';
 import { normalizeUrl, computeContentHash } from './dedup';
 import { RawJobPosting, IngestionResult } from './types';
 import { classifyJobsById, classifyUnclassifiedJobs } from '../llm/batch-classify';
@@ -291,6 +294,63 @@ export async function ingestJustJoinIt(): Promise<IngestionResult> {
   }
 }
 
+export async function ingestEJobs(): Promise<IngestionResult> {
+  try {
+    const ejobsJobs = await fetchEJobsJobs();
+    const ejobsUpsert = await upsertJobs(ejobsJobs);
+    if (ejobsUpsert.insertedIds.length > 0) {
+      await classifyJobsById(ejobsUpsert.insertedIds.slice(0, 100));
+    }
+    return {
+      source: 'ejobs',
+      fetched: ejobsJobs.length,
+      new: ejobsUpsert.newCount,
+      errors: ejobsUpsert.errorCount,
+      deleted: 0
+    };
+  } catch (err) {
+    return { source: 'ejobs', fetched: 0, new: 0, errors: 1, deleted: 0 };
+  }
+}
+
+export async function ingestBestJobs(): Promise<IngestionResult> {
+  try {
+    const bestjobsJobs = await fetchBestJobsJobs();
+    const bestjobsUpsert = await upsertJobs(bestjobsJobs);
+    if (bestjobsUpsert.insertedIds.length > 0) {
+      await classifyJobsById(bestjobsUpsert.insertedIds.slice(0, 100));
+    }
+    return {
+      source: 'bestjobs',
+      fetched: bestjobsJobs.length,
+      new: bestjobsUpsert.newCount,
+      errors: bestjobsUpsert.errorCount,
+      deleted: 0
+    };
+  } catch (err) {
+    return { source: 'bestjobs', fetched: 0, new: 0, errors: 1, deleted: 0 };
+  }
+}
+
+export async function ingestBulldogJob(): Promise<IngestionResult> {
+  try {
+    const bulldogjobJobs = await fetchBulldogJobJobs();
+    const bulldogjobUpsert = await upsertJobs(bulldogjobJobs);
+    if (bulldogjobUpsert.insertedIds.length > 0) {
+      await classifyJobsById(bulldogjobUpsert.insertedIds.slice(0, 100));
+    }
+    return {
+      source: 'bulldogjob',
+      fetched: bulldogjobJobs.length,
+      new: bulldogjobUpsert.newCount,
+      errors: bulldogjobUpsert.errorCount,
+      deleted: 0
+    };
+  } catch (err) {
+    return { source: 'bulldogjob', fetched: 0, new: 0, errors: 1, deleted: 0 };
+  }
+}
+
 export async function ingestAllSources(): Promise<IngestionResult[]> {
   const startTime = Date.now();
   const timeoutMs = 240000;
@@ -306,6 +366,9 @@ export async function ingestAllSources(): Promise<IngestionResult[]> {
     { name: 'nofluffjobs', fn: ingestNoFluffJobs },
     { name: 'zaplata', fn: ingestZaplata },
     { name: 'justjoinit', fn: ingestJustJoinIt },
+    { name: 'ejobs', fn: ingestEJobs },
+    { name: 'bestjobs', fn: ingestBestJobs },
+    { name: 'bulldogjob', fn: ingestBulldogJob },
   ];
 
   for (const source of sources) {
