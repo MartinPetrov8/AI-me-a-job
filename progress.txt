@@ -97,3 +97,5 @@ Started: 2026-03-08T20:41:42Z
 [S-01][done] Sprint O: Implemented Supabase Auth integration — added @supabase/supabase-js and @supabase/ssr packages, created Supabase client wrappers (browser + server), auth middleware for protected routes, login/signup/forgot-password pages, auth callback route, auth context provider, updated users table schema with authId and subscriptionStatus columns, maintained backward compatibility with restore_token flow | tests:PASS
 
 [S-01][done] Sprint O: Fixed vitest.config.ts __dirname ES module error by using fileURLToPath(import.meta.url) pattern, removed console.error debug statements from upload route | tests:PASS
+
+[S-01][done] Sprint Q: Navigation bar (sticky, responsive hamburger menu, active page detection), footer (3-column responsive layout), updated layout.tsx with NavBar+Footer+AuthProvider, pricing page (Free vs Pro tiers, FAQ section), privacy policy (GDPR-compliant), terms of service, about page, custom 404 and error pages, component tests | tests:PASS
