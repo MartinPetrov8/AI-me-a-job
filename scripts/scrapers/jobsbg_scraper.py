@@ -16,7 +16,7 @@ def scrape_jobs_bg():
             url = f"{base_url}&fwp_paged={page}" if page > 1 else base_url
             
             try:
-                response = fetcher.get(url)
+                response = fetcher.fetch(url)
                 
                 if not response or not hasattr(response, 'html'):
                     break

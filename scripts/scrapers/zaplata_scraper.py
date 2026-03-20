@@ -16,7 +16,7 @@ def scrape_zaplata():
             url = f"{base_url}?page={page}" if page > 1 else base_url
             
             try:
-                response = fetcher.get(url)
+                response = fetcher.fetch(url)
                 
                 if not response or not hasattr(response, 'html'):
                     break
