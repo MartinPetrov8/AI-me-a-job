@@ -1,88 +1,124 @@
 #!/usr/bin/env python3
+"""Jobs.bg scraper — Bulgaria's #1 job board.
+KNOWN ISSUE: jobs.bg uses DataDome CAPTCHA + Cloudflare.
+Cannot be scraped from datacenter IPs. Returns empty array gracefully.
+Will work when run from residential IP (e.g., Martin's local machine).
+Outputs JSON array of job objects to stdout.
+"""
 import json
 import random
-import time
+import re
 import sys
-from scrapling import StealthyFetcher
+import time
 
 def scrape_jobs_bg():
     jobs = []
-    base_url = 'https://www.jobs.bg/front_job_search.php?categories[]=56'
-    
+
     try:
-        fetcher = StealthyFetcher()
-        
-        for page in range(1, 4):
-            url = f"{base_url}&fwp_paged={page}" if page > 1 else base_url
-            
+        # Try DynamicFetcher first (Playwright), then StealthyFetcher
+        fetcher = None
+        fetch_func = None
+
+        try:
+            from scrapling import DynamicFetcher
+            fetcher = DynamicFetcher()
+            fetch_func = lambda url: fetcher.fetch(url, headless=True, timeout=15000)
+            print("[jobsbg] Using DynamicFetcher", file=sys.stderr)
+        except Exception:
             try:
-                response = fetcher.fetch(url)
-                
-                if not response or not hasattr(response, 'html'):
+                from scrapling import StealthyFetcher
+                fetcher = StealthyFetcher()
+                fetch_func = lambda url: fetcher.fetch(url)
+                print("[jobsbg] Using StealthyFetcher", file=sys.stderr)
+            except Exception as e:
+                print(f"[jobsbg] No fetcher available: {e}", file=sys.stderr)
+                print(json.dumps([]))
+                return
+
+        base_url = 'https://www.jobs.bg/front_job_search.php?categories[]=56'
+
+        for page in range(1, 4):
+            url = f"{base_url}&page={page}" if page > 1 else base_url
+
+            try:
+                response = fetch_func(url)
+
+                if not response:
+                    print(f"[jobsbg] Page {page}: no response", file=sys.stderr)
                     break
-                
-                html = response.html
-                
-                job_items = html.css('.job-list-item')
-                if not job_items:
+
+                status = getattr(response, 'status', 0)
+                if status == 403:
+                    print(f"[jobsbg] Page {page}: 403 Forbidden (DataDome/Cloudflare)", file=sys.stderr)
                     break
-                
-                for item in job_items:
+
+                if status != 200:
+                    print(f"[jobsbg] Page {page}: HTTP {status}", file=sys.stderr)
+                    break
+
+                content = response.html_content
+                if not content or 'captcha-delivery.com' in content:
+                    print(f"[jobsbg] Page {page}: CAPTCHA challenge detected", file=sys.stderr)
+                    break
+
+                # Parse job listings — jobs.bg uses <a> tags with href="/front_job_view.php?..."
+                job_links = re.findall(
+                    r'<a[^>]*href="(/front_job_view\.php\?frompage=[^"]*id=(\d+)[^"]*)"[^>]*>(.*?)</a>',
+                    content, re.DOTALL
+                )
+
+                if not job_links:
+                    # Try alternative pattern
+                    job_links = re.findall(
+                        r'href="(https?://www\.jobs\.bg/front_job_view\.php[^"]*id=(\d+)[^"]*)"',
+                        content
+                    )
+
+                if not job_links:
+                    print(f"[jobsbg] Page {page}: no job links found", file=sys.stderr)
+                    break
+
+                print(f"[jobsbg] Page {page}: {len(job_links)} links found", file=sys.stderr)
+
+                for match in job_links:
                     try:
-                        job_id_elem = item.attributes.get('data-job-id', '')
-                        if not job_id_elem:
+                        if len(match) >= 3:
+                            href, job_id, title_html = match
+                            title = re.sub(r'<[^>]+>', '', title_html).strip()
+                        else:
+                            href, job_id = match[0], match[1]
+                            title = ''
+
+                        job_url = href if href.startswith('http') else f'https://www.jobs.bg{href}'
+
+                        if not title or not job_url:
                             continue
-                        
-                        job_id = job_id_elem
-                        
-                        title_elem = item.css_first('.job-title')
-                        title = title_elem.text.strip() if title_elem else 'Untitled'
-                        
-                        company_elem = item.css_first('.company-name')
-                        company = company_elem.text.strip() if company_elem else ''
-                        
-                        location_elem = item.css_first('.location')
-                        location = location_elem.text.strip() if location_elem else ''
-                        
-                        url_elem = item.css_first('a.overlay-link')
-                        job_url = url_elem.attributes.get('href', '') if url_elem else ''
-                        if job_url and not job_url.startswith('http'):
-                            job_url = 'https://www.jobs.bg' + job_url
-                        
-                        description_elem = item.css_first('.job-description')
-                        description = description_elem.text.strip() if description_elem else ''
-                        
-                        full_text = f"{title} {description}".lower()
-                        remote = 'remote' in full_text or 'дистанционно' in full_text
-                        
-                        if not job_url or not title:
-                            continue
-                        
+
                         jobs.append({
                             'source': 'jobs_bg',
                             'external_id': f'jobsbg-{job_id}',
                             'title': title,
-                            'company': company or None,
-                            'location': location or None,
+                            'company': None,
+                            'location': 'Bulgaria',
                             'url': job_url,
-                            'description': description,
+                            'description': '',
                             'posted_at': None,
                             'country': 'BG',
-                            'remote': remote
+                            'remote': False
                         })
                     except Exception:
                         continue
-                
+
                 if page < 3:
                     time.sleep(random.uniform(2, 5))
-            
-            except Exception:
+
+            except Exception as e:
+                print(f"[jobsbg] Page {page} error: {e}", file=sys.stderr)
                 break
-        
-        fetcher.close()
-    except Exception:
-        pass
-    
+
+    except Exception as e:
+        print(f"[jobsbg] Fatal: {e}", file=sys.stderr)
+
     print(json.dumps(jobs))
 
 if __name__ == '__main__':

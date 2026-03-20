@@ -1,88 +1,87 @@
 #!/usr/bin/env python3
+"""JustJoin.it scraper — Poland's #1 IT job board.
+API removed; uses DynamicFetcher + schema.org CollectionPage data.
+Outputs JSON array of job objects to stdout.
+"""
 import json
+import re
 import sys
-import requests
 
 def scrape_justjoinit():
     jobs = []
-    
+
     try:
-        headers = {
-            'Accept': 'application/json',
-            'User-Agent': 'Mozilla/5.0 (compatible; JobAggregator/1.0)'
-        }
-        
-        response = requests.get('https://justjoin.it/api/offers', headers=headers, timeout=30)
-        
-        if response.status_code != 200:
+        from scrapling import DynamicFetcher
+        f = DynamicFetcher()
+        r = f.fetch('https://justjoin.it/job-offers/all-locations', headless=True, timeout=20000)
+
+        if not r or r.status != 200:
+            print(f"[justjoinit] HTTP {getattr(r, 'status', 'unknown')}", file=sys.stderr)
             print(json.dumps([]))
             return
-        
-        data = response.json()
-        
-        if not isinstance(data, list):
+
+        content = r.html_content
+        if not content:
+            print("[justjoinit] Empty response", file=sys.stderr)
             print(json.dumps([]))
             return
-        
-        for item in data[:100]:
+
+        # Extract schema.org CollectionPage JSON from <script type="application/ld+json">
+        ld_scripts = re.findall(
+            r'<script[^>]*type="application/ld\+json"[^>]*>(.*?)</script>',
+            content, re.DOTALL
+        )
+
+        # Fallback: check all scripts for CollectionPage
+        if not ld_scripts:
+            ld_scripts = [s for s in re.findall(r'<script[^>]*>(.*?)</script>', content, re.DOTALL)
+                         if 'CollectionPage' in s]
+
+        job_urls = []
+        for script_content in ld_scripts:
+            if 'CollectionPage' not in script_content:
+                continue
             try:
-                job_id = item.get('id', '')
-                if not job_id:
-                    continue
-                
-                title = item.get('title', 'Untitled')
-                company_name = item.get('company_name', '')
-                
-                city = item.get('city', '')
-                country_code = item.get('country_code', 'PL')
-                location = f"{city}, {country_code}" if city else country_code
-                
-                remote = item.get('remote', False) or item.get('remote_interview', False)
-                
-                employment_types = item.get('employment_types', [])
-                employment_type = employment_types[0].get('type') if employment_types else None
-                
-                skills = item.get('skills', [])
-                skill_names = [s.get('name', '') for s in skills if s.get('name')]
-                skills_text = ', '.join(skill_names[:10])
-                
-                salary_from = None
-                salary_to = None
-                salary_currency = None
-                employment_info = employment_types[0] if employment_types else {}
-                if employment_info:
-                    salary_from = employment_info.get('from_pln') or employment_info.get('salary_from')
-                    salary_to = employment_info.get('to_pln') or employment_info.get('salary_to')
-                    salary_currency = employment_info.get('currency', 'PLN')
-                
-                salary_text = ''
-                if salary_from and salary_to:
-                    salary_text = f"Salary: {salary_from} - {salary_to} {salary_currency}\n"
-                elif salary_from:
-                    salary_text = f"Salary: from {salary_from} {salary_currency}\n"
-                
-                description = f"{salary_text}Skills: {skills_text}" if skills_text else salary_text
-                
-                job_url = f"https://justjoin.it/offers/{job_id}"
-                
+                data = json.loads(script_content)
+                parts = data.get('hasPart', [])
+                for part in parts:
+                    url = part.get('url', '')
+                    if url and '/job-offer/' in url:
+                        job_urls.append(url)
+            except json.JSONDecodeError:
+                continue
+
+        print(f"[justjoinit] Found {len(job_urls)} job URLs from schema.org", file=sys.stderr)
+
+        for url in job_urls:
+            try:
+                # Extract slug from URL: https://justjoin.it/job-offer/company-title-city-tech
+                slug = url.rstrip('/').split('/')[-1]
+                parts = slug.split('-')
+
+                # Best effort parse: company is usually first word(s), tech is last
+                # This is approximate — full details need individual page fetch
+                title = slug.replace('-', ' ').title()
+
                 jobs.append({
                     'source': 'justjoinit',
-                    'external_id': f'justjoinit-{job_id}',
+                    'external_id': f'justjoinit-{slug}',
                     'title': title,
-                    'company': company_name or None,
-                    'location': location,
-                    'url': job_url,
-                    'description': description,
+                    'company': None,  # Would need individual page fetch
+                    'location': 'Poland',
+                    'url': url,
+                    'description': '',
                     'posted_at': None,
                     'country': 'PL',
-                    'remote': remote
+                    'remote': False
                 })
-            except Exception:
+            except Exception as e:
+                print(f"[justjoinit] Parse error: {e}", file=sys.stderr)
                 continue
-    
-    except Exception:
-        pass
-    
+
+    except Exception as e:
+        print(f"[justjoinit] Error: {e}", file=sys.stderr)
+
     print(json.dumps(jobs))
 
 if __name__ == '__main__':
