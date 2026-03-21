@@ -1,4 +1,4 @@
-# Repo Map — generated 2026-03-21T10:23:27Z
+# Repo Map — generated 2026-03-21T21:08:17Z
 # Architecture snapshot: class/function signatures, routes, exports
 # Use this to find the right file/function without reading full source.
 
@@ -114,6 +114,5 @@ node_modules/flatted/golang/pkg/flatted/flatted.go:
   tests/scripts
   tests/seo
   tsconfig.json
-  tsconfig.tsbuildinfo
   vercel.json
   vitest.config.ts

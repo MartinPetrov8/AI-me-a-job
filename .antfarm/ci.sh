@@ -2,16 +2,16 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-echo "=== CI: TypeScript Check ==="
-tsc --noEmit 2>&1
-
-echo ""
-echo "=== CI: Build ==="
+# --- CI: Build ---
+echo "CI: Running build..."
 npm run build 2>&1
 
-echo ""
-echo "=== CI: Tests ==="
+# --- CI: Tests ---
+echo "CI: Running tests..."
 npm run test 2>&1
 
-echo ""
-echo "✓ CI PASSED"
+# --- CI: Type Check ---
+echo "CI: Running type check..."
+tsc --noEmit 2>&1
+
+echo "CI PASSED"
