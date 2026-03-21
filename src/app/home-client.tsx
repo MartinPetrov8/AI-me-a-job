@@ -150,26 +150,58 @@ export default function HomeClient() {
         </div>
       )}
 
-      <div id="how-it-works" className="max-w-5xl mx-auto px-6 pb-16">
-        <h2 className="text-3xl font-bold text-gray-900 text-center mb-12">How it works</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 hover:shadow-md transition-shadow">
-            <div className="text-5xl mb-4">📄</div>
+      <section id="how-it-works" className="max-w-5xl mx-auto px-6 pb-16">
+        <h2 className="text-3xl font-bold text-gray-900 text-center mb-12">How It Works</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <motion.div
+            className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8"
+            initial={prefersReducedMotion ? {} : { opacity: 0, y: 20 }}
+            whileInView={prefersReducedMotion ? {} : { opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: '-50px' }}
+            transition={{ duration: 0.5, delay: 0 }}
+          >
+            <div className="flex items-center justify-center w-16 h-16 rounded-full bg-indigo-100 text-indigo-600 text-2xl font-bold mb-6">
+              1
+            </div>
             <h3 className="font-bold text-gray-900 mb-3 text-xl">Upload Your CV</h3>
-            <p className="text-gray-600 text-sm leading-relaxed">PDF or DOCX, analyzed in seconds</p>
-          </div>
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 hover:shadow-md transition-shadow">
-            <div className="text-5xl mb-4">🤖</div>
-            <h3 className="font-bold text-gray-900 mb-3 text-xl">AI Extracts Your Profile</h3>
-            <p className="text-gray-600 text-sm leading-relaxed">8 criteria matched automatically</p>
-          </div>
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 hover:shadow-md transition-shadow">
-            <div className="text-5xl mb-4">🎯</div>
-            <h3 className="font-bold text-gray-900 mb-3 text-xl">See Your Matches</h3>
-            <p className="text-gray-600 text-sm leading-relaxed">Ranked by relevance, no noise</p>
-          </div>
+            <p className="text-gray-600 text-sm leading-relaxed">
+              Upload your CV (PDF or DOCX) — AI extracts 8 criteria from your profile
+            </p>
+          </motion.div>
+
+          <motion.div
+            className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8"
+            initial={prefersReducedMotion ? {} : { opacity: 0, y: 20 }}
+            whileInView={prefersReducedMotion ? {} : { opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: '-50px' }}
+            transition={{ duration: 0.5, delay: 0.1 }}
+          >
+            <div className="flex items-center justify-center w-16 h-16 rounded-full bg-indigo-100 text-indigo-600 text-2xl font-bold mb-6">
+              2
+            </div>
+            <h3 className="font-bold text-gray-900 mb-3 text-xl">We Scan Jobs</h3>
+            <p className="text-gray-600 text-sm leading-relaxed">
+              We scan 7,000+ jobs from 12 boards — refreshed every day at 09:00 UTC
+            </p>
+          </motion.div>
+
+          <motion.div
+            className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8"
+            initial={prefersReducedMotion ? {} : { opacity: 0, y: 20 }}
+            whileInView={prefersReducedMotion ? {} : { opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: '-50px' }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+          >
+            <div className="flex items-center justify-center w-16 h-16 rounded-full bg-indigo-100 text-indigo-600 text-2xl font-bold mb-6">
+              3
+            </div>
+            <h3 className="font-bold text-gray-900 mb-3 text-xl">Get Ranked Shortlist</h3>
+            <p className="text-gray-600 text-sm leading-relaxed">
+              Get a ranked shortlist — each job scored by skills, location, salary, work mode, and more
+            </p>
+          </motion.div>
         </div>
-      </div>
+      </section>
 
       <footer className="border-t border-gray-100 bg-white py-6 text-center text-gray-400 text-sm">
         <p>Built by Martin Petrov | <a href="https://github.com/MartinPetrov8/AI-me-a-job" target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:text-indigo-700 transition-colors">Open source on GitHub</a></p>
