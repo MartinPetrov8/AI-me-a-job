@@ -1,0 +1,88 @@
+---
+title: "How AI Job Matching Works"
+date: "2026-03-01"
+excerpt: "Traditional job boards rely on keyword matching that misses great opportunities. AI job matching uses semantic understanding to find roles you're actually qualified for—even when the words don't match."
+slug: "how-ai-job-matching-works"
+tags: ["ai", "job-search", "guide"]
+---
+
+# How AI Job Matching Works
+
+If you've ever spent hours scrolling through job boards, you know the frustration. You search for "Data Scientist" and get flooded with roles for "Data Analysts," "ML Engineers," and even "Business Analysts." Meanwhile, perfect matches slip through because they use different terminology—"Research Scientist" or "AI Engineer."
+
+Traditional job boards rely on keyword matching. It's simple, fast, and fundamentally broken.
+
+AI job matching is different. Instead of matching words, it understands meaning. Let's explore how it works and why it's so much better.
+
+## The Problem with Keyword Search
+
+Traditional job boards use Boolean search. You type "Python developer," and they find every listing containing those exact words. Sounds simple enough—until you realize what it misses.
+
+If a job posting says "Software Engineer with strong Python skills," it might not show up. If it mentions "backend developer" instead of "Python developer," you'll never see it. If the posting uses "programmer" or "engineer" without your exact keywords, it's invisible to you.
+
+Worse, keyword search can't distinguish between levels. A senior engineer with 10 years of experience gets matched with junior roles requiring 1-2 years. The algorithm doesn't know the difference—it just sees "Python" and calls it a match.
+
+Semantic matching solves this. Instead of matching words, AI systems understand what the words mean in context. "Software Engineer with Python skills" and "Python developer" are semantically identical, even though the words differ. The AI knows this because it's been trained on millions of examples of how humans use language.
+
+## The 8 Criteria That Matter
+
+Effective job matching requires more than just skills. At aimeajob, we extract and match on eight criteria that hiring managers actually care about:
+
+**1. Skills** – Not just keywords, but the actual technologies and tools you know. "React" and "React.js" are the same thing. "Machine Learning" and "ML" are identical. The AI understands these equivalences.
+
+**2. Years of Experience** – A senior role requiring 8+ years won't match a candidate with 2 years, even if the skills align perfectly. Traditional keyword search misses this entirely.
+
+**3. Location** – Remote jobs match remote candidates. Berlin-based roles match Berlin-based candidates or those willing to relocate. This sounds obvious, but keyword search doesn't handle geography well.
+
+**4. Salary Expectations** – If you're looking for €80k+ and a role pays €45k, it's not a match. Simple, but critical.
+
+**5. Work Mode** – Remote, hybrid, or on-site. If you only want remote work, on-site roles shouldn't clutter your feed.
+
+**6. Seniority Level** – Junior, mid-level, senior, staff, principal. The AI understands that a "Staff Engineer" is more senior than a "Mid-level Engineer," even without explicit years-of-experience numbers.
+
+**7. Language** – If you speak English and German, you can apply to jobs requiring either. If a role requires French and you don't speak it, it won't show up.
+
+**8. Industry** – A finance background doesn't translate directly to healthcare tech. The AI knows this and weighs industry alignment.
+
+These eight criteria are extracted from your CV and matched against every job in the database. That's how aimeajob delivers targeted results instead of a keyword soup.
+
+## How AI Extracts Criteria from Your CV
+
+When you upload your CV to aimeajob, a large language model (LLM)—specifically Claude Haiku 4.5—reads it and extracts the eight criteria.
+
+The LLM doesn't use keyword matching. It reads your CV like a human recruiter would. It sees "developed machine learning models for fraud detection" and infers: skills include machine learning, Python, and fraud detection; industry is finance or fintech; experience level is likely mid-to-senior.
+
+If your CV says "5 years of software engineering experience," the LLM extracts 5 years. If it says "Senior Data Scientist at Acme Corp (2020-2024)," it calculates 4 years and infers seniority level: senior.
+
+The same LLM reads job postings and extracts the same criteria. This creates a fair comparison: your profile's criteria vs. the job's criteria.
+
+## Scoring and Ranking
+
+Once the criteria are extracted, the matching engine scores every job against your profile.
+
+Each criterion gets a score from 0 to 2:
+- **0 points**: No match (you require remote, the job is on-site)
+- **1 point**: Partial match (your skills overlap 50% with the job's requirements)
+- **2 points**: Full match (your experience, skills, and preferences align perfectly)
+
+The eight criteria scores are summed, giving a total score from 0 to 16. Jobs scoring 5 or higher are shown to you. The rest are filtered out.
+
+This threshold prevents low-quality matches from cluttering your results. A score of 5 means at least three criteria matched well. Anything below that is noise.
+
+Jobs are ranked by score. Your top match scored 14/16? That's the first result. A role that scored 6/16 appears further down the list.
+
+The beauty of this system is that it handles nuance. If you're slightly overqualified for a role, the algorithm can still match you—it just docks a point for experience level. If your skills are 80% aligned but not 100%, you still get a partial match. Traditional keyword search would miss both cases entirely.
+
+## Why It Matters
+
+AI job matching saves time. Instead of scrolling through 500 listings, you see your top 10 matches in 30 seconds.
+
+It finds jobs you'd never discover otherwise. That "Machine Learning Researcher" role you missed because you searched for "Data Scientist"? The AI surfaces it, because semantically, they're nearly identical.
+
+And it eliminates false positives. No more junior roles when you're senior. No more on-site jobs when you want remote. No more finance roles when you're a healthcare specialist.
+
+This is what job search should have been all along: precise, fast, and relevant.
+
+## Try It Yourself
+
+Upload your CV to aimeajob and see the difference. No registration required. Results in 30 seconds. [Start here](/upload).
