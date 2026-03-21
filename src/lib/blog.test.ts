@@ -49,4 +49,43 @@ describe('getBlogPosts', () => {
     const exists = posts.some(p => p.slug === 'ai-vs-traditional-job-search');
     expect(exists).toBe(true);
   });
+
+  it('should return exactly 5 articles after S-04', () => {
+    const posts = getBlogPosts();
+    expect(posts.length).toBe(5);
+  });
+
+  it('should include top-tech-jobs-bulgaria-2026 article with correct frontmatter', () => {
+    const posts = getBlogPosts();
+    const article = posts.find(p => p.slug === 'top-tech-jobs-bulgaria-2026');
+    
+    expect(article).toBeDefined();
+    expect(article?.date).toBe('2026-03-15');
+    expect(article?.tags).toContain('bulgaria');
+    expect(article?.tags).toContain('tech-jobs');
+    expect(article?.tags).toContain('career');
+  });
+
+  it('should include optimize-cv-ats-2026 article with correct frontmatter', () => {
+    const posts = getBlogPosts();
+    const article = posts.find(p => p.slug === 'optimize-cv-ats-2026');
+    
+    expect(article).toBeDefined();
+    expect(article?.date).toBe('2026-03-18');
+    expect(article?.tags).toContain('cv');
+    expect(article?.tags).toContain('ats');
+    expect(article?.tags).toContain('career-tips');
+  });
+
+  it('should fail if top-tech-jobs-bulgaria-2026.mdx is missing', () => {
+    const posts = getBlogPosts();
+    const exists = posts.some(p => p.slug === 'top-tech-jobs-bulgaria-2026');
+    expect(exists).toBe(true);
+  });
+
+  it('should fail if optimize-cv-ats-2026.mdx is missing', () => {
+    const posts = getBlogPosts();
+    const exists = posts.some(p => p.slug === 'optimize-cv-ats-2026');
+    expect(exists).toBe(true);
+  });
 });
