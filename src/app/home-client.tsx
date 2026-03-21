@@ -11,7 +11,18 @@ interface Stats {
   last_updated: string | null;
 }
 
-export default function HomeClient() {
+interface BlogPost {
+  title: string;
+  date: string;
+  excerpt: string;
+  slug: string;
+}
+
+interface HomeClientProps {
+  blogPosts: BlogPost[];
+}
+
+export default function HomeClient({ blogPosts }: HomeClientProps) {
   const [stats, setStats] = useState<Stats | null>(null);
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null);
   const prefersReducedMotion = useReducedMotion();
@@ -287,6 +298,35 @@ export default function HomeClient() {
               </div>
             </div>
           </div>
+        </div>
+      </section>
+
+      <section className="max-w-5xl mx-auto px-6 pb-16">
+        <h2 className="text-3xl font-bold text-gray-900 text-center mb-12">From the Blog</h2>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {blogPosts.map((post) => (
+            <Link
+              key={post.slug}
+              href={`/blog/${post.slug}`}
+              className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 hover:shadow-md transition-shadow"
+            >
+              <h3 className="font-bold text-gray-900 mb-2 text-lg">{post.title}</h3>
+              <p className="text-sm text-gray-500 mb-3">
+                {new Date(post.date).toLocaleDateString('en-US', { 
+                  year: 'numeric', 
+                  month: 'long', 
+                  day: 'numeric' 
+                })}
+              </p>
+              <p className="text-gray-600 text-sm leading-relaxed mb-4">{post.excerpt}</p>
+              <span className="text-indigo-600 text-sm font-medium inline-flex items-center gap-1">
+                Read more
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                </svg>
+              </span>
+            </Link>
+          ))}
         </div>
       </section>
 
