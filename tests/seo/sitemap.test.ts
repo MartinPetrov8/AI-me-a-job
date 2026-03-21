@@ -32,11 +32,11 @@ describe('sitemap', () => {
     expect(pricingPage?.changeFrequency).toBe('monthly');
   });
 
-  it('includes about page with priority 0.6', () => {
+  it('includes about page with priority 0.7', () => {
     const result = sitemap();
     const aboutPage = result.find((entry) => entry.url === 'https://aimeajob.com/about');
     expect(aboutPage).toBeDefined();
-    expect(aboutPage?.priority).toBe(0.6);
+    expect(aboutPage?.priority).toBe(0.7);
     expect(aboutPage?.changeFrequency).toBe('monthly');
   });
 
