@@ -30,6 +30,8 @@
   "homepage": "https://github.com/MartinPetrov8/AI-me-a-job#readme",
   "dependencies": {
     "@anthropic-ai/sdk": "^0.78.0",
+    "@supabase/ssr": "^0.9.0",
+    "@supabase/supabase-js": "^2.99.3",
     "@types/node": "^25.3.5",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
