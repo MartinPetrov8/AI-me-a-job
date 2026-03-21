@@ -1,4 +1,4 @@
-# Repo Map — generated 2026-03-21T08:47:38Z
+# Repo Map — generated 2026-03-21T09:01:41Z
 # Architecture snapshot: class/function signatures, routes, exports
 # Use this to find the right file/function without reading full source.
 
@@ -27,6 +27,7 @@ node_modules/flatted/golang/pkg/flatted/flatted.go:
   .env.example
   .gate-business
   .gate-deliverables
+  .gate-deliverables-sprint-x
   .gate-stack
   .git
   .gitignore
@@ -57,6 +58,7 @@ node_modules/flatted/golang/pkg/flatted/flatted.go:
   README.md
   SMOKE_TESTS.md
   architecture_notes.txt
+  architecture_notes_sprint_x.txt
   commit.sh
   docs
   docs/ADR
@@ -112,5 +114,6 @@ node_modules/flatted/golang/pkg/flatted/flatted.go:
   tests/scripts
   tests/seo
   tsconfig.json
+  tsconfig.tsbuildinfo
   vercel.json
   vitest.config.ts

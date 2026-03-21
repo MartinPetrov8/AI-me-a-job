@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
 
 interface Stats {
   total_jobs: number;
@@ -12,6 +13,7 @@ interface Stats {
 
 export default function HomeClient() {
   const [stats, setStats] = useState<Stats | null>(null);
+  const prefersReducedMotion = useReducedMotion();
 
   useEffect(() => {
     fetch('/api/stats')
@@ -19,6 +21,31 @@ export default function HomeClient() {
       .then(data => setStats(data))
       .catch(() => setStats(null));
   }, []);
+
+  const handleSmoothScroll = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    e.preventDefault();
+    const target = document.querySelector('#how-it-works');
+    if (target) {
+      target.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
+  const AnimatedCounter = ({ value }: { value: number }) => {
+    if (prefersReducedMotion) {
+      return <span className="font-bold text-2xl text-indigo-600">{value.toLocaleString()}</span>;
+    }
+
+    return (
+      <motion.span
+        className="font-bold text-2xl text-indigo-600"
+        initial={{ opacity: 0, scale: 0.8 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.5 }}
+      >
+        {value.toLocaleString()}
+      </motion.span>
+    );
+  };
 
   return (
     <main className="min-h-screen bg-[#F7F7F5]">
@@ -31,59 +58,99 @@ export default function HomeClient() {
         </div>
       </nav>
 
-      <div className="max-w-5xl mx-auto px-6 pt-24 pb-16 text-center">
-        <div className="inline-flex items-center gap-2 bg-indigo-50 text-indigo-700 text-sm font-medium px-4 py-1.5 rounded-full mb-8">
-          <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
-          AI-powered · No registration required
+      <div className="relative max-w-5xl mx-auto px-6 pt-24 pb-16 text-center overflow-hidden">
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-gradient-to-br from-indigo-100 via-indigo-50 to-transparent rounded-full blur-3xl opacity-40 pointer-events-none" />
+        
+        <div className="relative z-10">
+          <h1 className="text-5xl md:text-6xl font-extrabold text-gray-900 mb-6 leading-tight tracking-tight">
+            Stop Scrolling Job Boards.<br />
+            Get AI-Matched.
+          </h1>
+
+          <p className="text-xl text-gray-600 mb-10 max-w-3xl mx-auto leading-relaxed">
+            7,000+ jobs from 12 sources, ranked by how well they match YOUR CV. Free, no registration.
+          </p>
+
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8">
+            <Link
+              href="/upload"
+              className="inline-flex items-center gap-2 bg-indigo-600 text-white font-semibold px-8 py-4 rounded-xl hover:bg-indigo-700 transition-colors text-lg shadow-lg shadow-indigo-200 w-full sm:w-auto justify-center"
+            >
+              Upload Your CV — free
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+              </svg>
+            </Link>
+            <a
+              href="#how-it-works"
+              onClick={handleSmoothScroll}
+              className="inline-flex items-center gap-2 bg-white text-indigo-600 font-semibold px-8 py-4 rounded-xl border-2 border-indigo-600 hover:bg-indigo-50 transition-colors text-lg w-full sm:w-auto justify-center"
+            >
+              See how it works
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </a>
+          </div>
+
+          <div className="flex flex-wrap items-center justify-center gap-3 text-sm text-gray-600 mb-12">
+            <span className="flex items-center gap-2">
+              <svg className="w-4 h-4 text-indigo-600" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              </svg>
+              No registration
+            </span>
+            <span className="text-gray-300">·</span>
+            <span className="flex items-center gap-2">
+              <svg className="w-4 h-4 text-indigo-600" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              </svg>
+              PDF or DOCX
+            </span>
+            <span className="text-gray-300">·</span>
+            <span className="flex items-center gap-2">
+              <svg className="w-4 h-4 text-indigo-600" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              </svg>
+              Results in 30 seconds
+            </span>
+            <span className="text-gray-300">·</span>
+            <span className="flex items-center gap-2">
+              <svg className="w-4 h-4 text-indigo-600" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              </svg>
+              12 job sources
+            </span>
+          </div>
         </div>
-
-        <h1 className="text-6xl font-extrabold text-gray-900 mb-6 leading-[1.1] tracking-tight">
-          Jobs that actually<br />
-          <span className="text-indigo-600">match your skills</span>
-        </h1>
-
-        <p className="text-xl text-gray-500 mb-10 max-w-2xl mx-auto leading-relaxed">
-          Upload your CV. AI extracts your profile. Get a ranked shortlist based on 8 criteria — no sponsored noise, no registration.
-        </p>
-
-        <Link
-          href="/upload"
-          className="inline-flex items-center gap-2 bg-indigo-600 text-white font-semibold px-10 py-4 rounded-xl hover:bg-indigo-700 transition-colors text-lg shadow-lg shadow-indigo-200"
-        >
-          Upload Your CV
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-          </svg>
-        </Link>
-        <p className="mt-4 text-sm text-gray-400">Free · PDF or DOCX · Results in under 30 seconds</p>
       </div>
 
       {stats && (
-        <div className="max-w-5xl mx-auto px-6 pb-8">
+        <div className="max-w-5xl mx-auto px-6 pb-16">
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 text-center">
-            <div className="flex items-center justify-center gap-8 text-sm text-gray-600">
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-6 sm:gap-8 text-sm text-gray-600">
               <div className="flex items-center gap-2">
-                <span className="font-bold text-2xl text-indigo-600 animate-count">{stats.total_jobs}</span>
+                <AnimatedCounter value={stats.total_jobs} />
                 <span>active jobs</span>
               </div>
-              <span className="text-gray-300">|</span>
+              <span className="hidden sm:inline text-gray-300">|</span>
               <div className="flex items-center gap-2">
-                <span className="font-bold text-2xl text-indigo-600 animate-count">{stats.countries}</span>
+                <AnimatedCounter value={stats.countries} />
                 <span>countries</span>
               </div>
-              <span className="text-gray-300">|</span>
+              <span className="hidden sm:inline text-gray-300">|</span>
               <div className="flex items-center gap-2">
-                <span className="font-bold text-2xl text-indigo-600 animate-count">{stats.sources}</span>
+                <AnimatedCounter value={stats.sources} />
                 <span>sources</span>
               </div>
-              <span className="text-gray-300">|</span>
+              <span className="hidden sm:inline text-gray-300">|</span>
               <span className="text-gray-500">Updated daily</span>
             </div>
           </div>
         </div>
       )}
 
-      <div className="max-w-5xl mx-auto px-6 pb-16">
+      <div id="how-it-works" className="max-w-5xl mx-auto px-6 pb-16">
         <h2 className="text-3xl font-bold text-gray-900 text-center mb-12">How it works</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 hover:shadow-md transition-shadow">
@@ -107,16 +174,6 @@ export default function HomeClient() {
       <footer className="border-t border-gray-100 bg-white py-6 text-center text-gray-400 text-sm">
         <p>Built by Martin Petrov | <a href="https://github.com/MartinPetrov8/AI-me-a-job" target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:text-indigo-700 transition-colors">Open source on GitHub</a></p>
       </footer>
-
-      <style jsx>{`
-        @keyframes count {
-          from { opacity: 0.5; transform: scale(0.95); }
-          to { opacity: 1; transform: scale(1); }
-        }
-        .animate-count {
-          animation: count 0.6s ease-out;
-        }
-      `}</style>
     </main>
   );
 }
