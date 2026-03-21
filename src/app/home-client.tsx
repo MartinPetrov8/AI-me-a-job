@@ -13,6 +13,7 @@ interface Stats {
 
 export default function HomeClient() {
   const [stats, setStats] = useState<Stats | null>(null);
+  const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null);
   const prefersReducedMotion = useReducedMotion();
 
   useEffect(() => {
@@ -287,6 +288,203 @@ export default function HomeClient() {
             </div>
           </div>
         </div>
+      </section>
+
+      <section className="max-w-5xl mx-auto px-6 pb-16">
+        <h2 className="text-3xl font-bold text-gray-900 text-center mb-12">Frequently Asked Questions</h2>
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm divide-y divide-gray-100">
+          <div>
+            <button
+              onClick={() => setOpenFaqIndex(openFaqIndex === 0 ? null : 0)}
+              className="w-full px-6 py-5 flex items-center justify-between text-left hover:bg-gray-50 transition-colors"
+            >
+              <span className="font-semibold text-gray-900 text-lg">How does AI job matching work?</span>
+              <svg
+                className={`w-5 h-5 text-gray-400 transition-transform ${openFaqIndex === 0 ? 'rotate-180' : ''}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            {openFaqIndex === 0 && (
+              <div className="px-6 pb-5 text-gray-600 leading-relaxed">
+                When you upload your CV, our AI extracts 8 key criteria from your profile: skills, years of experience, location preferences, salary expectations, work mode (remote/hybrid/onsite), seniority level, languages, and industry background. We then score every job in our database against these 8 criteria using a weighted algorithm. Jobs that match more criteria and match them more precisely rank higher. You see a ranked shortlist with transparent match scores — no black box, no sponsored placements.
+              </div>
+            )}
+          </div>
+
+          <div>
+            <button
+              onClick={() => setOpenFaqIndex(openFaqIndex === 1 ? null : 1)}
+              className="w-full px-6 py-5 flex items-center justify-between text-left hover:bg-gray-50 transition-colors"
+            >
+              <span className="font-semibold text-gray-900 text-lg">Is aimeajob really free?</span>
+              <svg
+                className={`w-5 h-5 text-gray-400 transition-transform ${openFaqIndex === 1 ? 'rotate-180' : ''}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            {openFaqIndex === 1 && (
+              <div className="px-6 pb-5 text-gray-600 leading-relaxed">
+                Yes. Your top 5 matches are free forever — no credit card required, no trial period that expires. You can upload your CV, get ranked results, and see your best 5 matches every single time, completely free. If you need to see more than 5 results or unlock advanced filtering, we offer a Pro plan. But for most job seekers, the free tier is all you need.
+              </div>
+            )}
+          </div>
+
+          <div>
+            <button
+              onClick={() => setOpenFaqIndex(openFaqIndex === 2 ? null : 2)}
+              className="w-full px-6 py-5 flex items-center justify-between text-left hover:bg-gray-50 transition-colors"
+            >
+              <span className="font-semibold text-gray-900 text-lg">What job boards do you search?</span>
+              <svg
+                className={`w-5 h-5 text-gray-400 transition-transform ${openFaqIndex === 2 ? 'rotate-180' : ''}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            {openFaqIndex === 2 && (
+              <div className="px-6 pb-5 text-gray-600 leading-relaxed">
+                We aggregate from 12 sources: <strong>Adzuna</strong>, <strong>Jooble</strong>, <strong>RemoteOK</strong>, <strong>WeWorkRemotely</strong>, <strong>NoFluffJobs</strong>, <strong>zaplata.bg</strong>, <strong>jobs.bg</strong>, <strong>dev.bg</strong>, <strong>JustJoin.it</strong>, <strong>eJobs.ro</strong>, <strong>BestJobs.eu</strong>, and <strong>Bulldogjob.com</strong>. This gives you access to 7,000+ jobs in one search, covering both international boards and regional European platforms.
+              </div>
+            )}
+          </div>
+
+          <div>
+            <button
+              onClick={() => setOpenFaqIndex(openFaqIndex === 3 ? null : 3)}
+              className="w-full px-6 py-5 flex items-center justify-between text-left hover:bg-gray-50 transition-colors"
+            >
+              <span className="font-semibold text-gray-900 text-lg">Which countries are covered?</span>
+              <svg
+                className={`w-5 h-5 text-gray-400 transition-transform ${openFaqIndex === 3 ? 'rotate-180' : ''}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            {openFaqIndex === 3 && (
+              <div className="px-6 pb-5 text-gray-600 leading-relaxed">
+                We focus on Europe: <strong>Bulgaria (BG)</strong>, <strong>Romania (RO)</strong>, <strong>Poland (PL)</strong>, <strong>Germany (DE)</strong>, <strong>Netherlands (NL)</strong>, <strong>France (FR)</strong>, and <strong>Great Britain (GB)</strong>. We also include <strong>remote-first opportunities</strong> that are open to candidates across Europe. Our coverage will expand as we add more regional boards.
+              </div>
+            )}
+          </div>
+
+          <div>
+            <button
+              onClick={() => setOpenFaqIndex(openFaqIndex === 4 ? null : 4)}
+              className="w-full px-6 py-5 flex items-center justify-between text-left hover:bg-gray-50 transition-colors"
+            >
+              <span className="font-semibold text-gray-900 text-lg">Do I need to create an account?</span>
+              <svg
+                className={`w-5 h-5 text-gray-400 transition-transform ${openFaqIndex === 4 ? 'rotate-180' : ''}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            {openFaqIndex === 4 && (
+              <div className="px-6 pb-5 text-gray-600 leading-relaxed">
+                No. Just upload your CV and get results. No account needed, no email required, no password to remember. We generate a unique restore link after your upload so you can return to your results later. Keep that link safe if you want to access your matches again — but there is no mandatory registration.
+              </div>
+            )}
+          </div>
+
+          <div>
+            <button
+              onClick={() => setOpenFaqIndex(openFaqIndex === 5 ? null : 5)}
+              className="w-full px-6 py-5 flex items-center justify-between text-left hover:bg-gray-50 transition-colors"
+            >
+              <span className="font-semibold text-gray-900 text-lg">How often are jobs updated?</span>
+              <svg
+                className={`w-5 h-5 text-gray-400 transition-transform ${openFaqIndex === 5 ? 'rotate-180' : ''}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            {openFaqIndex === 5 && (
+              <div className="px-6 pb-5 text-gray-600 leading-relaxed">
+                Jobs are refreshed <strong>daily at 09:00 UTC</strong> from all 12 sources. Every morning, we pull new listings, remove expired postings, and re-classify everything using our AI extraction pipeline. When you search, you are always seeing the most up-to-date job data available.
+              </div>
+            )}
+          </div>
+        </div>
+
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              '@context': 'https://schema.org',
+              '@type': 'FAQPage',
+              mainEntity: [
+                {
+                  '@type': 'Question',
+                  name: 'How does AI job matching work?',
+                  acceptedAnswer: {
+                    '@type': 'Answer',
+                    text: 'When you upload your CV, our AI extracts 8 key criteria from your profile: skills, years of experience, location preferences, salary expectations, work mode (remote/hybrid/onsite), seniority level, languages, and industry background. We then score every job in our database against these 8 criteria using a weighted algorithm. Jobs that match more criteria and match them more precisely rank higher. You see a ranked shortlist with transparent match scores — no black box, no sponsored placements.'
+                  }
+                },
+                {
+                  '@type': 'Question',
+                  name: 'Is aimeajob really free?',
+                  acceptedAnswer: {
+                    '@type': 'Answer',
+                    text: 'Yes. Your top 5 matches are free forever — no credit card required, no trial period that expires. You can upload your CV, get ranked results, and see your best 5 matches every single time, completely free. If you need to see more than 5 results or unlock advanced filtering, we offer a Pro plan. But for most job seekers, the free tier is all you need.'
+                  }
+                },
+                {
+                  '@type': 'Question',
+                  name: 'What job boards do you search?',
+                  acceptedAnswer: {
+                    '@type': 'Answer',
+                    text: 'We aggregate from 12 sources: Adzuna, Jooble, RemoteOK, WeWorkRemotely, NoFluffJobs, zaplata.bg, jobs.bg, dev.bg, JustJoin.it, eJobs.ro, BestJobs.eu, and Bulldogjob.com. This gives you access to 7,000+ jobs in one search, covering both international boards and regional European platforms.'
+                  }
+                },
+                {
+                  '@type': 'Question',
+                  name: 'Which countries are covered?',
+                  acceptedAnswer: {
+                    '@type': 'Answer',
+                    text: 'We focus on Europe: Bulgaria (BG), Romania (RO), Poland (PL), Germany (DE), Netherlands (NL), France (FR), and Great Britain (GB). We also include remote-first opportunities that are open to candidates across Europe. Our coverage will expand as we add more regional boards.'
+                  }
+                },
+                {
+                  '@type': 'Question',
+                  name: 'Do I need to create an account?',
+                  acceptedAnswer: {
+                    '@type': 'Answer',
+                    text: 'No. Just upload your CV and get results. No account needed, no email required, no password to remember. We generate a unique restore link after your upload so you can return to your results later. Keep that link safe if you want to access your matches again — but there is no mandatory registration.'
+                  }
+                },
+                {
+                  '@type': 'Question',
+                  name: 'How often are jobs updated?',
+                  acceptedAnswer: {
+                    '@type': 'Answer',
+                    text: 'Jobs are refreshed daily at 09:00 UTC from all 12 sources. Every morning, we pull new listings, remove expired postings, and re-classify everything using our AI extraction pipeline. When you search, you are always seeing the most up-to-date job data available.'
+                  }
+                }
+              ]
+            })
+          }}
+        />
       </section>
 
       <footer className="border-t border-gray-100 bg-white py-6 text-center text-gray-400 text-sm">

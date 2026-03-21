@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { render, screen, waitFor, within, fireEvent } from '@testing-library/react';
 import HomeClient from '@/app/home-client';
 
 describe('HomeClient - Hero Section', () => {
@@ -555,6 +555,132 @@ describe('HomeClient - Features Grid', () => {
       const sectionElement = within(section as HTMLElement);
       expect(sectionElement.getByText(/Top 5 matches free forever/i)).toBeTruthy();
       expect(sectionElement.getByText(/forever free/i)).toBeTruthy();
+    }
+  });
+});
+
+describe('HomeClient - FAQ Section', () => {
+  beforeEach(() => {
+    global.fetch = vi.fn();
+    
+    (global as any).IntersectionObserver = class IntersectionObserver {
+      observe = vi.fn();
+      unobserve = vi.fn();
+      disconnect = vi.fn();
+      root = null;
+      rootMargin = '';
+      thresholds = [];
+      takeRecords = vi.fn(() => []);
+    };
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('renders H2 heading Frequently Asked Questions', () => {
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: true,
+      json: async () => ({ total_jobs: 7000, countries: 7, sources: 12, last_updated: null })
+    } as Response);
+
+    render(<HomeClient />);
+    
+    expect(screen.getByRole('heading', { level: 2, name: /Frequently Asked Questions/i })).toBeTruthy();
+  });
+
+  it('renders 6 accordion question buttons', () => {
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: true,
+      json: async () => ({ total_jobs: 7000, countries: 7, sources: 12, last_updated: null })
+    } as Response);
+
+    render(<HomeClient />);
+    
+    expect(screen.getByRole('button', { name: /How does AI job matching work\?/i })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Is aimeajob really free\?/i })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /What job boards do you search\?/i })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Which countries are covered\?/i })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Do I need to create an account\?/i })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /How often are jobs updated\?/i })).toBeTruthy();
+  });
+
+  it('clicking first question toggles answer visibility', async () => {
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: true,
+      json: async () => ({ total_jobs: 7000, countries: 7, sources: 12, last_updated: null })
+    } as Response);
+
+    render(<HomeClient />);
+    
+    const firstQuestionButton = screen.getByRole('button', { name: /How does AI job matching work\?/i });
+    
+    expect(screen.queryByText(/When you upload your CV, our AI extracts 8 key criteria/i)).toBeFalsy();
+    
+    fireEvent.click(firstQuestionButton);
+    
+    expect(screen.getByText(/When you upload your CV, our AI extracts 8 key criteria/i)).toBeTruthy();
+    
+    fireEvent.click(firstQuestionButton);
+    
+    expect(screen.queryByText(/When you upload your CV, our AI extracts 8 key criteria/i)).toBeFalsy();
+  });
+
+  it('Q3 answer lists all 12 job sources', async () => {
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: true,
+      json: async () => ({ total_jobs: 7000, countries: 7, sources: 12, last_updated: null })
+    } as Response);
+
+    render(<HomeClient />);
+    
+    const thirdQuestionButton = screen.getByRole('button', { name: /What job boards do you search\?/i });
+    fireEvent.click(thirdQuestionButton);
+    
+    const answerText = screen.getByText(/We aggregate from 12 sources:/i);
+    expect(answerText).toBeTruthy();
+    expect(answerText.textContent).toContain('Adzuna');
+    expect(answerText.textContent).toContain('Jooble');
+    expect(answerText.textContent).toContain('RemoteOK');
+    expect(answerText.textContent).toContain('WeWorkRemotely');
+    expect(answerText.textContent).toContain('NoFluffJobs');
+    expect(answerText.textContent).toContain('zaplata.bg');
+    expect(answerText.textContent).toContain('jobs.bg');
+    expect(answerText.textContent).toContain('dev.bg');
+    expect(answerText.textContent).toContain('JustJoin.it');
+    expect(answerText.textContent).toContain('eJobs.ro');
+    expect(answerText.textContent).toContain('BestJobs.eu');
+    expect(answerText.textContent).toContain('Bulldogjob.com');
+  });
+
+  it('FAQPage JSON-LD script tag contains correct schema with 6 mainEntity items', () => {
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: true,
+      json: async () => ({ total_jobs: 7000, countries: 7, sources: 12, last_updated: null })
+    } as Response);
+
+    const { container } = render(<HomeClient />);
+    
+    const scriptTag = container.querySelector('script[type="application/ld+json"]');
+    expect(scriptTag).toBeTruthy();
+    
+    if (scriptTag) {
+      const jsonContent = scriptTag.textContent;
+      expect(jsonContent).toBeTruthy();
+      
+      if (jsonContent) {
+        const schema = JSON.parse(jsonContent);
+        expect(schema['@type']).toBe('FAQPage');
+        expect(schema.mainEntity).toBeTruthy();
+        expect(Array.isArray(schema.mainEntity)).toBe(true);
+        expect(schema.mainEntity.length).toBe(6);
+        
+        expect(schema.mainEntity[0]['@type']).toBe('Question');
+        expect(schema.mainEntity[0].name).toBe('How does AI job matching work?');
+        expect(schema.mainEntity[0].acceptedAnswer).toBeTruthy();
+        expect(schema.mainEntity[0].acceptedAnswer['@type']).toBe('Answer');
+        expect(schema.mainEntity[0].acceptedAnswer.text).toBeTruthy();
+      }
     }
   });
 });
