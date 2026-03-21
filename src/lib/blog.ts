@@ -37,3 +37,31 @@ export function getBlogPosts(): BlogPost[] {
     return new Date(b.date).getTime() - new Date(a.date).getTime();
   });
 }
+
+export function getRelatedArticles(currentSlug: string, limit = 3): BlogPost[] {
+  const allPosts = getBlogPosts();
+  const currentPost = allPosts.find(p => p.slug === currentSlug);
+  
+  if (!currentPost) {
+    return allPosts.slice(0, limit);
+  }
+
+  const otherPosts = allPosts.filter(p => p.slug !== currentSlug);
+  
+  const postsWithScore = otherPosts.map(post => {
+    const sharedTags = post.tags.filter(tag => currentPost.tags.includes(tag));
+    return {
+      post,
+      score: sharedTags.length,
+    };
+  });
+
+  postsWithScore.sort((a, b) => {
+    if (b.score !== a.score) {
+      return b.score - a.score;
+    }
+    return new Date(b.post.date).getTime() - new Date(a.post.date).getTime();
+  });
+
+  return postsWithScore.slice(0, limit).map(item => item.post);
+}
