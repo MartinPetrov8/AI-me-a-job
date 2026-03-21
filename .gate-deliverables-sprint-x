@@ -1,0 +1,7 @@
+# Deliverables checklist for Sprint X: Landing Page Overhaul
+# Format: one file path per line
+
+src/app/home-client.tsx
+src/app/about/page.tsx
+src/app/sitemap.ts
+architecture_notes_sprint_x.txt

@@ -1,0 +1,298 @@
+# Architecture Notes — Sprint X: Landing Page Overhaul
+
+## Critical Patterns for This Sprint
+
+### 1. File Locations (MUST FOLLOW)
+- **Landing page**: src/app/home-client.tsx (client component, imported by src/app/page.tsx)
+- **About page**: src/app/about/page.tsx (server component with inline layout)
+- **Sitemap**: src/app/sitemap.ts (already includes about at 0.6 priority — verify this matches requirement)
+- **API routes**: src/app/api/stats/route.ts (already exists, returns {total_jobs, countries, sources, last_updated})
+
+### 2. Design System (MUST USE)
+- **Primary color**: indigo-600 (buttons, links, accents)
+- **Background**: #F7F7F5 (off-white body)
+- **Cards**: bg-white rounded-2xl shadow-sm
+- **Text colors**: text-gray-900 (headings), text-gray-700 (body), text-gray-600 (secondary), text-gray-500 (muted)
+- **Borders**: border-gray-100
+- **Typography**: font-bold (headings), font-medium (labels), font-semibold (section titles)
+- **Responsive grid**: grid-cols-1 md:grid-cols-2 lg:grid-cols-3 (mobile-first)
+
+### 3. Framer Motion Patterns
+**Existing usage** (from src/app/results/page.tsx):
+```tsx
+import { AnimatePresence, motion } from 'framer-motion';
+
+// Example: fade-in-up card
+<motion.div
+  initial={{ opacity: 0, y: 20 }}
+  animate={{ opacity: 1, y: 0 }}
+  exit={{ opacity: 0, y: -20 }}
+  transition={{ duration: 0.3 }}
+>
+  {content}
+</motion.div>
+
+// Example: whileInView (for scroll animations)
+<motion.div
+  initial={{ opacity: 0, y: 30 }}
+  whileInView={{ opacity: 1, y: 0 }}
+  viewport={{ once: true, margin: "-50px" }}
+  transition={{ duration: 0.5 }}
+>
+  {content}
+</motion.div>
+```
+
+**ACCESSIBILITY**: ALL animations must respect prefers-reduced-motion:
+```tsx
+// Option 1: CSS media query wrapper
+<motion.div
+  className="motion-safe:animate-fadeIn"
+  // Tailwind handles prefers-reduced-motion via motion-safe: prefix
+/>
+
+// Option 2: Conditional transition
+const reducedMotion = typeof window !== 'undefined' 
+  ? window.matchMedia('(prefers-reduced-motion: reduce)').matches 
+  : false;
+
+<motion.div
+  initial={{ opacity: 0, y: reducedMotion ? 0 : 30 }}
+  animate={{ opacity: 1, y: 0 }}
+  transition={{ duration: reducedMotion ? 0 : 0.5 }}
+/>
+```
+
+### 4. Stats Bar Animation
+**Existing pattern** (from src/app/home-client.tsx):
+```tsx
+const [stats, setStats] = useState<Stats | null>(null);
+
+useEffect(() => {
+  fetch('/api/stats')
+    .then(res => res.json())
+    .then(data => setStats(data))
+    .catch(() => setStats(null));
+}, []);
+
+// Render with loading state:
+{stats ? (
+  <div>{stats.total_jobs.toLocaleString()} jobs</div>
+) : (
+  <div className="animate-pulse">Loading...</div>
+)}
+```
+
+**Animated counter** (implement for S-01 stats bar):
+Use a simple `useEffect` loop to count up from 0 to target value over 1-2 seconds.
+Example:
+```tsx
+const [count, setCount] = useState(0);
+const target = stats?.total_jobs ?? 0;
+
+useEffect(() => {
+  if (!target) return;
+  let current = 0;
+  const increment = target / 60; // 60 frames = ~1 second
+  const timer = setInterval(() => {
+    current += increment;
+    if (current >= target) {
+      setCount(target);
+      clearInterval(timer);
+    } else {
+      setCount(Math.floor(current));
+    }
+  }, 16); // 60fps
+  return () => clearInterval(timer);
+}, [target]);
+
+return <span>{count.toLocaleString()}</span>;
+```
+
+### 5. FAQ Accordion Pattern (S-03)
+**No external library** — use plain React state:
+```tsx
+const [openIndex, setOpenIndex] = useState<number | null>(null);
+
+const faqs = [
+  { q: "Question 1", a: "Answer 1" },
+  { q: "Question 2", a: "Answer 2" },
+];
+
+return (
+  <div>
+    {faqs.map((faq, i) => (
+      <div key={i} className="border-b border-gray-100">
+        <button
+          onClick={() => setOpenIndex(openIndex === i ? null : i)}
+          className="w-full text-left py-4 flex justify-between items-center"
+        >
+          <span className="font-medium text-gray-900">{faq.q}</span>
+          <span>{openIndex === i ? '−' : '+'}</span>
+        </button>
+        {openIndex === i && (
+          <div className="pb-4 text-gray-700">{faq.a}</div>
+        )}
+      </div>
+    ))}
+  </div>
+);
+```
+
+### 6. JSON-LD Structured Data (S-03)
+**Existing pattern** (from src/components/json-ld.tsx):
+```tsx
+export function JsonLd({ data }: { data: object }) {
+  return (
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(data) }}
+    />
+  );
+}
+```
+
+**FAQPage schema** (for S-03):
+```tsx
+const faqSchema = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "How does AI job matching work?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "We use AI to extract 8 criteria from your CV (skills, experience, location, salary, work mode, seniority, language, industry) and match them against 7,000+ jobs from 12 sources. Each job is scored 0-8 based on fit, and we show you the top matches."
+      }
+    },
+    // ... more Q&A pairs
+  ]
+};
+
+// In component:
+<JsonLd data={faqSchema} />
+```
+
+### 7. Anchor Scroll Pattern (S-01 → S-02)
+**Secondary CTA** in hero must scroll to `#how-it-works`:
+```tsx
+// Hero CTA:
+<a
+  href="#how-it-works"
+  className="text-indigo-600 hover:text-indigo-700 font-medium"
+>
+  See how it works
+</a>
+
+// How It Works section:
+<section id="how-it-works" className="scroll-mt-20">
+  {/* scroll-mt-20 accounts for sticky nav */}
+  <h2>How It Works</h2>
+  ...
+</section>
+```
+
+### 8. TypeScript Strict Mode
+- **NO `any` types** — use proper types or `unknown`
+- **NO `ts-ignore`** — fix type errors, don't suppress
+- **Interface for component props**:
+  ```tsx
+  interface HeroProps {
+    stats: Stats | null;
+  }
+  
+  function Hero({ stats }: HeroProps) { ... }
+  ```
+
+### 9. Responsive Mobile-First Grid
+**Pattern from existing code**:
+```tsx
+// 1 column mobile, 2 tablet, 3 desktop:
+<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+  {items.map(...)}
+</div>
+
+// Full-width mobile, constrained desktop:
+<div className="max-w-5xl mx-auto px-6">
+  {content}
+</div>
+```
+
+### 10. Job Sources List (S-03 FAQ Q3)
+**Exact list** (from architecture docs):
+1. Adzuna
+2. Jooble
+3. RemoteOK
+4. WeWorkRemotely
+5. NoFluffJobs
+6. zaplata.bg
+7. jobs.bg
+8. dev.bg
+9. JustJoin.it
+10. eJobs.ro
+11. BestJobs.eu
+12. Bulldogjob.com
+
+**Countries** (FAQ Q4):
+BG, RO, PL, DE, NL, FR, GB + remote-first Europe
+
+### 11. Sitemap Requirement (S-05)
+**Current sitemap.ts** (src/app/sitemap.ts) already includes:
+```ts
+{
+  url: `${baseUrl}/about`,
+  lastModified,
+  changeFrequency: 'monthly',
+  priority: 0.6,
+}
+```
+
+**Task requirement**: "add about page at priority 0.7"
+**Action**: Update priority from 0.6 to 0.7 in sitemap.ts
+
+### 12. Testing
+- **Test command**: `npm run test` (vitest)
+- **Expected baseline**: 329 tests passing
+- **NO NEW TESTS REQUIRED** for this sprint (UI-only changes, visual QA)
+- **DO NOT BREAK EXISTING TESTS** — all 329 must still pass
+
+### 13. Build
+- **Build command**: `npm run build`
+- **Lint command**: `tsc --noEmit` (NEVER use "next lint" — Next.js 16 flat config incompatible)
+- **Expected output**: Clean build, no TypeScript errors, 30 routes
+
+### 14. Commit Pattern
+Use the `commit.sh` helper at repo root:
+```bash
+bash commit.sh "feat: S-01 - hero section rewrite"
+```
+This prints `COMMIT_HASH=...` for your output.
+
+## Protected Files (DO NOT MODIFY)
+- src/lib/db/schema.ts
+- src/lib/ingestion/* (all files)
+- src/middleware.ts (unless explicitly required)
+- .env (credentials)
+
+## Component Reuse Checklist
+Before creating a new component, check if these exist:
+- src/components/ui/badge.tsx (colored badges)
+- src/components/ui/skeleton.tsx (loading states)
+- src/components/json-ld.tsx (structured data)
+- src/components/nav-bar.tsx (top nav)
+- src/components/footer.tsx (footer)
+
+## Deployment Context
+- **Live site**: https://aimeajob.vercel.app
+- **Platform**: Vercel (Next.js automatic deployment)
+- **No manual deploy required** — merge to main auto-deploys
+
+## Sprint Objective Summary
+1. **S-01**: Rewrite hero (new headline, dual CTA, trust badges, live stats with animation)
+2. **S-02**: Add "How It Works" section (3 steps + 6-feature grid, id=how-it-works)
+3. **S-03**: Add FAQ section (6 Q&A accordion + FAQPage JSON-LD)
+4. **S-04**: Rewrite about page (company story, mission, tech, team, CTA)
+5. **S-05**: Update sitemap (about priority 0.6 → 0.7), verify tests + build
+
+**Definition of Done**: All 5 stories complete, 329 tests pass, build clean, merged to main.
