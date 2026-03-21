@@ -239,8 +239,12 @@ describe('HomeClient - How It Works Section', () => {
     expect(section).toBeTruthy();
     
     if (section) {
-      const steps = section.querySelectorAll('.bg-white.rounded-2xl');
-      expect(steps.length).toBe(3);
+      const stepsGrid = section.querySelector('.grid.grid-cols-1.md\\:grid-cols-3');
+      expect(stepsGrid).toBeTruthy();
+      if (stepsGrid) {
+        const steps = stepsGrid.querySelectorAll('.bg-white.rounded-2xl');
+        expect(steps.length).toBe(3);
+      }
     }
   });
 
@@ -330,13 +334,17 @@ describe('HomeClient - How It Works Section', () => {
     expect(section).toBeTruthy();
     
     if (section) {
-      const steps = section.querySelectorAll('.bg-white.rounded-2xl');
-      expect(steps.length).toBe(3);
-      
-      steps.forEach((step, index) => {
-        const heading = step.querySelector('h3');
-        expect(heading).toBeTruthy();
-      });
+      const stepsGrid = section.querySelector('.grid.grid-cols-1.md\\:grid-cols-3');
+      expect(stepsGrid).toBeTruthy();
+      if (stepsGrid) {
+        const steps = stepsGrid.querySelectorAll('.bg-white.rounded-2xl');
+        expect(steps.length).toBe(3);
+        
+        steps.forEach((step) => {
+          const heading = step.querySelector('h3');
+          expect(heading).toBeTruthy();
+        });
+      }
     }
   });
 
@@ -354,6 +362,199 @@ describe('HomeClient - How It Works Section', () => {
     if (section) {
       const grid = section.querySelector('.grid.grid-cols-1.md\\:grid-cols-3');
       expect(grid).toBeTruthy();
+    }
+  });
+});
+
+describe('HomeClient - Features Grid', () => {
+  beforeEach(() => {
+    global.fetch = vi.fn();
+    
+    (global as any).IntersectionObserver = class IntersectionObserver {
+      observe = vi.fn();
+      unobserve = vi.fn();
+      disconnect = vi.fn();
+      root = null;
+      rootMargin = '';
+      thresholds = [];
+      takeRecords = vi.fn(() => []);
+    };
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('renders feature grid container with 6 child elements', () => {
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: true,
+      json: async () => ({ total_jobs: 7000, countries: 7, sources: 12, last_updated: null })
+    } as Response);
+
+    const { container } = render(<HomeClient />);
+    
+    const section = container.querySelector('section#how-it-works');
+    expect(section).toBeTruthy();
+    
+    if (section) {
+      const featureGrid = section.querySelector('.mt-16.grid.grid-cols-1.md\\:grid-cols-2');
+      expect(featureGrid).toBeTruthy();
+      
+      if (featureGrid) {
+        const features = featureGrid.querySelectorAll('.bg-white.rounded-2xl');
+        expect(features.length).toBe(6);
+      }
+    }
+  });
+
+  it('renders feature containing No sponsored jobs text', () => {
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: true,
+      json: async () => ({ total_jobs: 7000, countries: 7, sources: 12, last_updated: null })
+    } as Response);
+
+    const { container } = render(<HomeClient />);
+    
+    const section = container.querySelector('section#how-it-works');
+    expect(section).toBeTruthy();
+    
+    if (section) {
+      const sectionElement = within(section as HTMLElement);
+      expect(sectionElement.getByText(/No sponsored jobs/i)).toBeTruthy();
+      expect(sectionElement.getByText(/Pure AI ranking, no pay-to-play/i)).toBeTruthy();
+    }
+  });
+
+  it('renders feature containing 8-criteria matching text', () => {
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: true,
+      json: async () => ({ total_jobs: 7000, countries: 7, sources: 12, last_updated: null })
+    } as Response);
+
+    const { container } = render(<HomeClient />);
+    
+    const section = container.querySelector('section#how-it-works');
+    expect(section).toBeTruthy();
+    
+    if (section) {
+      const sectionElement = within(section as HTMLElement);
+      expect(sectionElement.getByText(/8-criteria matching/i)).toBeTruthy();
+      expect(sectionElement.getByText(/skills, experience, location, salary, work mode, seniority, language, and industry/i)).toBeTruthy();
+    }
+  });
+
+  it('renders feature grid with responsive grid-cols-1 mobile and grid-cols-2 md+', () => {
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: true,
+      json: async () => ({ total_jobs: 7000, countries: 7, sources: 12, last_updated: null })
+    } as Response);
+
+    const { container } = render(<HomeClient />);
+    
+    const section = container.querySelector('section#how-it-works');
+    expect(section).toBeTruthy();
+    
+    if (section) {
+      const featureGrid = section.querySelector('.grid.grid-cols-1.md\\:grid-cols-2');
+      expect(featureGrid).toBeTruthy();
+    }
+  });
+
+  it('each feature card has bg-white and rounded-2xl classes', () => {
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: true,
+      json: async () => ({ total_jobs: 7000, countries: 7, sources: 12, last_updated: null })
+    } as Response);
+
+    const { container } = render(<HomeClient />);
+    
+    const section = container.querySelector('section#how-it-works');
+    expect(section).toBeTruthy();
+    
+    if (section) {
+      const featureGrid = section.querySelector('.mt-16.grid');
+      expect(featureGrid).toBeTruthy();
+      
+      if (featureGrid) {
+        const features = featureGrid.querySelectorAll('.bg-white.rounded-2xl');
+        expect(features.length).toBe(6);
+        
+        features.forEach(feature => {
+          expect(feature.classList.contains('bg-white')).toBe(true);
+          expect(feature.classList.contains('rounded-2xl')).toBe(true);
+        });
+      }
+    }
+  });
+
+  it('renders feature containing 12 job sources text', () => {
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: true,
+      json: async () => ({ total_jobs: 7000, countries: 7, sources: 12, last_updated: null })
+    } as Response);
+
+    const { container } = render(<HomeClient />);
+    
+    const section = container.querySelector('section#how-it-works');
+    expect(section).toBeTruthy();
+    
+    if (section) {
+      const sectionElement = within(section as HTMLElement);
+      expect(sectionElement.getByText(/12 job sources in one search/i)).toBeTruthy();
+    }
+  });
+
+  it('renders feature containing Daily refresh text', () => {
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: true,
+      json: async () => ({ total_jobs: 7000, countries: 7, sources: 12, last_updated: null })
+    } as Response);
+
+    const { container } = render(<HomeClient />);
+    
+    const section = container.querySelector('section#how-it-works');
+    expect(section).toBeTruthy();
+    
+    if (section) {
+      const sectionElement = within(section as HTMLElement);
+      expect(sectionElement.getByText(/Daily refresh/i)).toBeTruthy();
+      expect(sectionElement.getByText(/Jobs updated every morning at 09:00 UTC/i)).toBeTruthy();
+    }
+  });
+
+  it('renders feature containing Europe-focused text', () => {
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: true,
+      json: async () => ({ total_jobs: 7000, countries: 7, sources: 12, last_updated: null })
+    } as Response);
+
+    const { container } = render(<HomeClient />);
+    
+    const section = container.querySelector('section#how-it-works');
+    expect(section).toBeTruthy();
+    
+    if (section) {
+      const sectionElement = within(section as HTMLElement);
+      expect(sectionElement.getByText(/Europe-focused/i)).toBeTruthy();
+      expect(sectionElement.getByText(/BG, RO, PL, DE, NL, FR, GB/i)).toBeTruthy();
+    }
+  });
+
+  it('renders feature containing Top 5 matches free forever text', () => {
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: true,
+      json: async () => ({ total_jobs: 7000, countries: 7, sources: 12, last_updated: null })
+    } as Response);
+
+    const { container } = render(<HomeClient />);
+    
+    const section = container.querySelector('section#how-it-works');
+    expect(section).toBeTruthy();
+    
+    if (section) {
+      const sectionElement = within(section as HTMLElement);
+      expect(sectionElement.getByText(/Top 5 matches free forever/i)).toBeTruthy();
+      expect(sectionElement.getByText(/forever free/i)).toBeTruthy();
     }
   });
 });
