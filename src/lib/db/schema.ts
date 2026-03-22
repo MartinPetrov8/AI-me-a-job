@@ -7,6 +7,8 @@ export const users = pgTable('users', {
   restoreToken: text('restore_token'),
   authId: uuid('auth_id').unique(),
   subscriptionStatus: text('subscription_status').notNull().default('free'),
+  stripeCustomerId: text('stripe_customer_id'),
+  subscriptionExpiresAt: timestamp('subscription_expires_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });

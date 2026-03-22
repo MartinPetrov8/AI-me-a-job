@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { AnimatePresence, motion } from 'framer-motion';
 import { SkeletonCard, Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
+import type { SubscriptionStatus } from '@/lib/stripe/subscription';
 
 interface MatchedJob {
   job_id: string;
@@ -211,6 +212,8 @@ function ResultsContent() {
   const [results, setResults] = useState<MatchedJob[]>([]);
   const [meta, setMeta] = useState<SearchResponse['meta'] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [subscription_status, setSubscriptionStatus] = useState<SubscriptionStatus>('free');
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
 
   const [filterRemote, setFilterRemote] = useState<boolean | null>(null);
   const [filterMinScore, setFilterMinScore] = useState<number>(5);
@@ -229,6 +232,24 @@ function ResultsContent() {
   const [panelLoading, setPanelLoading] = useState(false);
 
   const initialLoadDone = useRef(false);
+  
+  // Check subscription status on mount
+  useEffect(() => {
+    const checkSubscription = async () => {
+      try {
+        const res = await fetch('/api/subscription');
+        if (res.ok) {
+          const data = await res.json();
+          setSubscriptionStatus(data.status || 'free');
+        }
+      } catch (error) {
+        console.error('Failed to check subscription:', error);
+      }
+    };
+    
+    checkSubscription();
+  }, []);
+
   useEffect(() => {
     if (profileId) {
       // Seed localStorage with the token from the URL if not already present.
@@ -367,6 +388,21 @@ function ResultsContent() {
       setPanelError('Failed to re-run search. Please try again.');
     } finally {
       setPanelLoading(false);
+    }
+  };
+
+  const handleCheckout = async () => {
+    setCheckoutLoading(true);
+    try {
+      const res = await fetch('/api/stripe/checkout', { method: 'POST' });
+      if (!res.ok) throw new Error('Checkout failed');
+      const data = await res.json();
+      if (data.url) window.location.href = data.url;
+    } catch (error) {
+      console.error('Checkout error:', error);
+      alert('Failed to start checkout');
+    } finally {
+      setCheckoutLoading(false);
     }
   };
 
@@ -560,7 +596,71 @@ function ResultsContent() {
 
         {!loading && !error && sortedFilteredResults.length > 0 && (
           <div className="space-y-4">
-            {sortedFilteredResults.map((job, i) => <JobCard key={job.job_id} job={job} index={i} maxScore={meta?.max_score ?? 8} />)}
+            {sortedFilteredResults.map((job, i) => {
+              const isFreeRestricted = subscription_status === 'free' && i >= 5;
+              return (
+                <div key={job.job_id} className={isFreeRestricted ? 'opacity-40 pointer-events-none' : ''}>
+                  <JobCard job={job} index={i} maxScore={meta?.max_score ?? 8} />
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Free tier paywall overlay */}
+        {!loading && !error && subscription_status === 'free' && sortedFilteredResults.length > 5 && (
+          <div className="mt-8 bg-gradient-to-t from-indigo-600 via-indigo-600/80 to-transparent rounded-3xl p-8 text-white text-center relative">
+            <div className="relative z-10">
+              <p className="text-sm font-semibold opacity-90 mb-2">🔒 Unlock all matches</p>
+              <h3 className="text-2xl font-bold mb-2">Upgrade to Pro</h3>
+              <p className="text-indigo-100 mb-6">See all {sortedFilteredResults.length} job matches + weekly digest</p>
+              <button
+                onClick={handleCheckout}
+                disabled={checkoutLoading}
+                className="inline-flex items-center gap-2 bg-white text-indigo-600 px-6 py-3 rounded-xl font-semibold hover:bg-indigo-50 transition-colors disabled:opacity-50"
+              >
+                {checkoutLoading ? 'Starting checkout...' : '€5/month'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Payment failed banner */}
+        {subscription_status === 'past_due' && (
+          <div className="sticky bottom-0 z-30 bg-red-50 border-t border-red-200 px-6 py-4">
+            <div className="max-w-3xl mx-auto flex items-center justify-between">
+              <div>
+                <p className="font-semibold text-red-700">Payment failed</p>
+                <p className="text-sm text-red-600">Update your payment method to continue</p>
+              </div>
+              <button
+                onClick={() => {
+                  const res = fetch('/api/stripe/portal', { method: 'POST' });
+                  res.then(r => r.json()).then(d => {
+                    if (d.url) window.location.href = d.url;
+                  });
+                }}
+                className="bg-red-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-red-700 transition-colors text-sm"
+              >
+                Update payment
+              </button>
+            </div>
+          </div>
+        )}
+        
+        {/* Pro upgrade banner (sticky) */}
+        {subscription_status === 'free' && sortedFilteredResults.length > 0 && (
+          <div className="sticky bottom-0 z-30 bg-indigo-600 text-white px-6 py-3">
+            <div className="max-w-3xl mx-auto flex items-center justify-between">
+              <p className="text-sm">Showing 5 of {sortedFilteredResults.length} matches</p>
+              <button
+                onClick={handleCheckout}
+                disabled={checkoutLoading}
+                className="text-sm font-semibold hover:underline disabled:opacity-50"
+              >
+                {checkoutLoading ? 'Starting...' : 'Upgrade to Pro →'}
+              </button>
+            </div>
           </div>
         )}
 
