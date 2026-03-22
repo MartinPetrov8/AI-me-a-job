@@ -1,4 +1,4 @@
-# Repo Map — generated 2026-03-21T10:23:27Z
+# Repo Map — generated 2026-03-21T23:13:37Z
 # Architecture snapshot: class/function signatures, routes, exports
 # Use this to find the right file/function without reading full source.
 
@@ -60,6 +60,8 @@ node_modules/flatted/golang/pkg/flatted/flatted.go:
   architecture_notes.txt
   architecture_notes_sprint_x.txt
   commit.sh
+  content
+  content/blog
   docs
   docs/ADR
   docs/ANTFARM.md

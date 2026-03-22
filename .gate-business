@@ -1,14 +1,30 @@
-# Business gates for AI-me-a-job
-# Format: check_type arg1 arg2...
-# Types: db_rows, file_nonempty, file_exists, cmd_exit0, http_ok
+# Business checks for Sprint Y — Blog Infrastructure
+# Format: check_type argument [expected_value]
 
-# Core files must exist
-file_exists src/lib/matching/engine.ts
-file_exists src/app/api/search/route.ts
-file_exists src/app/results/page.tsx
-file_exists src/app/layout.tsx
+# Blog infrastructure files must exist
+file_exists content/blog/how-ai-job-matching-works.mdx
+file_exists content/blog/best-job-boards-data-scientists-2026.mdx
+file_exists content/blog/ai-vs-traditional-job-search.mdx
+file_exists content/blog/top-tech-jobs-bulgaria-2026.mdx
+file_exists content/blog/optimize-cv-ats-2026.mdx
 
-# Architecture artifacts
-file_exists architecture_notes.txt
-file_exists .antfarm/repo-map.txt
-file_exists .antfarm/ci.sh
+# Blog utilities and pages must exist
+file_exists src/lib/blog.ts
+file_exists src/app/blog/page.tsx
+file_exists src/app/blog/layout.tsx
+
+# MDX config must be present
+file_exists next.config.js
+
+# Articles must be non-empty (real content, not placeholders)
+file_nonempty content/blog/how-ai-job-matching-works.mdx
+file_nonempty content/blog/best-job-boards-data-scientists-2026.mdx
+file_nonempty content/blog/ai-vs-traditional-job-search.mdx
+file_nonempty content/blog/top-tech-jobs-bulgaria-2026.mdx
+file_nonempty content/blog/optimize-cv-ats-2026.mdx
+
+# Build must pass
+cmd_exit0 npm run build
+
+# Tests must pass
+cmd_exit0 npm run test

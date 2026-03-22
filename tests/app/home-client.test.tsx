@@ -2,6 +2,27 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor, within, fireEvent } from '@testing-library/react';
 import HomeClient from '@/app/home-client';
 
+const mockBlogPosts = [
+  {
+    title: 'Test Post 1',
+    date: '2026-03-01',
+    excerpt: 'Test excerpt 1',
+    slug: 'test-post-1',
+  },
+  {
+    title: 'Test Post 2',
+    date: '2026-03-02',
+    excerpt: 'Test excerpt 2',
+    slug: 'test-post-2',
+  },
+  {
+    title: 'Test Post 3',
+    date: '2026-03-03',
+    excerpt: 'Test excerpt 3',
+    slug: 'test-post-3',
+  },
+];
+
 describe('HomeClient - Hero Section', () => {
   beforeEach(() => {
     global.fetch = vi.fn();
@@ -27,7 +48,7 @@ describe('HomeClient - Hero Section', () => {
       json: async () => ({ total_jobs: 7000, countries: 7, sources: 12, last_updated: null })
     } as Response);
 
-    render(<HomeClient />);
+    render(<HomeClient blogPosts={mockBlogPosts} />);
     
     expect(screen.getByText(/Stop Scrolling Job Boards/i)).toBeTruthy();
     expect(screen.getByText(/Get AI-Matched/i)).toBeTruthy();
@@ -39,7 +60,7 @@ describe('HomeClient - Hero Section', () => {
       json: async () => ({ total_jobs: 7000, countries: 7, sources: 12, last_updated: null })
     } as Response);
 
-    render(<HomeClient />);
+    render(<HomeClient blogPosts={mockBlogPosts} />);
     
     expect(screen.getByText(/7,000\+ jobs from 12 sources/i)).toBeTruthy();
     expect(screen.getByText(/Free, no registration/i)).toBeTruthy();
@@ -51,7 +72,7 @@ describe('HomeClient - Hero Section', () => {
       json: async () => ({ total_jobs: 7000, countries: 7, sources: 12, last_updated: null })
     } as Response);
 
-    render(<HomeClient />);
+    render(<HomeClient blogPosts={mockBlogPosts} />);
     
     const uploadButton = screen.getByRole('link', { name: /Upload Your CV — free/i });
     expect(uploadButton).toBeTruthy();
@@ -64,7 +85,7 @@ describe('HomeClient - Hero Section', () => {
       json: async () => ({ total_jobs: 7000, countries: 7, sources: 12, last_updated: null })
     } as Response);
 
-    render(<HomeClient />);
+    render(<HomeClient blogPosts={mockBlogPosts} />);
     
     const howItWorksButton = screen.getByRole('link', { name: /See how it works/i });
     expect(howItWorksButton).toBeTruthy();
@@ -77,7 +98,7 @@ describe('HomeClient - Hero Section', () => {
       json: async () => ({ total_jobs: 7000, countries: 7, sources: 12, last_updated: null })
     } as Response);
 
-    const { container } = render(<HomeClient />);
+    const { container } = render(<HomeClient blogPosts={mockBlogPosts} />);
     
     const trustBadgesDiv = container.querySelector('.flex.flex-wrap.items-center.justify-center.gap-3.text-sm');
     expect(trustBadgesDiv).toBeTruthy();
@@ -96,7 +117,7 @@ describe('HomeClient - Hero Section', () => {
       json: async () => ({ total_jobs: 7543, countries: 8, sources: 12, last_updated: '2026-03-21' })
     } as Response);
 
-    render(<HomeClient />);
+    render(<HomeClient blogPosts={mockBlogPosts} />);
 
     await waitFor(() => {
       expect(global.fetch).toHaveBeenCalledWith('/api/stats');
@@ -109,7 +130,7 @@ describe('HomeClient - Hero Section', () => {
       json: async () => ({ total_jobs: 7543, countries: 8, sources: 12, last_updated: '2026-03-21' })
     } as Response);
 
-    render(<HomeClient />);
+    render(<HomeClient blogPosts={mockBlogPosts} />);
 
     await waitFor(() => {
       expect(screen.getByText('7,543')).toBeTruthy();
@@ -124,7 +145,7 @@ describe('HomeClient - Hero Section', () => {
       json: async () => ({ total_jobs: 7543, countries: 8, sources: 12, last_updated: '2026-03-21' })
     } as Response);
 
-    const { container } = render(<HomeClient />);
+    const { container } = render(<HomeClient blogPosts={mockBlogPosts} />);
 
     await waitFor(() => {
       expect(screen.getByText('8')).toBeTruthy();
@@ -144,7 +165,7 @@ describe('HomeClient - Hero Section', () => {
   it('does not display stats bar when fetch fails', async () => {
     (global.fetch as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('Network error'));
 
-    render(<HomeClient />);
+    render(<HomeClient blogPosts={mockBlogPosts} />);
 
     await waitFor(() => {
       expect(global.fetch).toHaveBeenCalled();
@@ -159,7 +180,7 @@ describe('HomeClient - Hero Section', () => {
       json: async () => ({ total_jobs: 7000, countries: 7, sources: 12, last_updated: null })
     } as Response);
 
-    const { container } = render(<HomeClient />);
+    const { container } = render(<HomeClient blogPosts={mockBlogPosts} />);
     
     const howItWorksSection = container.querySelector('#how-it-works');
     expect(howItWorksSection).toBeTruthy();
@@ -171,7 +192,7 @@ describe('HomeClient - Hero Section', () => {
       json: async () => ({ total_jobs: 7000, countries: 7, sources: 12, last_updated: null })
     } as Response);
 
-    const { container } = render(<HomeClient />);
+    const { container } = render(<HomeClient blogPosts={mockBlogPosts} />);
     
     const howItWorksSection = container.querySelector('#how-it-works');
     expect(howItWorksSection).toBeTruthy();
@@ -189,7 +210,7 @@ describe('HomeClient - Hero Section', () => {
       json: async () => ({ total_jobs: 7000, countries: 7, sources: 12, last_updated: null })
     } as Response);
 
-    const { container } = render(<HomeClient />);
+    const { container } = render(<HomeClient blogPosts={mockBlogPosts} />);
     
     const gradientBlob = container.querySelector('.bg-gradient-to-br');
     expect(gradientBlob).toBeTruthy();
@@ -221,7 +242,7 @@ describe('HomeClient - How It Works Section', () => {
       json: async () => ({ total_jobs: 7000, countries: 7, sources: 12, last_updated: null })
     } as Response);
 
-    const { container } = render(<HomeClient />);
+    const { container } = render(<HomeClient blogPosts={mockBlogPosts} />);
     
     const section = container.querySelector('section#how-it-works');
     expect(section).toBeTruthy();
@@ -233,7 +254,7 @@ describe('HomeClient - How It Works Section', () => {
       json: async () => ({ total_jobs: 7000, countries: 7, sources: 12, last_updated: null })
     } as Response);
 
-    const { container } = render(<HomeClient />);
+    const { container } = render(<HomeClient blogPosts={mockBlogPosts} />);
     
     const section = container.querySelector('section#how-it-works');
     expect(section).toBeTruthy();
@@ -254,7 +275,7 @@ describe('HomeClient - How It Works Section', () => {
       json: async () => ({ total_jobs: 7000, countries: 7, sources: 12, last_updated: null })
     } as Response);
 
-    const { container } = render(<HomeClient />);
+    const { container } = render(<HomeClient blogPosts={mockBlogPosts} />);
     
     const section = container.querySelector('section#how-it-works');
     expect(section).toBeTruthy();
@@ -272,7 +293,7 @@ describe('HomeClient - How It Works Section', () => {
       json: async () => ({ total_jobs: 7000, countries: 7, sources: 12, last_updated: null })
     } as Response);
 
-    const { container } = render(<HomeClient />);
+    const { container } = render(<HomeClient blogPosts={mockBlogPosts} />);
     
     const section = container.querySelector('section#how-it-works');
     expect(section).toBeTruthy();
@@ -290,7 +311,7 @@ describe('HomeClient - How It Works Section', () => {
       json: async () => ({ total_jobs: 7000, countries: 7, sources: 12, last_updated: null })
     } as Response);
 
-    const { container } = render(<HomeClient />);
+    const { container } = render(<HomeClient blogPosts={mockBlogPosts} />);
     
     const section = container.querySelector('section#how-it-works');
     expect(section).toBeTruthy();
@@ -308,7 +329,7 @@ describe('HomeClient - How It Works Section', () => {
       json: async () => ({ total_jobs: 7000, countries: 7, sources: 12, last_updated: null })
     } as Response);
 
-    const { container } = render(<HomeClient />);
+    const { container } = render(<HomeClient blogPosts={mockBlogPosts} />);
     
     const section = container.querySelector('section#how-it-works');
     expect(section).toBeTruthy();
@@ -328,7 +349,7 @@ describe('HomeClient - How It Works Section', () => {
       json: async () => ({ total_jobs: 7000, countries: 7, sources: 12, last_updated: null })
     } as Response);
 
-    const { container } = render(<HomeClient />);
+    const { container } = render(<HomeClient blogPosts={mockBlogPosts} />);
     
     const section = container.querySelector('section#how-it-works');
     expect(section).toBeTruthy();
@@ -354,7 +375,7 @@ describe('HomeClient - How It Works Section', () => {
       json: async () => ({ total_jobs: 7000, countries: 7, sources: 12, last_updated: null })
     } as Response);
 
-    const { container } = render(<HomeClient />);
+    const { container } = render(<HomeClient blogPosts={mockBlogPosts} />);
     
     const section = container.querySelector('section#how-it-works');
     expect(section).toBeTruthy();
@@ -391,7 +412,7 @@ describe('HomeClient - Features Grid', () => {
       json: async () => ({ total_jobs: 7000, countries: 7, sources: 12, last_updated: null })
     } as Response);
 
-    const { container } = render(<HomeClient />);
+    const { container } = render(<HomeClient blogPosts={mockBlogPosts} />);
     
     const section = container.querySelector('section#how-it-works');
     expect(section).toBeTruthy();
@@ -413,7 +434,7 @@ describe('HomeClient - Features Grid', () => {
       json: async () => ({ total_jobs: 7000, countries: 7, sources: 12, last_updated: null })
     } as Response);
 
-    const { container } = render(<HomeClient />);
+    const { container } = render(<HomeClient blogPosts={mockBlogPosts} />);
     
     const section = container.querySelector('section#how-it-works');
     expect(section).toBeTruthy();
@@ -431,7 +452,7 @@ describe('HomeClient - Features Grid', () => {
       json: async () => ({ total_jobs: 7000, countries: 7, sources: 12, last_updated: null })
     } as Response);
 
-    const { container } = render(<HomeClient />);
+    const { container } = render(<HomeClient blogPosts={mockBlogPosts} />);
     
     const section = container.querySelector('section#how-it-works');
     expect(section).toBeTruthy();
@@ -449,7 +470,7 @@ describe('HomeClient - Features Grid', () => {
       json: async () => ({ total_jobs: 7000, countries: 7, sources: 12, last_updated: null })
     } as Response);
 
-    const { container } = render(<HomeClient />);
+    const { container } = render(<HomeClient blogPosts={mockBlogPosts} />);
     
     const section = container.querySelector('section#how-it-works');
     expect(section).toBeTruthy();
@@ -466,7 +487,7 @@ describe('HomeClient - Features Grid', () => {
       json: async () => ({ total_jobs: 7000, countries: 7, sources: 12, last_updated: null })
     } as Response);
 
-    const { container } = render(<HomeClient />);
+    const { container } = render(<HomeClient blogPosts={mockBlogPosts} />);
     
     const section = container.querySelector('section#how-it-works');
     expect(section).toBeTruthy();
@@ -493,7 +514,7 @@ describe('HomeClient - Features Grid', () => {
       json: async () => ({ total_jobs: 7000, countries: 7, sources: 12, last_updated: null })
     } as Response);
 
-    const { container } = render(<HomeClient />);
+    const { container } = render(<HomeClient blogPosts={mockBlogPosts} />);
     
     const section = container.querySelector('section#how-it-works');
     expect(section).toBeTruthy();
@@ -510,7 +531,7 @@ describe('HomeClient - Features Grid', () => {
       json: async () => ({ total_jobs: 7000, countries: 7, sources: 12, last_updated: null })
     } as Response);
 
-    const { container } = render(<HomeClient />);
+    const { container } = render(<HomeClient blogPosts={mockBlogPosts} />);
     
     const section = container.querySelector('section#how-it-works');
     expect(section).toBeTruthy();
@@ -528,7 +549,7 @@ describe('HomeClient - Features Grid', () => {
       json: async () => ({ total_jobs: 7000, countries: 7, sources: 12, last_updated: null })
     } as Response);
 
-    const { container } = render(<HomeClient />);
+    const { container } = render(<HomeClient blogPosts={mockBlogPosts} />);
     
     const section = container.querySelector('section#how-it-works');
     expect(section).toBeTruthy();
@@ -546,7 +567,7 @@ describe('HomeClient - Features Grid', () => {
       json: async () => ({ total_jobs: 7000, countries: 7, sources: 12, last_updated: null })
     } as Response);
 
-    const { container } = render(<HomeClient />);
+    const { container } = render(<HomeClient blogPosts={mockBlogPosts} />);
     
     const section = container.querySelector('section#how-it-works');
     expect(section).toBeTruthy();
@@ -584,7 +605,7 @@ describe('HomeClient - FAQ Section', () => {
       json: async () => ({ total_jobs: 7000, countries: 7, sources: 12, last_updated: null })
     } as Response);
 
-    render(<HomeClient />);
+    render(<HomeClient blogPosts={mockBlogPosts} />);
     
     expect(screen.getByRole('heading', { level: 2, name: /Frequently Asked Questions/i })).toBeTruthy();
   });
@@ -595,7 +616,7 @@ describe('HomeClient - FAQ Section', () => {
       json: async () => ({ total_jobs: 7000, countries: 7, sources: 12, last_updated: null })
     } as Response);
 
-    render(<HomeClient />);
+    render(<HomeClient blogPosts={mockBlogPosts} />);
     
     expect(screen.getByRole('button', { name: /How does AI job matching work\?/i })).toBeTruthy();
     expect(screen.getByRole('button', { name: /Is aimeajob really free\?/i })).toBeTruthy();
@@ -611,7 +632,7 @@ describe('HomeClient - FAQ Section', () => {
       json: async () => ({ total_jobs: 7000, countries: 7, sources: 12, last_updated: null })
     } as Response);
 
-    render(<HomeClient />);
+    render(<HomeClient blogPosts={mockBlogPosts} />);
     
     const firstQuestionButton = screen.getByRole('button', { name: /How does AI job matching work\?/i });
     
@@ -632,7 +653,7 @@ describe('HomeClient - FAQ Section', () => {
       json: async () => ({ total_jobs: 7000, countries: 7, sources: 12, last_updated: null })
     } as Response);
 
-    render(<HomeClient />);
+    render(<HomeClient blogPosts={mockBlogPosts} />);
     
     const thirdQuestionButton = screen.getByRole('button', { name: /What job boards do you search\?/i });
     fireEvent.click(thirdQuestionButton);
@@ -659,7 +680,7 @@ describe('HomeClient - FAQ Section', () => {
       json: async () => ({ total_jobs: 7000, countries: 7, sources: 12, last_updated: null })
     } as Response);
 
-    const { container } = render(<HomeClient />);
+    const { container } = render(<HomeClient blogPosts={mockBlogPosts} />);
     
     const scriptTag = container.querySelector('script[type="application/ld+json"]');
     expect(scriptTag).toBeTruthy();

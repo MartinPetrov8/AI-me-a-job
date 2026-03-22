@@ -17,6 +17,7 @@ export function NavBar() {
   const navLinks = [
     { href: '/upload', label: 'Upload CV' },
     { href: '/pricing', label: 'Pricing' },
+    { href: '/blog', label: 'Blog' },
     { href: '/about', label: 'About' },
   ];
 

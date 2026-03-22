@@ -1,123 +1,108 @@
-# Architecture Notes — AI-me-a-job
+# Architecture Notes — Sprint Y Blog Infrastructure
 
-## Tech Stack
-- **Framework**: Next.js 16.1.6 (App Router with Turbopack)
-- **Language**: TypeScript
-- **Database**: PostgreSQL via Drizzle ORM
-- **Testing**: Vitest + Testing Library
-- **LLM**: Anthropic Claude via @anthropic-ai/sdk (configurable via env)
-- **Styling**: Tailwind CSS 4.2.1
-- **Animation**: Framer Motion
+## Codebase Structure
+- Next.js 15 App Router: all pages in src/app/
+- Components: src/components/
+- Utilities: src/lib/
+- Tests: tests/ (mirrors src/ structure)
+- Build tool: next build (Turbopack)
+- Test runner: vitest
+- Type checking: tsc --noEmit
 
-## Project Structure
-```
-src/
-  app/                    # Next.js App Router pages + API routes
-    api/                  # API endpoints (all use runtime='nodejs')
-      pipeline/           # Job ingestion pipeline (maxDuration=300)
-      search/             # Job matching engine
-      upload/             # CV upload + parsing (maxDuration=60)
-      preferences/        # User preferences CRUD
-      profile/            # User profile CRUD
-      save/               # Save session state
-      restore/            # Restore session by token
-    results/              # Job results UI
-    preferences/          # Preferences form
-    profile/              # Profile form
-    upload/               # CV upload UI
-  lib/                    # Business logic (framework-agnostic)
-    matching/             # Core matching algorithm
-    llm/                  # LLM integration (CV parsing, job classification)
-    ingestion/            # Job scraping (Adzuna, Jooble, devbg, jobsbg)
-    db/                   # Database schema + client
-    auth/                 # Token-based ownership verification
-    cv-parser/            # CV text extraction (PDF, DOCX)
-  components/             # React UI components
-    ui/                   # Reusable primitives (Badge, Skeleton)
-tests/                    # Vitest tests (mirror src/ structure)
-```
+## Design System Patterns
+- Primary color: indigo-600 (hover: indigo-700)
+- Background: #F7F7F5 (light beige)
+- Cards: bg-white with rounded-2xl shadow-sm
+- Responsive grids: grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3
+- Spacing: consistent use of px-4 sm:px-6 lg:px-8 for containers
+- Max width container: max-w-7xl mx-auto
 
-## Key Patterns
+## Component Patterns
+- All interactive components use 'use client' directive
+- Navigation: src/components/nav-bar.tsx — navLinks array at line 17
+- Footer: src/components/footer.tsx
+- Auth provider pattern: useAuth hook from @/components/auth-provider
 
-### 1. API Routes
-- **ALL** routes export `export const runtime = 'nodejs'` (not Edge runtime)
-- Long-running routes set `maxDuration` (pipeline=300s, upload=60s)
-- Error handling: try/catch → NextResponse.json({ error }, { status })
-- Auth: validate restore token via `validateRestoreToken(profileId, token)`
+## Routing
+- App Router conventions: page.tsx, layout.tsx
+- Dynamic routes: [slug] directories
+- API routes: src/app/api/*/route.ts (Next.js 15 App Router)
 
-### 2. Matching Engine (src/lib/matching/engine.ts)
-- **Location**: `matchLocation()` function checks if user pref appears in job location string
-- **Scoring**: `calculateMatch()` scores 8 criteria (0-8 scale), filter >= 5
-- **Benefit of doubt**: null job fields auto-match (except when profile also null)
-- **Pre-filters**: Apply user preferences BEFORE scoring (work mode, employment type, location, salary)
-- **Sort options**: score (default), posted_at, salary_max — all DESC NULLS LAST
-- **Database**: Uses Drizzle ORM with type-safe queries
+## Navigation Integration
+- NavBar links defined in navLinks array (line 17 of nav-bar.tsx)
+- Add blog link: { href: '/blog', label: 'Blog' }
+- Mobile menu support built-in (responsive)
 
-### 3. Testing
-- **Runner**: Vitest (npm run test)
-- **Mocking**: vi.mock() for db, external APIs
-- **Pattern**: Mock db.select/insert/update, return chained .from().where().limit()
-- **Coverage**: 162 tests across API routes, lib functions, components
-- **Location**: Tests mirror src/ paths (tests/lib/matching/engine.test.ts)
+## Homepage Structure (src/app/home-client.tsx)
+- Client component with useState hooks
+- Sections: Hero → How It Works (id="how-it-works") → Features → FAQ
+- Insert blog section after hero, before FAQ (around line 120)
+- Uses motion.div for animations (framer-motion)
+- Stats fetched from /api/stats
 
-### 4. Error Handling
-- **LLM calls**: Always wrap in try/catch, return fallback on error
-- **CV parsing**: Return null on parse failure, log error
-- **API routes**: Catch all errors, return 500 with generic message (don't leak internals)
-- **Validation**: Zod schemas for all API inputs (src/lib/validation.ts)
+## Sitemap Pattern (src/app/sitemap.ts)
+- Returns MetadataRoute.Sitemap array
+- baseUrl: https://aimeajob.com
+- Priority scale: 1.0 (home) → 0.9 (upload) → 0.8 (pricing) → etc.
+- Blog should be priority 0.8, articles 0.7
 
-### 5. Database Schema (PROTECTED: src/lib/db/schema.ts)
-- **Tables**: profiles, jobs, searches, searchResults
-- **ORM**: Drizzle with postgres.js driver
-- **Migrations**: drizzle-kit generate/push
-- **Types**: Auto-generated from schema
+## Test Conventions
+- Test files in tests/ mirror src/ structure
+- Use vitest (NOT jest)
+- Mocking pattern: vi.mock('next/navigation', () => ({ ... }))
+- Component tests: render from @testing-library/react
+- Screen queries: screen.getByText, screen.getAllByText
+- Assertions: expect(value).toBeDefined(), expect(value).toBe(...)
+- Snapshot tests for complex layouts
 
-### 6. LLM Integration
-- **Provider**: Configurable via LLM_PROVIDER env (openrouter | anthropic)
-- **Client**: src/lib/llm/client.ts exports `llm()` function
-- **Prompts**: All prompts in src/lib/llm/prompts.ts (system + user templates)
-- **CV Parsing**: src/lib/llm/extract-cv.ts — extracts structured profile from text
-- **Job Classification**: src/lib/llm/classify-job.ts — tags jobs with criteria
+## Error Handling
+- No explicit try/catch in most client components
+- API routes use try/catch with JSON error responses
+- Error boundaries: src/app/error.tsx
 
-### 7. UI Components
-- **Styling**: Tailwind utility classes, no CSS modules
-- **Color system**: Consistent gray scale (bg-[#F7F7F5] body, border-gray-100)
-- **Animations**: Framer Motion for page transitions, job card reveals
-- **Icons**: No icon library — use Unicode symbols or SVG inline
-- **Forms**: Controlled inputs, useState for local state
+## TypeScript Rules
+- Strict mode enabled
+- No any, no ts-ignore
+- All functions and components typed
+- Interfaces for complex props
+- Import aliases: @/components, @/lib, @/app
 
-### 8. Naming Conventions
-- **Files**: kebab-case (matching-engine.ts, tag-input.tsx)
-- **Components**: PascalCase (JobCard, ScoreRing, CompanyAvatar)
-- **Functions**: camelCase (findMatches, calculateMatch, matchLocation)
-- **Types**: PascalCase (MatchedJob, SearchResponse)
-- **Constants**: UPPER_SNAKE_CASE (YEARS_EXPERIENCE, EDUCATION_LEVELS)
+## Environment
+- .env required for build (DATABASE_URL, LLM config)
+- .env.example provides template
+- Supabase for auth and DB
 
-### 9. Ingestion (PROTECTED: src/lib/ingestion/*)
-- **Sources**: Adzuna API, Jooble API, devbg scraper, jobsbg scraper
-- **Deduplication**: Hash-based (title+company+location)
-- **Classification**: Batch classify via LLM after ingestion
-- **Protected**: Do not modify ingestion logic without explicit approval
+## Build Requirements
+- Must have DATABASE_URL env var (even if placeholder)
+- Build produces static pages where possible
+- Dynamic routes marked with ƒ in build output
+- Static routes marked with ○
 
-## Build Notes
-- **Build command**: npm run build (Next.js production build)
-- **Test command**: npm run test (Vitest run mode)
-- **Typecheck**: tsc --noEmit (NEVER use "next lint" — Next.js 16 flat config incompatible)
-- **Dev server**: npm run dev (Next.js dev with Turbopack)
-- **Database**: npm run db:generate / db:push (Drizzle migrations)
+## Critical for Blog Sprint
+1. MDX config must go in next.config.js (not next.config.ts)
+2. Use @next/mdx with createMDX wrapper
+3. pageExtensions: ['js','jsx','ts','tsx','md','mdx']
+4. Content directory: content/blog/
+5. Gray-matter for frontmatter parsing
+6. Blog listing: read MDX files, parse frontmatter, sort by date
+7. Build must pass after MDX setup before continuing to other stories
 
-## Environment Variables
-- DATABASE_URL (required for build)
-- LLM_PROVIDER, LLM_MODEL (required for CV parsing / job classification)
-- OPENROUTER_API_KEY or ANTHROPIC_API_KEY (depending on provider)
-- ADZUNA_APP_ID, ADZUNA_APP_KEY, JOOBLE_API_KEY (optional for ingestion)
+## Naming Conventions
+- Files: kebab-case (nav-bar.tsx, home-client.tsx)
+- Components: PascalCase (NavBar, HomeClient)
+- Functions: camelCase (getStats, fetchJobs)
+- Types/Interfaces: PascalCase (Stats, Job)
+- CSS classes: Tailwind utility classes
 
-## Protected Files (DO NOT MODIFY)
-- src/lib/db/schema.ts
-- src/lib/ingestion/* (all files)
-- .env* (credentials)
+## Import Patterns
+- Next.js: import Link from 'next/link'
+- Components: import { NavBar } from '@/components/nav-bar'
+- Utils: import { db } from '@/lib/db'
+- Types: import type { Stats } from '@/lib/types'
 
-## Sprint Objective Context
-- **Location scoring bug #37**: matchLocation() returns boolean, needs to return 0|1|2 score
-- **Mobile layout issues**: Filter bar overflow, safe area padding, keyboard handling
-- **Max score**: Currently 8, will be 9 after location becomes scored criterion
+## Baseline Status
+- Build: ✓ passes (Next.js 16.1.6 Turbopack)
+- Tests: ✓ 370 tests passing in 20.6s
+- TypeScript: ✓ no errors
+- Warnings: middleware deprecation (non-blocking)
+- Dependencies: 238 packages installed
