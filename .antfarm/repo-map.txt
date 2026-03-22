@@ -1,4 +1,4 @@
-# Repo Map — generated 2026-03-22T19:32:44Z
+# Repo Map — generated 2026-03-22T19:51:22Z
 # Architecture snapshot: class/function signatures, routes, exports
 # Use this to find the right file/function without reading full source.
 
@@ -124,6 +124,7 @@ node_modules/flatted/golang/pkg/flatted/flatted.go:
   tests/app
   tests/components
   tests/fixtures
+  tests/integration
   tests/lib
   tests/middleware.test.ts
   tests/scripts
