@@ -2,9 +2,41 @@ import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 import { checkRateLimit } from '@/lib/rate-limit';
 
+// Routes that require authentication
+const PROTECTED_PATHS = [
+  '/results',
+  '/profile',
+  '/preferences',
+  '/account',
+  '/api/stripe/checkout',
+  '/api/stripe/portal',
+];
+
+// Routes that are always public (no auth required)
+const PUBLIC_PATHS = [
+  '/',
+  '/login',
+  '/signup',
+  '/restore',
+  '/pricing',
+  '/api/stripe/webhook',
+  '/api/pipeline',
+  '/api/health',
+];
+
+function isProtectedPath(pathname: string): boolean {
+  return PROTECTED_PATHS.some((path) => pathname.startsWith(path));
+}
+
+function isPublicPath(pathname: string): boolean {
+  return PUBLIC_PATHS.some((path) =>
+    path === '/' ? pathname === '/' : pathname.startsWith(path)
+  );
+}
+
 export async function middleware(request: NextRequest) {
   const rateLimit = checkRateLimit(request.nextUrl.pathname, request.headers);
-  
+
   if (!rateLimit.allowed) {
     return NextResponse.json(
       { error: 'Rate limit exceeded', retryAfter: rateLimit.retryAfter },
@@ -21,7 +53,8 @@ export async function middleware(request: NextRequest) {
     request,
   });
 
-  // Skip auth if Supabase not configured (allows builds/deploys without env vars)
+  // Graceful fallback — skip auth when Supabase env vars missing
+  // (allows builds/deploys without env vars configured)
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
     return supabaseResponse;
   }
@@ -35,7 +68,7 @@ export async function middleware(request: NextRequest) {
           return request.cookies.getAll();
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) =>
+          cookiesToSet.forEach(({ name, value }) =>
             request.cookies.set(name, value)
           );
           supabaseResponse = NextResponse.next({
@@ -53,15 +86,12 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const protectedPaths = ['/results', '/profile', '/preferences', '/settings'];
-  const isProtectedPath = protectedPaths.some((path) =>
-    request.nextUrl.pathname.startsWith(path)
-  );
+  const { pathname } = request.nextUrl;
 
-  if (isProtectedPath && !user) {
+  if (isProtectedPath(pathname) && !user) {
     const url = request.nextUrl.clone();
     url.pathname = '/login';
-    url.searchParams.set('redirect', request.nextUrl.pathname);
+    url.searchParams.set('redirect', pathname);
     return NextResponse.redirect(url);
   }
 

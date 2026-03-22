@@ -34,7 +34,8 @@ describe('Login Page', () => {
 
   it('renders Google sign in button', () => {
     render(<LoginPage />);
-    expect(screen.getByRole('button', { name: /sign in with google/i })).toBeDefined();
+    // GoogleOAuthButton renders "Continue with Google" by default on login page
+    expect(screen.getByRole('button', { name: /continue with google/i })).toBeDefined();
   });
 
   it('renders forgot password link', () => {

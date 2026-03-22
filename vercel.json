@@ -43,6 +43,10 @@
     {
       "path": "/api/pipeline?source=bulldogjob",
       "schedule": "50 9 * * *"
+    },
+    {
+      "path": "/api/embed/batch",
+      "schedule": "30 10 * * *"
     }
   ]
 }
