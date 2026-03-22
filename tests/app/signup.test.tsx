@@ -2,6 +2,12 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import SignupPage from '@/app/signup/page';
 
+vi.mock('next/navigation', () => ({
+  useRouter: vi.fn(() => ({
+    push: vi.fn(),
+  })),
+}));
+
 vi.mock('@/lib/supabase/client', () => ({
   createClient: vi.fn(() => ({
     auth: {
@@ -33,7 +39,8 @@ describe('Signup Page', () => {
 
   it('renders Google signup button', () => {
     render(<SignupPage />);
-    expect(screen.getByRole('button', { name: /sign up with google/i })).toBeDefined();
+    // GoogleOAuthButton renders "Continue with Google"
+    expect(screen.getByRole('button', { name: /continue with google/i })).toBeDefined();
   });
 
   it('renders login link', () => {

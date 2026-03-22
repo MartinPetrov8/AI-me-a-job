@@ -4,6 +4,7 @@ import { AuthProvider } from '@/components/auth-provider'
 import { NavBar } from '@/components/nav-bar'
 import { Footer } from '@/components/footer'
 import { JsonLd } from '@/components/json-ld'
+import { validateSupabaseEnv } from '@/lib/supabase/validate-env'
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://aimeajob.com'),
@@ -16,6 +17,15 @@ export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   viewportFit: 'cover',
+}
+
+// Validate Supabase env vars at startup — logs a warning if missing, does NOT throw
+const { valid: supabaseEnvValid, missing: supabaseMissing } = validateSupabaseEnv()
+if (!supabaseEnvValid) {
+  console.warn(
+    '[aimeajob] Supabase env vars missing — auth features disabled until configured:',
+    supabaseMissing.join(', ')
+  )
 }
 
 export default function RootLayout({
