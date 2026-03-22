@@ -14,6 +14,7 @@ vi.mock('@anthropic-ai/sdk', () => ({
 describe('classifyJob', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    delete process.env.OPENROUTER_API_KEY;
     process.env.ANTHROPIC_API_KEY = 'test-key';
   });
 

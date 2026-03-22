@@ -1,25 +1,51 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { POST } from '@/app/api/stripe/checkout/route';
-import { NextRequest } from 'next/server';
+
+const { mockCreateSession, mockCreateCustomer, mockVerifyAuth, mockDbSelect, mockDbUpdate } = vi.hoisted(() => ({
+  mockCreateSession: vi.fn(),
+  mockCreateCustomer: vi.fn(),
+  mockVerifyAuth: vi.fn(),
+  mockDbSelect: vi.fn(),
+  mockDbUpdate: vi.fn(),
+}));
 
 vi.mock('@/lib/stripe/client', () => ({
-  stripe: vi.fn(() => ({
+  stripe: () => ({
     checkout: {
       sessions: {
-        create: vi.fn(),
+        create: mockCreateSession,
       },
     },
     customers: {
-      create: vi.fn(),
+      create: mockCreateCustomer,
     },
-  })),
+  }),
 }));
-vi.mock('@/lib/auth/verify');
-vi.mock('@/lib/db');
+
+vi.mock('@/lib/auth/verify', () => ({
+  verifyAuth: mockVerifyAuth,
+}));
+
+vi.mock('@/lib/db', () => ({
+  db: {
+    select: mockDbSelect,
+    update: mockDbUpdate,
+  },
+}));
+
+import { POST } from '@/app/api/stripe/checkout/route';
+import { NextRequest } from 'next/server';
 
 describe('POST /api/stripe/checkout', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    process.env.STRIPE_PUBLISHABLE_KEY = 'pk_test_123';
+    process.env.NEXT_PUBLIC_URL = 'http://localhost:3000';
+    
+    mockDbUpdate.mockReturnValue({
+      set: vi.fn().mockReturnValue({
+        where: vi.fn().mockResolvedValue(undefined),
+      }),
+    });
   });
 
   it('should create a checkout session for authenticated user', async () => {
@@ -27,9 +53,22 @@ describe('POST /api/stripe/checkout', () => {
       url: 'https://checkout.stripe.com/pay/test',
     };
 
-    const { stripe: getStripe } = await import('@/lib/stripe/client');
-    const mockStripe = getStripe();
-    vi.mocked(mockStripe.checkout.sessions.create).mockResolvedValueOnce(mockSession as any);
+    mockVerifyAuth.mockResolvedValueOnce({ userId: 'test-user-id' });
+    mockCreateSession.mockResolvedValueOnce(mockSession);
+    
+    mockDbSelect.mockReturnValue({
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          limit: vi.fn().mockResolvedValueOnce([
+            {
+              id: 'test-user-id',
+              email: 'test@example.com',
+              stripeCustomerId: 'cus_test',
+            },
+          ]),
+        }),
+      }),
+    });
 
     const req = new NextRequest('http://localhost:3000/api/stripe/checkout', {
       method: 'POST',
@@ -39,35 +78,16 @@ describe('POST /api/stripe/checkout', () => {
       },
     });
 
-    // Mock auth
-    const verifyAuth = require('@/lib/auth/verify').verifyAuth;
-    verifyAuth.mockResolvedValueOnce({ userId: 'test-user-id' });
-
-    // Mock db
-    const db = require('@/lib/db').db;
-    db.select.mockReturnValue({
-      from: vi.fn().mockReturnValue({
-        where: vi.fn().mockReturnValue({
-          limit: vi.fn().mockResolvedValueOnce([
-            {
-              email: 'test@example.com',
-              stripeCustomerId: 'cus_test',
-            },
-          ]),
-        }),
-      }),
-    });
-
     const response = await POST(req);
     const data = await response.json();
 
     expect(response.status).toBe(200);
     expect(data).toHaveProperty('url');
+    expect(data.url).toBe('https://checkout.stripe.com/pay/test');
   });
 
   it('should return 401 for unauthenticated requests', async () => {
-    const { verifyAuth } = await import('@/lib/auth/verify');
-    vi.mocked(verifyAuth).mockResolvedValueOnce(null);
+    mockVerifyAuth.mockResolvedValueOnce(null);
 
     const req = new NextRequest('http://localhost:3000/api/stripe/checkout', {
       method: 'POST',
