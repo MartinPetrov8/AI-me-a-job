@@ -119,3 +119,5 @@ Started: 2026-03-08T20:41:42Z
 [S-05][done] Added related articles footer component to blog article pages with tag-based matching logic, responsive grid layout (grid-cols-1 md:grid-cols-3), white cards with rounded-2xl shadow-sm design, fallback to recent posts, 10 comprehensive tests | tests:PASS
 
 [S-06][done] Homepage Integration, Navigation & Sitemap - Added 'From the Blog' section to home-client.tsx showing 3 latest posts in responsive 3-col grid (1-col mobile, 3-col lg), added Blog link to nav-bar.tsx navLinks, updated sitemap.ts to include /blog (priority 0.8) and all 5 article URLs (priority 0.7, changefreq weekly), comprehensive test coverage with home-client-blog.test.tsx and sitemap-blog.test.ts | tests:PASS
+
+[S-01][done] Embedding backfill script for jobs table — scripts/backfill-embeddings.ts queries jobs WHERE embedding IS NULL in batches of 100, calls embedBatch() from src/lib/embedding/embed.ts, updates jobs.embedding via Drizzle ORM, supports --dry-run flag, 500ms rate limiting between batches, progress logging, error handling with graceful degradation | tests:PASS
