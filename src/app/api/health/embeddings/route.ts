@@ -6,41 +6,44 @@
  */
 
 import { NextResponse } from 'next/server';
+import { db } from '@/lib/db';
+import { sql } from 'drizzle-orm';
 
 export const runtime = 'nodejs';
 
 export async function GET() {
   try {
-    const { db } = await import('@/lib/db');
-    const { sql } = await import('drizzle-orm');
-
     const [jobStats] = await db.execute(
       sql`
         SELECT
-          COUNT(*)::int AS total_jobs,
-          COUNT(embedding)::int AS embedded_jobs
+          COUNT(*)::int AS total,
+          COUNT(embedding)::int AS embedded
         FROM jobs
-        WHERE classified_at IS NOT NULL
       `
     ) as any[];
 
     const [profileStats] = await db.execute(
       sql`
-        SELECT COUNT(embedding)::int AS profiles_embedded
+        SELECT
+          COUNT(*)::int AS total,
+          COUNT(embedding)::int AS embedded
         FROM profiles
       `
     ) as any[];
 
-    const totalJobs = Number(jobStats?.total_jobs ?? 0);
-    const embeddedJobs = Number(jobStats?.embedded_jobs ?? 0);
-    const profilesEmbedded = Number(profileStats?.profiles_embedded ?? 0);
+    const totalJobs = Number(jobStats?.total ?? 0);
+    const embeddedJobs = Number(jobStats?.embedded ?? 0);
+    const totalProfiles = Number(profileStats?.total ?? 0);
+    const embeddedProfiles = Number(profileStats?.embedded ?? 0);
+    
     const coveragePct = totalJobs > 0 ? Math.round((embeddedJobs / totalJobs) * 100) : 0;
 
     return NextResponse.json({
       total_jobs: totalJobs,
-      embedded: embeddedJobs,
+      embedded_jobs: embeddedJobs,
       coverage_pct: coveragePct,
-      profiles_embedded: profilesEmbedded,
+      total_profiles: totalProfiles,
+      embedded_profiles: embeddedProfiles,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
