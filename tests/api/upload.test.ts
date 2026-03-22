@@ -33,13 +33,28 @@ vi.mock('@/lib/llm/extract-cv', () => ({
   }
 }));
 
+vi.mock('@/lib/embedding/embed', () => ({
+  embedText: vi.fn(),
+  buildProfileEmbeddingText: vi.fn((profile: any) => {
+    return [
+      profile.titleInferred,
+      profile.sphereOfExpertise,
+      profile.seniorityLevel,
+      profile.industry,
+      profile.keySkills?.join(', '),
+    ].filter(Boolean).join(' ').trim();
+  })
+}));
+
 import { POST } from '@/app/api/upload/route';
 import { extractText, EmptyDocumentError } from '@/lib/cv-parser/extract-text';
 import { extractCvCriteria, LLMExtractionError } from '@/lib/llm/extract-cv';
+import { embedText } from '@/lib/embedding/embed';
 import { db } from '@/lib/db';
 
 describe('POST /api/upload', () => {
   let mockReturning: any;
+  let mockUpdate: any;
 
   beforeEach(() => {
     mockReturning = vi.fn();
@@ -50,7 +65,15 @@ describe('POST /api/upload', () => {
       values: mockValues
     }));
 
+    const mockSet = vi.fn(() => ({
+      where: vi.fn().mockResolvedValue(undefined)
+    }));
+    mockUpdate = vi.fn(() => ({
+      set: mockSet
+    }));
+
     vi.mocked(db.insert).mockImplementation(mockInsert as any);
+    (db as any).update = mockUpdate;
 
     vi.mocked(extractText).mockResolvedValue('Sample CV text with more than fifty characters for testing');
     vi.mocked(extractCvCriteria).mockResolvedValue({
@@ -64,6 +87,8 @@ describe('POST /api/upload', () => {
       industry: 'Technology',
       key_skills: ['Python', 'Go']
     });
+
+    vi.mocked(embedText).mockResolvedValue(new Array(1536).fill(0.1));
   });
 
   afterEach(() => {
@@ -198,5 +223,65 @@ describe('POST /api/upload', () => {
 
     expect(response.status).toBe(503);
     expect(data.error).toBe('Failed to extract CV criteria');
+  });
+
+  it('should compute and store profile embedding after upload', async () => {
+    const mockUserId = 'user-embed-123';
+    const mockProfileId = 'profile-embed-456';
+    const fakeEmbedding = new Array(1536).fill(0.25);
+
+    mockReturning
+      .mockResolvedValueOnce([{ id: mockUserId }])
+      .mockResolvedValueOnce([{ id: mockProfileId }]);
+
+    vi.mocked(embedText).mockResolvedValue(fakeEmbedding);
+
+    const formData = new FormData();
+    const file = new File(['pdf content'], 'resume.pdf', { type: 'application/pdf' });
+    formData.append('file', file);
+
+    const request = new NextRequest('http://localhost:3000/api/upload', {
+      method: 'POST',
+      body: formData
+    });
+
+    const response = await POST(request);
+    const data = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(data.data.user_id).toBe(mockUserId);
+    expect(data.data.profile_id).toBe(mockProfileId);
+    expect(embedText).toHaveBeenCalledTimes(1);
+    expect(embedText).toHaveBeenCalledWith('Engineering Senior Technology Python, Go');
+    expect(mockUpdate).toHaveBeenCalledTimes(1);
+  });
+
+  it('should gracefully handle embedding failure without failing upload', async () => {
+    const mockUserId = 'user-no-embed-123';
+    const mockProfileId = 'profile-no-embed-456';
+
+    mockReturning
+      .mockResolvedValueOnce([{ id: mockUserId }])
+      .mockResolvedValueOnce([{ id: mockProfileId }]);
+
+    vi.mocked(embedText).mockRejectedValue(new Error('OpenAI API down'));
+
+    const formData = new FormData();
+    const file = new File(['pdf content'], 'resume.pdf', { type: 'application/pdf' });
+    formData.append('file', file);
+
+    const request = new NextRequest('http://localhost:3000/api/upload', {
+      method: 'POST',
+      body: formData
+    });
+
+    const response = await POST(request);
+    const data = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(data.data.user_id).toBe(mockUserId);
+    expect(data.data.profile_id).toBe(mockProfileId);
+    expect(embedText).toHaveBeenCalledTimes(1);
+    expect(mockUpdate).not.toHaveBeenCalled();
   });
 });

@@ -1,10 +1,11 @@
-# Repo Map — generated 2026-03-21T23:13:37Z
+# Repo Map — generated 2026-03-22T20:33:00Z
 # Architecture snapshot: class/function signatures, routes, exports
 # Use this to find the right file/function without reading full source.
 
 ## Python
 
 scripts/scrapers/bestjobs_scraper.py:
+  def decode_html_entities(text)
   def scrape_bestjobs()
 
 ## Go
@@ -54,6 +55,9 @@ node_modules/flatted/golang/pkg/flatted/flatted.go:
   .next/trace-build
   .next/turbopack
   .next/types
+  .vercel
+  .vercel/README.txt
+  .vercel/project.json
   MIGRATION-0003.md
   README.md
   SMOKE_TESTS.md
@@ -84,7 +88,15 @@ node_modules/flatted/golang/pkg/flatted/flatted.go:
   docs/STAKEHOLDER_INTERVIEW.md
   docs/STRUCTURE.md
   docs/USER_STORIES.md
+  drizzle
   drizzle.config.ts
+  drizzle/0000_calm_colleen_wing.sql
+  drizzle/0001_cross_source_dedup.sql
+  drizzle/0001_sturdy_sugar_man.sql
+  drizzle/0004_add_sessions_table.sql
+  drizzle/0005_add_feedback_table.sql
+  drizzle/0006_add_auth_columns.sql
+  drizzle/meta
   next-env.d.ts
   next.config.js
   node_modules
@@ -95,6 +107,7 @@ node_modules/flatted/golang/pkg/flatted/flatted.go:
   public
   public/robots.txt
   scripts
+  scripts/backfill-embeddings.ts
   scripts/classify-backlog.ts
   scripts/classify-jobs.ts
   scripts/ingest-jobs.ts
@@ -111,6 +124,7 @@ node_modules/flatted/golang/pkg/flatted/flatted.go:
   tests/app
   tests/components
   tests/fixtures
+  tests/integration
   tests/lib
   tests/middleware.test.ts
   tests/scripts

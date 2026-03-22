@@ -1,20 +1,44 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { POST } from '@/app/api/stripe/webhook/route';
-import { NextRequest } from 'next/server';
+
+const { mockConstructEvent, mockUpdateSubscriptionStatus, mockDbSelect } = vi.hoisted(() => ({
+  mockConstructEvent: vi.fn(),
+  mockUpdateSubscriptionStatus: vi.fn(),
+  mockDbSelect: vi.fn(),
+}));
 
 vi.mock('@/lib/stripe/client', () => ({
-  stripe: vi.fn(() => ({
+  stripe: () => ({
     webhooks: {
-      constructEvent: vi.fn(),
+      constructEvent: mockConstructEvent,
     },
-  })),
+  }),
 }));
-vi.mock('@/lib/stripe/subscription');
-vi.mock('@/lib/db');
+
+vi.mock('@/lib/stripe/subscription', () => ({
+  updateSubscriptionStatus: mockUpdateSubscriptionStatus,
+}));
+
+vi.mock('@/lib/db', () => ({
+  db: {
+    select: mockDbSelect,
+  },
+}));
+
+import { POST } from '@/app/api/stripe/webhook/route';
+import { NextRequest } from 'next/server';
 
 describe('POST /api/stripe/webhook', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    process.env.STRIPE_WEBHOOK_SECRET = 'whsec_test';
+    
+    mockDbSelect.mockReturnValue({
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          limit: vi.fn().mockResolvedValue([]),
+        }),
+      }),
+    });
   });
 
   it('should handle checkout.session.completed event', async () => {
@@ -30,12 +54,8 @@ describe('POST /api/stripe/webhook', () => {
       },
     };
 
-    const { stripe: getStripe } = await import('@/lib/stripe/client');
-    const mockStripe = getStripe();
-    vi.mocked(mockStripe.webhooks.constructEvent).mockReturnValueOnce(mockEvent as any);
-
-    const { updateSubscriptionStatus } = await import('@/lib/stripe/subscription');
-    vi.mocked(updateSubscriptionStatus).mockResolvedValueOnce(undefined);
+    mockConstructEvent.mockReturnValueOnce(mockEvent);
+    mockUpdateSubscriptionStatus.mockResolvedValueOnce(undefined);
 
     const body = JSON.stringify(mockEvent);
     const req = new NextRequest('http://localhost:3000/api/stripe/webhook', {
@@ -52,6 +72,11 @@ describe('POST /api/stripe/webhook', () => {
 
     expect(response.status).toBe(200);
     expect(data).toEqual({ received: true });
+    expect(mockUpdateSubscriptionStatus).toHaveBeenCalledWith(
+      'test-user-id',
+      'pro',
+      'cus_test'
+    );
   });
 
   it('should reject requests with missing signature', async () => {
@@ -65,12 +90,12 @@ describe('POST /api/stripe/webhook', () => {
 
     const response = await POST(req);
     expect(response.status).toBe(400);
+    const data = await response.json();
+    expect(data).toEqual({ error: 'Missing signature' });
   });
 
   it('should reject requests with invalid signature', async () => {
-    const { stripe: getStripe } = await import('@/lib/stripe/client');
-    const mockStripe = getStripe();
-    vi.mocked(mockStripe.webhooks.constructEvent).mockImplementationOnce(() => {
+    mockConstructEvent.mockImplementationOnce(() => {
       throw new Error('Signature verification failed');
     });
 
@@ -85,5 +110,7 @@ describe('POST /api/stripe/webhook', () => {
 
     const response = await POST(req);
     expect(response.status).toBe(400);
+    const data = await response.json();
+    expect(data).toEqual({ error: 'Invalid signature' });
   });
 });

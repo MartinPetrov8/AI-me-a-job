@@ -1,12 +1,9 @@
-/**
- * Unit tests for POST /api/embed and GET /api/embed.
- * Mocks DB and embedding functions — no real API calls or DB access.
- */
-
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { NextRequest } from 'next/server';
+import { POST, GET } from '@/app/api/embed/route';
+import { db } from '@/lib/db';
+import { profiles, jobs } from '@/lib/db/schema';
+import * as embed from '@/lib/embedding/embed';
 
-// ── Mocks (must be hoisted before imports) ────────────────────────────────────
 vi.mock('@/lib/db', () => ({
   db: {
     select: vi.fn(),
@@ -20,147 +17,232 @@ vi.mock('@/lib/embedding/embed', () => ({
   buildJobEmbeddingText: vi.fn(),
 }));
 
-import { POST, GET } from '@/app/api/embed/route';
-import { db } from '@/lib/db';
-import { embedText, buildProfileEmbeddingText, buildJobEmbeddingText } from '@/lib/embedding/embed';
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-const DUMMY_EMBEDDING = new Array(1536).fill(0.1);
-const CRON_SECRET = 'test-cron-secret-xyz';
-
-function makeRequest(method: string, body?: object, url = 'http://localhost/api/embed', secret?: string) {
-  const headers: Record<string, string> = {
-    'content-type': 'application/json',
-  };
-  if (secret !== undefined) {
-    headers['x-cron-secret'] = secret;
-  }
-  return new NextRequest(url, {
-    method,
-    headers,
-    body: body ? JSON.stringify(body) : undefined,
-  });
-}
-
-function setupDbMocks(profileRow?: object, jobRow?: object) {
-  const mockWhere = vi.fn().mockReturnThis();
-  const mockLimit = vi.fn().mockResolvedValue(profileRow ? [profileRow] : (jobRow ? [jobRow] : []));
-  const mockFrom = vi.fn().mockReturnValue({ where: mockWhere });
-
-  // For update chain
-  const mockSet = vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue([]) });
-  const mockUpdate = vi.fn().mockReturnValue({ set: mockSet });
-
-  (db.select as any).mockReturnValue({ from: mockFrom });
-  (db.update as any).mockReturnValue({ set: mockSet });
-
-  // Make where chain work for both select and update
-  mockWhere.mockReturnValue({ limit: mockLimit });
-}
-
-// ── POST /api/embed ───────────────────────────────────────────────────────────
 describe('POST /api/embed', () => {
+  const validSecret = 'test-cron-secret';
+  const fakeEmbedding = new Array(1536).fill(0.1);
+
   beforeEach(() => {
     vi.clearAllMocks();
-    process.env.CRON_SECRET = CRON_SECRET;
-    vi.mocked(embedText).mockResolvedValue(DUMMY_EMBEDDING);
-    vi.mocked(buildProfileEmbeddingText).mockReturnValue('Senior TypeScript Engineer');
+    process.env.CRON_SECRET = validSecret;
   });
 
   it('returns 401 when CRON_SECRET header is missing', async () => {
-    const request = makeRequest('POST', { profile_id: 'some-id' });
-    const response = await POST(request);
+    const request = new Request('http://localhost:3000/api/embed', {
+      method: 'POST',
+      body: JSON.stringify({ profile_id: 'test-id' }),
+    });
+
+    const response = await POST(request as any);
+    const data = await response.json();
+
     expect(response.status).toBe(401);
+    expect(data.error).toBe('Unauthorized');
   });
 
-  it('returns 401 when CRON_SECRET header is wrong', async () => {
-    const request = makeRequest('POST', { profile_id: 'some-id' }, 'http://localhost/api/embed', 'wrong-secret');
-    const response = await POST(request);
+  it('returns 401 when CRON_SECRET header is invalid', async () => {
+    const request = new Request('http://localhost:3000/api/embed', {
+      method: 'POST',
+      headers: { 'x-cron-secret': 'wrong-secret' },
+      body: JSON.stringify({ profile_id: 'test-id' }),
+    });
+
+    const response = await POST(request as any);
+    const data = await response.json();
+
     expect(response.status).toBe(401);
+    expect(data.error).toBe('Unauthorized');
   });
 
-  it('returns 200 with embedded: true when profile_id is valid', async () => {
+  it('returns 400 when profile_id is missing', async () => {
+    const request = new Request('http://localhost:3000/api/embed', {
+      method: 'POST',
+      headers: { 'x-cron-secret': validSecret },
+      body: JSON.stringify({}),
+    });
+
+    const response = await POST(request as any);
+    const data = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(data.error).toBe('profile_id is required');
+  });
+
+  it('returns 404 when profile does not exist', async () => {
+    vi.mocked(db.select).mockReturnValue({
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          limit: vi.fn().mockResolvedValue([]),
+        }),
+      }),
+    } as any);
+
+    const request = new Request('http://localhost:3000/api/embed', {
+      method: 'POST',
+      headers: { 'x-cron-secret': validSecret },
+      body: JSON.stringify({ profile_id: 'nonexistent-id' }),
+    });
+
+    const response = await POST(request as any);
+    const data = await response.json();
+
+    expect(response.status).toBe(404);
+    expect(data.error).toBe('Profile not found');
+  });
+
+  it('recomputes profile embedding and returns 200 with dimensions', async () => {
+    const profileId = 'profile-123';
     const mockProfile = {
-      id: 'profile-uuid-123',
-      titleInferred: 'TypeScript Engineer',
-      sphereOfExpertise: 'Engineering',
+      id: profileId,
+      titleInferred: 'Senior Developer',
+      sphereOfExpertise: 'Backend',
       seniorityLevel: 'Senior',
       industry: 'Technology',
-      keySkills: ['TypeScript', 'Node.js'],
-      yearsExperience: '5-9',
-      prefLocation: null,
+      keySkills: ['Python', 'Node.js'],
+      yearsExperience: '5-10',
+      prefLocation: 'Remote',
     };
 
-    setupDbMocks(mockProfile);
+    vi.mocked(db.select).mockReturnValue({
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          limit: vi.fn().mockResolvedValue([mockProfile]),
+        }),
+      }),
+    } as any);
 
-    const request = makeRequest(
-      'POST',
-      { profile_id: 'profile-uuid-123' },
-      'http://localhost/api/embed',
-      CRON_SECRET
-    );
+    vi.mocked(embed.buildProfileEmbeddingText).mockReturnValue('Senior Developer Backend...');
+    vi.mocked(embed.embedText).mockResolvedValue(fakeEmbedding);
 
-    const response = await POST(request);
+    const mockUpdate = vi.fn().mockReturnValue({
+      set: vi.fn().mockReturnValue({
+        where: vi.fn().mockResolvedValue(undefined),
+      }),
+    });
+    vi.mocked(db.update).mockImplementation(mockUpdate as any);
+
+    const request = new Request('http://localhost:3000/api/embed', {
+      method: 'POST',
+      headers: { 'x-cron-secret': validSecret },
+      body: JSON.stringify({ profile_id: profileId }),
+    });
+
+    const response = await POST(request as any);
     const data = await response.json();
 
     expect(response.status).toBe(200);
-    expect(data.embedded).toBe(true);
-    expect(data.dimensions).toBe(1536);
-  });
-
-  it('returns 400 when profile_id is missing from body', async () => {
-    const request = makeRequest('POST', {}, 'http://localhost/api/embed', CRON_SECRET);
-    const response = await POST(request);
-    expect(response.status).toBe(400);
+    expect(data).toEqual({ embedded: true, dimensions: 1536 });
+    expect(embed.embedText).toHaveBeenCalledWith('Senior Developer Backend...');
+    expect(mockUpdate).toHaveBeenCalledWith(profiles);
   });
 });
 
-// ── GET /api/embed ────────────────────────────────────────────────────────────
 describe('GET /api/embed', () => {
+  const validSecret = 'test-cron-secret';
+  const fakeEmbedding = new Array(1536).fill(0.1);
+
   beforeEach(() => {
     vi.clearAllMocks();
-    process.env.CRON_SECRET = CRON_SECRET;
-    vi.mocked(embedText).mockResolvedValue(DUMMY_EMBEDDING);
-    vi.mocked(buildJobEmbeddingText).mockReturnValue('Backend Engineer Node.js Remote');
+    process.env.CRON_SECRET = validSecret;
   });
 
   it('returns 401 when CRON_SECRET header is missing', async () => {
-    const request = makeRequest('GET', undefined, 'http://localhost/api/embed?job_id=some-job');
-    const response = await GET(request);
-    expect(response.status).toBe(401);
-  });
-
-  it('returns 200 with embedded: true when job_id is valid', async () => {
-    const mockJob = {
-      id: 'job-uuid-456',
-      title: 'Backend Engineer',
-      company: 'TechCorp',
-      location: 'Remote',
-      descriptionRaw: 'We are hiring a backend engineer...',
-    };
-
-    setupDbMocks(undefined, mockJob);
-
-    const request = new NextRequest('http://localhost/api/embed?job_id=job-uuid-456', {
+    const request = new Request('http://localhost:3000/api/embed?job_id=test-id', {
       method: 'GET',
-      headers: { 'x-cron-secret': CRON_SECRET },
     });
 
-    const response = await GET(request);
+    const response = await GET(request as any);
     const data = await response.json();
 
-    expect(response.status).toBe(200);
-    expect(data.embedded).toBe(true);
-    expect(data.dimensions).toBe(1536);
+    expect(response.status).toBe(401);
+    expect(data.error).toBe('Unauthorized');
+  });
+
+  it('returns 401 when CRON_SECRET header is invalid', async () => {
+    const request = new Request('http://localhost:3000/api/embed?job_id=test-id', {
+      method: 'GET',
+      headers: { 'x-cron-secret': 'wrong-secret' },
+    });
+
+    const response = await GET(request as any);
+    const data = await response.json();
+
+    expect(response.status).toBe(401);
+    expect(data.error).toBe('Unauthorized');
   });
 
   it('returns 400 when job_id query param is missing', async () => {
-    const request = new NextRequest('http://localhost/api/embed', {
+    const request = new Request('http://localhost:3000/api/embed', {
       method: 'GET',
-      headers: { 'x-cron-secret': CRON_SECRET },
+      headers: { 'x-cron-secret': validSecret },
     });
 
-    const response = await GET(request);
+    const response = await GET(request as any);
+    const data = await response.json();
+
     expect(response.status).toBe(400);
+    expect(data.error).toBe('job_id query param is required');
+  });
+
+  it('returns 404 when job does not exist', async () => {
+    vi.mocked(db.select).mockReturnValue({
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          limit: vi.fn().mockResolvedValue([]),
+        }),
+      }),
+    } as any);
+
+    const request = new Request('http://localhost:3000/api/embed?job_id=nonexistent-id', {
+      method: 'GET',
+      headers: { 'x-cron-secret': validSecret },
+    });
+
+    const response = await GET(request as any);
+    const data = await response.json();
+
+    expect(response.status).toBe(404);
+    expect(data.error).toBe('Job not found');
+  });
+
+  it('recomputes job embedding and returns 200 with dimensions', async () => {
+    const jobId = 'job-123';
+    const mockJob = {
+      id: jobId,
+      title: 'Backend Developer',
+      company: 'Tech Corp',
+      location: 'Sofia, Bulgaria',
+      descriptionRaw: 'We are looking for a backend developer...',
+    };
+
+    vi.mocked(db.select).mockReturnValue({
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          limit: vi.fn().mockResolvedValue([mockJob]),
+        }),
+      }),
+    } as any);
+
+    vi.mocked(embed.buildJobEmbeddingText).mockReturnValue('Backend Developer Tech Corp Sofia...');
+    vi.mocked(embed.embedText).mockResolvedValue(fakeEmbedding);
+
+    const mockUpdate = vi.fn().mockReturnValue({
+      set: vi.fn().mockReturnValue({
+        where: vi.fn().mockResolvedValue(undefined),
+      }),
+    });
+    vi.mocked(db.update).mockImplementation(mockUpdate as any);
+
+    const request = new Request(`http://localhost:3000/api/embed?job_id=${jobId}`, {
+      method: 'GET',
+      headers: { 'x-cron-secret': validSecret },
+    });
+
+    const response = await GET(request as any);
+    const data = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(data).toEqual({ embedded: true, dimensions: 1536 });
+    expect(embed.embedText).toHaveBeenCalledWith('Backend Developer Tech Corp Sofia...');
+    expect(mockUpdate).toHaveBeenCalledWith(jobs);
   });
 });

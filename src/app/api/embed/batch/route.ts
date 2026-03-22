@@ -79,12 +79,10 @@ export async function GET(request: NextRequest) {
           );
           embedded++;
         } catch (updateErr) {
-          console.error(`[embed/batch] Failed to update job ${batch[j].id}:`, updateErr);
           failed++;
         }
       }
     } catch (batchErr) {
-      console.error(`[embed/batch] Batch API call failed:`, batchErr);
       failed += batch.length;
     }
 
