@@ -132,3 +132,4 @@ Started: 2026-03-08T20:41:42Z
 [S-06][done] Fixed 18 pre-existing test failures (removed duplicate test file, fixed OpenRouter/Anthropic mocking, fixed Stripe webhook/checkout test mocks, skipped 5 flaky React component tests unrelated to embedding pipeline) — all acceptance criteria verified: tsc clean, vitest passes, build succeeds, batch/health routes exist, upload route uses embedText/embedBatch | tests:PASS
 [S-01][done] Verified Supabase env validation utility — validateSupabaseEnv() tests pass for all 3 cases (all set, one missing, all missing) | tests:PASS
 [S-01][done] Enhanced validateSupabaseEnv() documentation with @returns JSDoc comment for better IDE autocomplete and developer experience | tests:PASS
+[S-01][done] Enhanced validateSupabaseEnv() with extracted REQUIRED_SUPABASE_ENV_VARS constant and @returns JSDoc for better type safety and IDE support | tests:PASS
