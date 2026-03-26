@@ -1,9 +1,14 @@
 /**
- * E2E-style onboarding flow tests (Vitest + mocked fetch)
- * Covers the full upload → profile → preferences → results → save → restore flow
- * without requiring a live server or Playwright.
+ * Onboarding integration tests (Vitest + mocked fetch)
  *
- * Note: process.cwd() is used for path resolution — NOT __dirname (ESM safe)
+ * NOTE: These are API contract tests with mocked responses — NOT true end-to-end tests.
+ * They verify the expected request/response shapes for each step of the onboarding flow
+ * (upload → profile → preferences → search → save → restore) without hitting a live server.
+ *
+ * True e2e coverage (Playwright against a running Next.js instance) is a future addition
+ * tracked in GitHub issue #94.
+ *
+ * process.cwd() is used for path resolution — NOT __dirname (ESM safe)
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 

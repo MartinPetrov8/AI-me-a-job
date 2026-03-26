@@ -14,17 +14,19 @@ export async function GET() {
     dbStatus = 'error';
   }
 
-  // Service configuration status — presence only, no secret values
-  const supabase = process.env.NEXT_PUBLIC_SUPABASE_URL ? 'configured' : 'missing';
-  const stripe = process.env.STRIPE_SECRET_KEY ? 'configured' : 'missing';
-  const resend = process.env.RESEND_API_KEY ? 'configured' : 'missing';
+  // Service configuration status — counts only, no service names (prevents stack enumeration)
+  const configuredServices = [
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.STRIPE_SECRET_KEY,
+    process.env.RESEND_API_KEY,
+  ].filter(Boolean).length;
+  const totalServices = 3;
 
   return NextResponse.json({
     status: 'ok',
     db: dbStatus,
-    supabase,
-    stripe,
-    resend,
+    services: configuredServices,
+    servicesTotal: totalServices,
     timestamp: new Date().toISOString(),
     version: '1.0.0',
   });
