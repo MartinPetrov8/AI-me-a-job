@@ -90,4 +90,27 @@ describe('middleware', () => {
     const res = await middleware(req);
     expect(res.status).toBe(429);
   });
+
+  // Business-critical: Stripe sends webhooks here — auth would silently break payments
+  it('allows /api/stripe/webhook without auth (Stripe requirement)', async () => {
+    const { checkRateLimit } = await import('@/lib/rate-limit');
+    vi.mocked(checkRateLimit).mockReturnValue({ allowed: true });
+    mockSupabase(null);
+    const req = makeRequest('/api/stripe/webhook');
+    const res = await middleware(req);
+    expect(res.status).not.toBe(307);
+    expect(res.headers.get('location')).toBeNull();
+  });
+
+  // Business-critical: account page must be protected
+  it('redirects unauthenticated user from /account to /login', async () => {
+    const { checkRateLimit } = await import('@/lib/rate-limit');
+    vi.mocked(checkRateLimit).mockReturnValue({ allowed: true });
+    mockSupabase(null);
+    const req = makeRequest('/account');
+    const res = await middleware(req);
+    expect(res.status).toBe(307);
+    const location = res.headers.get('location') || '';
+    expect(location).toContain('/login');
+  });
 });
