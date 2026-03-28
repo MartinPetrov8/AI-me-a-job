@@ -66,9 +66,20 @@ export async function findMatches(
   }
 
   // Build SQL query parameters
-  const yearsScale = YEARS_EXPERIENCE;
-  const eduScale = EDUCATION_LEVELS;
-  const senScale = SENIORITY_LEVELS;
+  // Use sql.raw() for ARRAY literals — drizzle sql template expands JS arrays
+  // into ($1, $2, ...) ROW constructors, but array_position() needs ARRAY[...]
+  function toSqlArray(arr: readonly string[]): ReturnType<typeof sql.raw> {
+    return sql.raw(`ARRAY['${Array.from(arr).join("','")}']`);
+  }
+  // For user-supplied arrays — SQL-escape single quotes to prevent injection
+  function toSqlArrayValues(arr: string[]): string {
+    if (arr.length === 0) return "ARRAY[]::text[]";
+    const escaped = arr.map(v => v.replace(/'/g, "''"));
+    return `ARRAY['${escaped.join("','")}']::text[]`;
+  }
+  const yearsScale = toSqlArray(YEARS_EXPERIENCE);
+  const eduScale = toSqlArray(EDUCATION_LEVELS);
+  const senScale = toSqlArray(SENIORITY_LEVELS);
 
   // Construct WHERE clause conditions dynamically
   const whereConditions: any[] = [sql`classified_at IS NOT NULL`];
@@ -167,7 +178,7 @@ export async function findMatches(
 
       CASE 
         WHEN languages IS NULL OR cardinality(languages) = 0 THEN 1
-        WHEN languages <@ ${profile.languages || []}::text[] THEN 1 
+        WHEN languages <@ ${sql.raw(toSqlArrayValues(profile.languages || []))} THEN 1 
         ELSE 0 
       END AS c_languages,
 
@@ -180,7 +191,7 @@ export async function findMatches(
       CASE 
         WHEN key_skills IS NULL OR cardinality(key_skills) = 0 THEN 1
         WHEN cardinality(ARRAY(
-          SELECT unnest(key_skills) INTERSECT SELECT unnest(${profile.keySkills || []}::text[])
+          SELECT unnest(key_skills) INTERSECT SELECT unnest(${sql.raw(toSqlArrayValues(profile.keySkills || []))})
         )) >= 2 THEN 1 
         ELSE 0 
       END AS c_skills,
@@ -197,8 +208,11 @@ export async function findMatches(
     WHERE ${whereSql}
   `;
 
-  const havingAndLimit = sql`
-    HAVING (
+  // Wrap in subquery so HAVING can reference the computed aliases (c_years etc.)
+  // without requiring GROUP BY (pure row-level filtering via subquery WHERE)
+  const finalQuery = sql`
+    SELECT * FROM (${candidatesQuery}) AS scored
+    WHERE (
       c_years + c_education + c_field + c_sphere + c_seniority +
       c_languages + c_industry + c_skills + COALESCE(c_location, 0)
     ) >= 4
@@ -209,15 +223,24 @@ export async function findMatches(
     LIMIT 300
   `;
 
-  const finalQuery = sql`${candidatesQuery} ${havingAndLimit}`;
-
   // drizzle-orm/postgres-js returns rows as a RowList (array-like) directly
   const candidatesRaw = await db.execute(finalQuery);
   const candidates = Array.from(candidatesRaw) as any[];
 
   // PHASE B: JS vector re-rank (on 300 candidates)
   const MAX_SQL_SCORE = profile.prefLocation ? 9 : 8;
-  const profileEmbedding = profile.embedding as number[] | null;
+
+  // postgres-js returns pgvector as a string "[0.1,0.2,...]" — parse to number[]
+  function parseEmbedding(raw: unknown): number[] | null {
+    if (!raw) return null;
+    if (Array.isArray(raw)) return raw as number[];
+    if (typeof raw === 'string') {
+      try { return JSON.parse(raw.replace(/^\[/, '[').replace(/\]$/, ']')); } catch { return null; }
+    }
+    return null;
+  }
+
+  const profileEmbedding = parseEmbedding(profile.embedding);
 
   const scored = candidates.map((job: any) => {
     const sqlScore = 
@@ -234,7 +257,7 @@ export async function findMatches(
     const sqlNorm = sqlScore / MAX_SQL_SCORE;
 
     let hybridScore: number;
-    const jobEmbedding = job.embedding as number[] | null;
+    const jobEmbedding = parseEmbedding(job.embedding);
 
     if (profileEmbedding && jobEmbedding) {
       const cosine = cosineSimilarity(profileEmbedding, jobEmbedding);
