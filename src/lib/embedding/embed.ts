@@ -32,6 +32,7 @@ export async function embedText(text: string): Promise<number[]> {
     body: JSON.stringify({
       model: EMBEDDING_MODEL,
       input: text,
+      dimensions: EMBEDDING_DIMENSIONS,
     }),
     signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
   });
@@ -69,6 +70,7 @@ export async function embedBatch(texts: string[]): Promise<number[][]> {
     body: JSON.stringify({
       model: EMBEDDING_MODEL,
       input: texts,
+      dimensions: EMBEDDING_DIMENSIONS,
     }),
     signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
   });
