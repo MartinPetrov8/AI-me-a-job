@@ -1,156 +1,100 @@
 /**
- * Backfill Embeddings Script
+ * Backfill embeddings for jobs where embedding IS NULL
+ * Uses Jina AI (768 dims) to generate embeddings
+ * Runs in batches of 50 to avoid token limits and timeouts
  * 
- * Compute embeddings for all existing jobs with null embedding vectors.
- * 
- * Usage:
- *   npx tsx scripts/backfill-embeddings.ts [--dry-run]
- * 
- * What it does:
- * - Queries jobs WHERE embedding IS NULL in batches of 100
- * - For each job: builds text from title + description_raw
- * - Calls OpenAI embeddings API via embedBatch()
- * - Updates jobs.embedding using Drizzle ORM
- * - Rate limiting: 500ms delay between batches
- * - Progress logging: 'Batch N/M complete (X jobs embedded)'
- * 
- * Flags:
- *   --dry-run    Count jobs needing embeddings but don't call API or update DB
- * 
- * Idempotency:
- * - Safe to re-run multiple times
- * - Already-embedded jobs are skipped (checks embedding IS NULL)
- * - If interrupted, re-running will pick up where it left off
- * 
- * Requirements:
- * - OPENAI_API_KEY must be set in .env
- * - Database connection must be configured (DATABASE_URL in .env)
+ * Usage: npx tsx scripts/backfill-embeddings.ts [--limit 100]
  */
 
-import { db } from '../src/lib/db';
-import { jobs } from '../src/lib/db/schema';
-import { isNull, count, eq } from 'drizzle-orm';
-import { embedBatch, buildJobEmbeddingText } from '../src/lib/embedding/embed';
+import { db } from '@/lib/db/index';
+import { jobs } from '@/lib/db/schema';
+import { sql, isNull } from 'drizzle-orm';
+import { buildJobEmbeddingText, embedBatch } from '@/lib/embedding/embed';
 
-const BATCH_SIZE = 100;
-const RATE_LIMIT_DELAY_MS = 500;
+const BATCH_SIZE = 50;
+const JINA_API_KEY = process.env.JINA_API_KEY;
 
-function sleep(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
+if (!JINA_API_KEY) {
+  console.error('ERROR: JINA_API_KEY environment variable is required');
+  process.exit(1);
 }
 
-async function main() {
-  const isDryRun = process.argv.includes('--dry-run');
+async function backfillEmbeddings() {
+  let totalProcessed = 0;
+  let totalEmbedded = 0;
+  let totalFailed = 0;
 
   try {
-    const totalResult = await db.select({ count: count() }).from(jobs);
-    const totalJobs = totalResult[0]?.count ?? 0;
-
-    const nullEmbeddingResult = await db
-      .select({ count: count() })
-      .from(jobs)
-      .where(isNull(jobs.embedding));
-    const nullEmbeddingCount = nullEmbeddingResult[0]?.count ?? 0;
-
-    process.stdout.write('Embedding Backfill Report:\n');
-    process.stdout.write(`Total jobs in database: ${totalJobs}\n`);
-    process.stdout.write(`Jobs without embeddings: ${nullEmbeddingCount}\n`);
-
-    if (isDryRun) {
-      process.stdout.write('\nDry run mode — no API calls or database updates will be performed.\n');
-      process.exit(0);
-    }
-
-    if (nullEmbeddingCount === 0) {
-      process.stdout.write('\nNo jobs need embeddings. Nothing to do.\n');
-      process.exit(0);
-    }
-
-    process.stdout.write('\nStarting embedding generation...\n');
-
-    let totalEmbedded = 0;
-    let totalFailed = 0;
-    const errors: string[] = [];
-
-    const totalBatches = Math.ceil(nullEmbeddingCount / BATCH_SIZE);
-    let currentBatch = 0;
-
     while (true) {
-      const jobsToEmbed = await db
-        .select({
-          id: jobs.id,
-          title: jobs.title,
-          company: jobs.company,
-          location: jobs.location,
-          descriptionRaw: jobs.descriptionRaw,
-        })
+      // Fetch batch of jobs with NULL embeddings
+      const batch = await db
+        .select()
         .from(jobs)
         .where(isNull(jobs.embedding))
         .limit(BATCH_SIZE);
 
-      if (jobsToEmbed.length === 0) {
+      if (batch.length === 0) {
+        console.log(`✓ All jobs have embeddings (total processed: ${totalProcessed})`);
         break;
       }
 
-      currentBatch++;
+      console.log(`Processing batch: ${batch.length} jobs...`);
+
+      // Build embedding texts
+      const embeddingTexts = batch.map(job => buildJobEmbeddingText(job));
 
       try {
-        const texts = jobsToEmbed.map(job => buildJobEmbeddingText(job));
-        const embeddings = await embedBatch(texts);
+        // Call Jina API to generate embeddings for the batch
+        const embeddings = await embedBatch(embeddingTexts);
 
-        for (let i = 0; i < jobsToEmbed.length; i++) {
-          const job = jobsToEmbed[i];
+        // Update each job with its embedding
+        for (let i = 0; i < batch.length; i++) {
+          const job = batch[i];
           const embedding = embeddings[i];
 
-          try {
+          if (embedding && embedding.length === 768) {
             await db
               .update(jobs)
-              .set({ embedding: embedding })
-              .where(eq(jobs.id, job.id));
+              .set({ embedding })
+              .where(sql`${jobs.id} = ${job.id}`);
+
             totalEmbedded++;
-          } catch (updateError) {
-            const errorMsg = updateError instanceof Error ? updateError.message : String(updateError);
-            errors.push(`Job ${job.id}: Update failed - ${errorMsg}`);
+          } else {
+            console.warn(`⚠ Invalid embedding for job ${job.id}: length ${embedding?.length || 0}`);
             totalFailed++;
           }
         }
 
-        process.stdout.write(`Batch ${currentBatch}/${totalBatches} complete (${totalEmbedded} jobs embedded)\n`);
+        totalProcessed += batch.length;
+        console.log(
+          `✓ Batch complete: ${totalEmbedded}/${totalProcessed} embedded, ${totalFailed} failed`,
+        );
 
-        if (currentBatch < totalBatches) {
-          await sleep(RATE_LIMIT_DELAY_MS);
-        }
+        // Small delay between batches to avoid rate limiting
+        await new Promise(resolve => setTimeout(resolve, 500));
       } catch (batchError) {
-        const errorMsg = batchError instanceof Error ? batchError.message : String(batchError);
-        errors.push(`Batch ${currentBatch}: ${errorMsg}`);
-        totalFailed += jobsToEmbed.length;
-        process.stdout.write(`Batch ${currentBatch}/${totalBatches} failed - skipping ${jobsToEmbed.length} jobs\n`);
-
-        if (currentBatch < totalBatches) {
-          await sleep(RATE_LIMIT_DELAY_MS);
-        }
+        console.error(`✗ Batch processing failed:`, batchError);
+        totalFailed += batch.length;
+        totalProcessed += batch.length;
       }
     }
 
-    process.stdout.write(`\nDone. ${totalEmbedded} embedded, ${totalFailed} failed.\n`);
+    console.log('\n=== Backfill Summary ===');
+    console.log(`Total processed: ${totalProcessed}`);
+    console.log(`Successfully embedded: ${totalEmbedded}`);
+    console.log(`Failed: ${totalFailed}`);
 
-    if (errors.length > 0) {
-      process.stdout.write('\nErrors:\n');
-      errors.forEach(error => {
-        process.stdout.write(`  - ${error}\n`);
-      });
-    }
-
-    if (totalFailed > 0) {
-      process.exit(1);
+    if (totalEmbedded > 0) {
+      console.log(`✓ Backfill complete`);
+    } else {
+      console.log(`⚠ No embeddings were created`);
     }
 
     process.exit(0);
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    process.stderr.write(`Fatal error: ${errorMessage}\n`);
+    console.error('Fatal error during backfill:', error);
     process.exit(1);
   }
 }
 
-main();
+backfillEmbeddings();
