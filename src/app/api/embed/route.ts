@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
     .set({ embedding })
     .where(eq(profiles.id, profile_id));
 
-  return NextResponse.json({ embedded: true, dimensions: 1536 });
+  return NextResponse.json({ embedded: true, dimensions: 768 });
 }
 
 export async function GET(request: NextRequest) {
@@ -67,5 +67,5 @@ export async function GET(request: NextRequest) {
     .set({ embedding })
     .where(eq(jobs.id, job_id));
 
-  return NextResponse.json({ embedded: true, dimensions: 1536 });
+  return NextResponse.json({ embedded: true, dimensions: 768 });
 }

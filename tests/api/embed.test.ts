@@ -19,7 +19,7 @@ vi.mock('@/lib/embedding/embed', () => ({
 
 describe('POST /api/embed', () => {
   const validSecret = 'test-cron-secret';
-  const fakeEmbedding = new Array(1536).fill(0.1);
+  const fakeEmbedding = new Array(768).fill(0.1);
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -130,7 +130,7 @@ describe('POST /api/embed', () => {
     const data = await response.json();
 
     expect(response.status).toBe(200);
-    expect(data).toEqual({ embedded: true, dimensions: 1536 });
+    expect(data).toEqual({ embedded: true, dimensions: 768 });
     expect(embed.embedText).toHaveBeenCalledWith('Senior Developer Backend...');
     expect(mockUpdate).toHaveBeenCalledWith(profiles);
   });
@@ -138,7 +138,7 @@ describe('POST /api/embed', () => {
 
 describe('GET /api/embed', () => {
   const validSecret = 'test-cron-secret';
-  const fakeEmbedding = new Array(1536).fill(0.1);
+  const fakeEmbedding = new Array(768).fill(0.1);
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -241,7 +241,7 @@ describe('GET /api/embed', () => {
     const data = await response.json();
 
     expect(response.status).toBe(200);
-    expect(data).toEqual({ embedded: true, dimensions: 1536 });
+    expect(data).toEqual({ embedded: true, dimensions: 768 });
     expect(embed.embedText).toHaveBeenCalledWith('Backend Developer Tech Corp Sofia...');
     expect(mockUpdate).toHaveBeenCalledWith(jobs);
   });

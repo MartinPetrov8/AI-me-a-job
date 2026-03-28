@@ -1,16 +1,16 @@
-const EMBEDDING_MODEL = 'text-embedding-3-small';
-const EMBEDDING_DIMENSIONS = 1536;
-const OPENAI_EMBEDDINGS_URL = 'https://api.openai.com/v1/embeddings';
+const EMBEDDING_MODEL = 'jina-embeddings-v3';
+const EMBEDDING_DIMENSIONS = 768;
+const JINA_EMBEDDINGS_URL = 'https://api.jina.ai/v1/embeddings';
 const FETCH_TIMEOUT_MS = 20_000; // 20s — prevents hanging serverless functions
 
 function getApiKey(): string {
-  const key = process.env.OPENAI_API_KEY;
-  if (!key) throw new Error('OPENAI_API_KEY environment variable is not set');
-  return key;
+  // Graceful degradation: return empty string if key not set
+  // Allows running locally without Jina key for testing
+  return process.env.JINA_API_KEY || '';
 }
 
 /**
- * Generate an embedding vector for a single text input via OpenAI REST API.
+ * Generate an embedding vector for a single text input via Jina AI REST API.
  * No SDK dependency — plain fetch.
  */
 export async function embedText(text: string): Promise<number[]> {
@@ -18,23 +18,27 @@ export async function embedText(text: string): Promise<number[]> {
     throw new Error('Cannot embed empty text');
   }
 
-  const res = await fetch(OPENAI_EMBEDDINGS_URL, {
+  const apiKey = getApiKey();
+  if (!apiKey) {
+    throw new Error('JINA_API_KEY environment variable is not set. Get one at https://jina.ai/api-dashboard/key-manager');
+  }
+
+  const res = await fetch(JINA_EMBEDDINGS_URL, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${getApiKey()}`,
+      Authorization: `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
       model: EMBEDDING_MODEL,
       input: text,
-      dimensions: EMBEDDING_DIMENSIONS,
     }),
     signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
   });
 
   if (!res.ok) {
     const err = await res.text();
-    throw new Error(`OpenAI embeddings API error ${res.status}: ${err}`);
+    throw new Error(`Jina embeddings API error ${res.status}: ${err}`);
   }
 
   const data = await res.json();
@@ -43,30 +47,35 @@ export async function embedText(text: string): Promise<number[]> {
 
 /**
  * Generate embeddings for multiple texts in a single API call.
- * Max 100 inputs per batch (OpenAI limit).
+ * Max 2048 tokens per request; typical job posting ~500 tokens, so ~4 documents max safely.
+ * Use batch size of 4 to be conservative.
  */
 export async function embedBatch(texts: string[]): Promise<number[][]> {
   if (texts.length === 0) return [];
   if (texts.length > 100) throw new Error('Batch size exceeds limit of 100 inputs');
   if (texts.some(t => !t || t.trim().length === 0)) throw new Error('Batch contains empty text');
 
-  const res = await fetch(OPENAI_EMBEDDINGS_URL, {
+  const apiKey = getApiKey();
+  if (!apiKey) {
+    throw new Error('JINA_API_KEY environment variable is not set. Get one at https://jina.ai/api-dashboard/key-manager');
+  }
+
+  const res = await fetch(JINA_EMBEDDINGS_URL, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${getApiKey()}`,
+      Authorization: `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
       model: EMBEDDING_MODEL,
       input: texts,
-      dimensions: EMBEDDING_DIMENSIONS,
     }),
     signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
   });
 
   if (!res.ok) {
     const err = await res.text();
-    throw new Error(`OpenAI embeddings API error ${res.status}: ${err}`);
+    throw new Error(`Jina embeddings API error ${res.status}: ${err}`);
   }
 
   const data = await res.json();

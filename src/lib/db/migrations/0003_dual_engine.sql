@@ -6,10 +6,10 @@
 CREATE EXTENSION IF NOT EXISTS vector;
 
 -- Add embedding column to jobs table
-ALTER TABLE jobs ADD COLUMN IF NOT EXISTS embedding vector(1536);
+ALTER TABLE jobs ADD COLUMN IF NOT EXISTS embedding vector(768);
 
 -- Add embedding column to profiles table
-ALTER TABLE profiles ADD COLUMN IF NOT EXISTS embedding vector(1536);
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS embedding vector(768);
 
 -- Create HNSW index on jobs.embedding for fast cosine similarity search
 -- Only index jobs that have embeddings and are classified

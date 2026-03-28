@@ -14,10 +14,10 @@ describe('Database schema pgvector support', () => {
     expect(jobs.embedding.constructor.name).toBe('PgVector');
   });
 
-  it('jobs.embedding has dimensions property set to 1536', () => {
+  it('jobs.embedding has dimensions property set to 768', () => {
     const embeddingConfig = (jobs.embedding as any).config;
     expect(embeddingConfig).toBeDefined();
-    expect(embeddingConfig.dimensions).toBe(1536);
+    expect(embeddingConfig.dimensions).toBe(768);
   });
 
   it('profiles table has embedding column with type PgVector', () => {
@@ -25,10 +25,10 @@ describe('Database schema pgvector support', () => {
     expect(profiles.embedding.constructor.name).toBe('PgVector');
   });
 
-  it('profiles.embedding has dimensions property set to 1536', () => {
+  it('profiles.embedding has dimensions property set to 768', () => {
     const embeddingConfig = (profiles.embedding as any).config;
     expect(embeddingConfig).toBeDefined();
-    expect(embeddingConfig.dimensions).toBe(1536);
+    expect(embeddingConfig.dimensions).toBe(768);
   });
 
   it('migration file 0003_dual_engine.sql exists and contains CREATE EXTENSION', () => {
@@ -41,14 +41,14 @@ describe('Database schema pgvector support', () => {
     const migrationPath = join(__dirname, 'migrations', '0003_dual_engine.sql');
     const migrationContent = readFileSync(migrationPath, 'utf-8');
     expect(migrationContent).toContain('ALTER TABLE jobs ADD COLUMN');
-    expect(migrationContent).toContain('embedding vector(1536)');
+    expect(migrationContent).toContain('embedding vector(768)');
   });
 
   it('migration file contains ALTER TABLE for profiles.embedding', () => {
     const migrationPath = join(__dirname, 'migrations', '0003_dual_engine.sql');
     const migrationContent = readFileSync(migrationPath, 'utf-8');
     expect(migrationContent).toContain('ALTER TABLE profiles ADD COLUMN');
-    expect(migrationContent).toContain('embedding vector(1536)');
+    expect(migrationContent).toContain('embedding vector(768)');
   });
 
   it('migration file contains HNSW index on jobs.embedding', () => {

@@ -24,32 +24,31 @@ function mockFetchError(status: number, body: string) {
   });
 }
 
-const DUMMY_VECTOR = new Array(1536).fill(0).map((_, i) => i / 1536);
+const DUMMY_VECTOR = new Array(768).fill(0).map((_, i) => i / 768);
 
 beforeEach(() => {
   vi.stubGlobal('fetch', vi.fn());
-  process.env.OPENAI_API_KEY = 'test-key-123';
+  process.env.JINA_API_KEY = 'test-key-123';
 });
 
 // ── embedText ─────────────────────────────────────────────────────────────────
 describe('embedText', () => {
-  it('calls the OpenAI embeddings endpoint with correct body', async () => {
+  it('calls the Jina embeddings endpoint with correct body', async () => {
     vi.stubGlobal('fetch', mockFetchOk([DUMMY_VECTOR]));
 
     await embedText('Machine Learning Engineer with 5 years experience');
 
     const [url, opts] = (global.fetch as any).mock.calls[0];
-    expect(url).toBe('https://api.openai.com/v1/embeddings');
+    expect(url).toBe('https://api.jina.ai/v1/embeddings');
     const body = JSON.parse(opts.body);
-    expect(body.model).toBe('text-embedding-3-small');
+    expect(body.model).toBe('jina-embeddings-v3');
     expect(body.input).toBe('Machine Learning Engineer with 5 years experience');
-    expect(body.dimensions).toBe(1536);
   });
 
-  it('returns a 1536-dimensional vector', async () => {
+  it('returns a 768-dimensional vector', async () => {
     vi.stubGlobal('fetch', mockFetchOk([DUMMY_VECTOR]));
     const result = await embedText('some text');
-    expect(result).toHaveLength(1536);
+    expect(result).toHaveLength(768);
     expect(result[0]).toBeCloseTo(0);
   });
 
@@ -67,12 +66,12 @@ describe('embedText', () => {
 
   it('throws on API error response', async () => {
     vi.stubGlobal('fetch', mockFetchError(401, '{"error":"Invalid API key"}'));
-    await expect(embedText('test')).rejects.toThrow('OpenAI embeddings API error 401');
+    await expect(embedText('test')).rejects.toThrow('Jina embeddings API error 401');
   });
 
-  it('throws when OPENAI_API_KEY is not set', async () => {
-    delete process.env.OPENAI_API_KEY;
-    await expect(embedText('test')).rejects.toThrow('OPENAI_API_KEY');
+  it('throws when JINA_API_KEY is not set', async () => {
+    delete process.env.JINA_API_KEY;
+    await expect(embedText('test')).rejects.toThrow('JINA_API_KEY');
   });
 });
 
@@ -89,8 +88,8 @@ describe('embedBatch', () => {
     vi.stubGlobal('fetch', mockFetchOk(vectors));
     const result = await embedBatch(['text one', 'text two']);
     expect(result).toHaveLength(2);
-    expect(result[0]).toHaveLength(1536);
-    expect(result[1]).toHaveLength(1536);
+    expect(result[0]).toHaveLength(768);
+    expect(result[1]).toHaveLength(768);
   });
 
   it('preserves order of embeddings by index', async () => {

@@ -7,7 +7,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { embedText, embedBatch } from '@/lib/embedding/embed';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-const DUMMY_VECTOR_1536 = new Array(1536).fill(0).map((_, i) => i / 1536);
+const DUMMY_VECTOR_768 = new Array(768).fill(0).map((_, i) => i / 768);
 
 function mockFetchOk(embeddings: number[][]) {
   return vi.fn().mockResolvedValue({
@@ -20,18 +20,18 @@ function mockFetchOk(embeddings: number[][]) {
 
 beforeEach(() => {
   vi.stubGlobal('fetch', vi.fn());
-  process.env.OPENAI_API_KEY = 'test-key-for-matching-embed';
+  process.env.JINA_API_KEY = 'test-key-for-matching-embed';
 });
 
 // ── embedText ─────────────────────────────────────────────────────────────────
 describe('embedText', () => {
-  it('returns an array of 1536 numbers', async () => {
-    vi.stubGlobal('fetch', mockFetchOk([DUMMY_VECTOR_1536]));
+  it('returns an array of 768 numbers', async () => {
+    vi.stubGlobal('fetch', mockFetchOk([DUMMY_VECTOR_768]));
 
     const result = await embedText('Software Engineer with 5 years of TypeScript experience');
 
     expect(Array.isArray(result)).toBe(true);
-    expect(result).toHaveLength(1536);
+    expect(result).toHaveLength(768);
     result.forEach(n => expect(typeof n).toBe('number'));
   });
 
@@ -44,7 +44,7 @@ describe('embedText', () => {
 // ── embedBatch ────────────────────────────────────────────────────────────────
 describe('embedBatch', () => {
   it('returns an array of arrays, length matches input', async () => {
-    const vectors = [DUMMY_VECTOR_1536, DUMMY_VECTOR_1536.map(x => x * 0.5)];
+    const vectors = [DUMMY_VECTOR_768, DUMMY_VECTOR_768.map(x => x * 0.5)];
     vi.stubGlobal('fetch', mockFetchOk(vectors));
 
     const result = await embedBatch(['Data Scientist Python ML', 'Backend Engineer Node.js']);
@@ -53,7 +53,7 @@ describe('embedBatch', () => {
     expect(result).toHaveLength(2);
     result.forEach(vec => {
       expect(Array.isArray(vec)).toBe(true);
-      expect(vec).toHaveLength(1536);
+      expect(vec).toHaveLength(768);
     });
   });
 

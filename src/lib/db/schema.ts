@@ -35,7 +35,7 @@ export const profiles = pgTable('profiles', {
   prefSalaryCurrency: text('pref_salary_currency'),
   lastSearchAt: timestamp('last_search_at', { withTimezone: true }),
   titleInferred: text('title_inferred'),
-  embedding: vector('embedding', { dimensions: 1536 }),
+  embedding: vector('embedding', { dimensions: 768 }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
@@ -67,7 +67,7 @@ export const jobs = pgTable('jobs', {
   keySkills: text('key_skills').array(),
   classifiedAt: timestamp('classified_at', { withTimezone: true }),
   ingestedAt: timestamp('ingested_at', { withTimezone: true }).notNull().defaultNow(),
-  embedding: vector('embedding', { dimensions: 1536 }),
+  embedding: vector('embedding', { dimensions: 768 }),
   canonicalUrl: text('canonical_url'),
   contentHash: text('content_hash'),
 }, (table) => ({
